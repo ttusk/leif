@@ -4052,7 +4052,7 @@ var CorvoView = class extends import_obsidian10.ItemView {
 
 // src/ui/view/registerCorvoView.ts
 var CORVO_VIEW_TYPE = "corvo-main-view";
-var CORVO_ICON = "bird";
+var CORVO_ICON = "feather";
 function registerCorvoView(plugin, dataStore) {
   plugin.registerView(CORVO_VIEW_TYPE, (leaf) => new CorvoView(leaf, dataStore));
   plugin.addRibbonIcon(CORVO_ICON, "Abrir Corvo", () => openCorvoView(plugin));

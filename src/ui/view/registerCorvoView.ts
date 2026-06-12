@@ -4,7 +4,7 @@ import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import { CorvoView } from "@/ui/view/CorvoView";
 
 export const CORVO_VIEW_TYPE = "corvo-main-view";
-export const CORVO_ICON = "bird";
+export const CORVO_ICON = "feather";
 
 export function registerCorvoView(plugin: Obsidian.Plugin, dataStore: PluginDataStore): void {
   plugin.registerView(CORVO_VIEW_TYPE, (leaf) => new CorvoView(leaf, dataStore));
