@@ -2224,9 +2224,12 @@ var CycleTab = class {
     const table = DomHelpers.createElement("table", "corvo-table");
     const thead = DomHelpers.createElement("thead");
     const headerRow = DomHelpers.createElement("tr");
-    ["Ordem", "Mat\xE9ria", "Tempo", "Etapa", "Status", "A\xE7\xF5es"].forEach((header2) => {
+    ["", "Ordem", "Mat\xE9ria", "Tempo", "Etapa", "Status", "A\xE7\xF5es"].forEach((header2, index) => {
       const th = DomHelpers.createElement("th");
       th.textContent = header2;
+      if (index === 0) {
+        th.className = "corvo-th-reorder";
+      }
       headerRow.appendChild(th);
     });
     thead.appendChild(headerRow);
@@ -2244,12 +2247,13 @@ var CycleTab = class {
   }
   renderDisplayRow(subject, subjects, index, activeContestId) {
     const tr = DomHelpers.createElement("tr");
+    tr.appendChild(DomHelpers.createCell(null, this.renderReorderCell(subject, subjects, index, activeContestId)));
     tr.appendChild(DomHelpers.createCell(String(subject.order)));
     tr.appendChild(DomHelpers.createCell(subject.name));
     tr.appendChild(DomHelpers.createCell(`${subject.plannedStudyMinutes} min`));
     tr.appendChild(DomHelpers.createCell(subject.currentStage ?? "\u2014"));
-    tr.appendChild(DomHelpers.createCell(subject.isActive ? "Ativa" : "Inativa"));
-    tr.appendChild(DomHelpers.createCell(null, this.renderSubjectActionsCell(subject, subjects, index, activeContestId)));
+    tr.appendChild(this.renderStatusCell(subject, activeContestId));
+    tr.appendChild(DomHelpers.createCell(null, this.renderEditCell(subject)));
     return tr;
   }
   renderEditableRow(subject, subjects, index, activeContestId) {
@@ -2305,6 +2309,7 @@ var CycleTab = class {
         })
       );
     }
+    tr.appendChild(DomHelpers.createCell(""));
     tr.appendChild(DomHelpers.createCell(String(subject.order)));
     tr.appendChild(DomHelpers.createCell(subject.name));
     tr.appendChild(DomHelpers.createCell(null, minutesInput));
@@ -2350,11 +2355,12 @@ var CycleTab = class {
     );
     return form;
   }
-  renderSubjectActionsCell(subject, subjects, index, activeContestId) {
-    const controls = DomHelpers.createElement("div", "corvo-inline-actions corvo-inline-actions-compact");
+  renderReorderCell(subject, subjects, index, activeContestId) {
+    const cell = DomHelpers.createElement("div", "corvo-reorder-cell");
     if (index > 0) {
-      controls.appendChild(
+      cell.appendChild(
         DomHelpers.createIconButton("up", "Subir", {
+          className: "corvo-reorder-button",
           onClick: async () => {
             await this.moveSubject(subjects, index, index - 1, activeContestId);
           }
@@ -2362,34 +2368,38 @@ var CycleTab = class {
       );
     }
     if (index < subjects.length - 1) {
-      controls.appendChild(
+      cell.appendChild(
         DomHelpers.createIconButton("down", "Descer", {
+          className: "corvo-reorder-button",
           onClick: async () => {
             await this.moveSubject(subjects, index, index + 1, activeContestId);
           }
         })
       );
     }
-    controls.appendChild(
-      DomHelpers.createIconButton(
-        subject.isActive ? "toggleOn" : "toggleOff",
-        subject.isActive ? "Desativar" : "Ativar",
-        {
-          onClick: async () => {
-            try {
-              await this.setSubjectActiveStateUseCase.execute({
-                subjectId: subject.id,
-                isActive: !subject.isActive
-              });
-              await this.onUpdate();
-            } catch (error) {
-              this.notifyError(error, "N\xE3o foi poss\xEDvel alterar o status da mat\xE9ria.");
-            }
-          }
-        }
-      )
-    );
-    controls.appendChild(
+    return cell;
+  }
+  renderStatusCell(subject, activeContestId) {
+    const td = DomHelpers.createElement("td", "corvo-status-cell");
+    const span = DomHelpers.createElement("span", subject.isActive ? "corvo-status-active" : "corvo-status-inactive");
+    span.textContent = subject.isActive ? "Ativa" : "Inativa";
+    td.appendChild(span);
+    td.addEventListener("click", async () => {
+      try {
+        await this.setSubjectActiveStateUseCase.execute({
+          subjectId: subject.id,
+          isActive: !subject.isActive
+        });
+        await this.onUpdate();
+      } catch (error) {
+        this.notifyError(error, "N\xE3o foi poss\xEDvel alterar o status da mat\xE9ria.");
+      }
+    });
+    return td;
+  }
+  renderEditCell(subject) {
+    const cell = DomHelpers.createElement("div", "corvo-edit-cell");
+    cell.appendChild(
       DomHelpers.createIconButton("edit", "Editar", {
         onClick: async () => {
           this.editingSubjectId = subject.id;
@@ -2397,7 +2407,7 @@ var CycleTab = class {
         }
       })
     );
-    return controls;
+    return cell;
   }
   async moveSubject(subjects, sourceIndex, targetIndex, activeContestId) {
     try {

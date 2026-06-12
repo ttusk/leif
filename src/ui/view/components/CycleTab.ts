@@ -94,9 +94,12 @@ export class CycleTab {
     // Header
     const thead = DomHelpers.createElement("thead");
     const headerRow = DomHelpers.createElement("tr");
-    ["Ordem", "Matéria", "Tempo", "Etapa", "Status", "Ações"].forEach((header) => {
+    ["", "Ordem", "Matéria", "Tempo", "Etapa", "Status", "Ações"].forEach((header, index) => {
       const th = DomHelpers.createElement("th");
       th.textContent = header;
+      if (index === 0) {
+        th.className = "corvo-th-reorder";
+      }
       headerRow.appendChild(th);
     });
     thead.appendChild(headerRow);
@@ -125,12 +128,13 @@ export class CycleTab {
     activeContestId: string | null
   ): HTMLElement {
     const tr = DomHelpers.createElement("tr");
+    tr.appendChild(DomHelpers.createCell(null, this.renderReorderCell(subject, subjects, index, activeContestId)));
     tr.appendChild(DomHelpers.createCell(String(subject.order)));
     tr.appendChild(DomHelpers.createCell(subject.name));
     tr.appendChild(DomHelpers.createCell(`${subject.plannedStudyMinutes} min`));
     tr.appendChild(DomHelpers.createCell(subject.currentStage ?? "—"));
-    tr.appendChild(DomHelpers.createCell(subject.isActive ? "Ativa" : "Inativa"));
-    tr.appendChild(DomHelpers.createCell(null, this.renderSubjectActionsCell(subject, subjects, index, activeContestId)));
+    tr.appendChild(this.renderStatusCell(subject, activeContestId));
+    tr.appendChild(DomHelpers.createCell(null, this.renderEditCell(subject)));
     return tr;
   }
 
@@ -180,7 +184,7 @@ export class CycleTab {
     controls.appendChild(saveButton);
     controls.appendChild(cancelButton);
 
-    // Reorder buttons still available while editing
+    // Reorder buttons available while editing too
     if (index > 0) {
       controls.appendChild(
         DomHelpers.createIconButton("up", "Subir", {
@@ -200,6 +204,7 @@ export class CycleTab {
       );
     }
 
+    tr.appendChild(DomHelpers.createCell(""));
     tr.appendChild(DomHelpers.createCell(String(subject.order)));
     tr.appendChild(DomHelpers.createCell(subject.name));
     tr.appendChild(DomHelpers.createCell(null, minutesInput));
@@ -250,17 +255,18 @@ export class CycleTab {
     return form;
   }
 
-  private renderSubjectActionsCell(
+  private renderReorderCell(
     subject: Subject,
     subjects: Subject[],
     index: number,
     activeContestId: string | null
   ): HTMLElement {
-    const controls = DomHelpers.createElement("div", "corvo-inline-actions corvo-inline-actions-compact");
+    const cell = DomHelpers.createElement("div", "corvo-reorder-cell");
 
     if (index > 0) {
-      controls.appendChild(
+      cell.appendChild(
         DomHelpers.createIconButton("up", "Subir", {
+          className: "corvo-reorder-button",
           onClick: async () => {
             await this.moveSubject(subjects, index, index - 1, activeContestId);
           }
@@ -269,8 +275,9 @@ export class CycleTab {
     }
 
     if (index < subjects.length - 1) {
-      controls.appendChild(
+      cell.appendChild(
         DomHelpers.createIconButton("down", "Descer", {
+          className: "corvo-reorder-button",
           onClick: async () => {
             await this.moveSubject(subjects, index, index + 1, activeContestId);
           }
@@ -278,27 +285,36 @@ export class CycleTab {
       );
     }
 
-    controls.appendChild(
-      DomHelpers.createIconButton(
-        subject.isActive ? "toggleOn" : "toggleOff",
-        subject.isActive ? "Desativar" : "Ativar",
-        {
-          onClick: async () => {
-            try {
-              await this.setSubjectActiveStateUseCase.execute({
-                subjectId: subject.id,
-                isActive: !subject.isActive
-              });
-              await this.onUpdate();
-            } catch (error) {
-              this.notifyError(error, "Não foi possível alterar o status da matéria.");
-            }
-          }
-        }
-      )
-    );
+    return cell;
+  }
 
-    controls.appendChild(
+  private renderStatusCell(
+    subject: Subject,
+    activeContestId: string | null
+  ): HTMLElement {
+    const td = DomHelpers.createElement("td", "corvo-status-cell");
+    const span = DomHelpers.createElement("span", subject.isActive ? "corvo-status-active" : "corvo-status-inactive");
+    span.textContent = subject.isActive ? "Ativa" : "Inativa";
+    td.appendChild(span);
+
+    td.addEventListener("click", async () => {
+      try {
+        await this.setSubjectActiveStateUseCase.execute({
+          subjectId: subject.id,
+          isActive: !subject.isActive
+        });
+        await this.onUpdate();
+      } catch (error) {
+        this.notifyError(error, "Não foi possível alterar o status da matéria.");
+      }
+    });
+
+    return td;
+  }
+
+  private renderEditCell(subject: Subject): HTMLElement {
+    const cell = DomHelpers.createElement("div", "corvo-edit-cell");
+    cell.appendChild(
       DomHelpers.createIconButton("edit", "Editar", {
         onClick: async () => {
           this.editingSubjectId = subject.id;
@@ -306,8 +322,7 @@ export class CycleTab {
         }
       })
     );
-
-    return controls;
+    return cell;
   }
 
   private async moveSubject(
