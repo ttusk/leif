@@ -22,6 +22,23 @@ Corvo is an Obsidian plugin for managing study cycles for public exams.
 - `npm run build`
 - `npm test`
 
+## Sample Vault
+
+A pre-configured test vault is available in `sample-vault/`. It contains:
+
+- The Corvo plugin built and installed
+- Pre-loaded demo data for the **TCE-SP 2026** contest
+- 6 subjects, 15 study items, 7 topics, 30 study sessions
+- A second contest (**SEFAZ-BA 2026**) for testing switching
+
+### How to use the sample vault
+
+1. Open Obsidian
+2. Click "Open folder as vault"
+3. Select the `sample-vault/` folder
+4. The Corvo plugin will be already enabled
+5. Click the raven icon in the left sidebar or use `Corvo: Abrir painel do Corvo`
+
 ## POC Commands
 
 - `Corvo: Abrir painel do Corvo`
