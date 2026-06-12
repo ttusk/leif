@@ -445,6 +445,41 @@ export class DomHelpers {
   }
 
   /**
+   * Creates an inline creation form card with cancel and submit actions.
+   * @param title - Title for the form
+   * @param onSubmit - Handler for form submission
+   * @param onCancel - Handler for cancel action
+   * @returns Form element
+   */
+  static createInlineForm(
+    title: string,
+    onSubmit: (event: Event) => void | Promise<void>,
+    onCancel: () => void | Promise<void>
+  ): HTMLElement {
+    const card = this.createElement("section", "corvo-card corvo-create-form");
+    card.appendChild(this.createSectionSubtitle(title, "add"));
+
+    const form = this.createForm(onSubmit);
+    const actions = this.createElement("div", "corvo-form-actions");
+    actions.appendChild(
+      this.createButton("Cancelar", {
+        className: "corvo-button",
+        onClick: () => onCancel()
+      })
+    );
+    actions.appendChild(
+      this.createButton("Criar", {
+        type: "submit",
+        className: "corvo-primary-button"
+      })
+    );
+
+    card.appendChild(form);
+    card.appendChild(actions);
+    return card;
+  }
+
+  /**
    * Displays an error notification using Obsidian's Notice.
    * Checks for specific error types to provide better messages.
    */

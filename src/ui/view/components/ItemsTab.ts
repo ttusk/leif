@@ -25,6 +25,7 @@ export class ItemsTab {
   private selectedSubjectId: string | null = null;
   private editingItemId: string | null = null;
   private expandedItemId: string | null = null;
+  private isCreatingNew = false;
 
   constructor(
     private readonly dataStore: PluginDataStore,
@@ -41,7 +42,16 @@ export class ItemsTab {
   async render(container: HTMLElement, data: CorvoPluginData): Promise<void> {
     const header = DomHelpers.createElement("div", "corvo-section-header");
     header.appendChild(DomHelpers.createSectionTitle("Itens e PDFs"));
-    header.appendChild(
+    const actions = DomHelpers.createElement("div", "corvo-inline-actions");
+    actions.appendChild(
+      DomHelpers.createIconButton("add", "Novo item", {
+        onClick: async () => {
+          this.isCreatingNew = true;
+          await this.onUpdate();
+        }
+      })
+    );
+    actions.appendChild(
       DomHelpers.createIconButton("download", "Exportar CSV", {
         onClick: async () => {
           try {
@@ -52,6 +62,7 @@ export class ItemsTab {
         }
       })
     );
+    header.appendChild(actions);
     container.appendChild(header);
 
     const subject = this.getSelectedSubject(data);
@@ -66,9 +77,10 @@ export class ItemsTab {
     }
 
     container.appendChild(this.renderSubjectPicker(data));
-    container.appendChild(
-      DomHelpers.createDisclosure("Novo item", this.renderCreateItemForm(subject.id))
-    );
+
+    if (this.isCreatingNew) {
+      container.appendChild(this.renderCreateItemForm(subject.id));
+    }
 
     const progress = await this.getActiveContestProgressDashboardUseCase.execute();
     const subjectProgress = progress.pdfProgressBySubject.find(
@@ -306,26 +318,37 @@ export class ItemsTab {
     const weightInput = DomHelpers.createInput("number", "Peso", "1");
     const questionCountInput = DomHelpers.createInput("number", "Total de questões", "0");
 
-    const form = DomHelpers.createForm(async () => {
-      try {
-        await this.createStudyItemUseCase.execute({
-          id: `${subjectId}-item-${Date.now()}`,
-          subjectId,
-          title: titleInput.value,
-          weight: Number(weightInput.value),
-          questionCount: Number(questionCountInput.value)
-        });
-        await this.onUpdate();
-      } catch (error) {
-        this.notifyError(error, "Não foi possível criar o item.");
+    const form = DomHelpers.createInlineForm(
+      "Novo item",
+      async () => {
+        try {
+          await this.createStudyItemUseCase.execute({
+            id: `${subjectId}-item-${Date.now()}`,
+            subjectId,
+            title: titleInput.value,
+            weight: Number(weightInput.value),
+            questionCount: Number(questionCountInput.value)
+          });
+          titleInput.value = "";
+          weightInput.value = "1";
+          questionCountInput.value = "0";
+          this.isCreatingNew = false;
+          await this.onUpdate();
+        } catch (error) {
+          this.notifyError(error, "Não foi possível criar o item.");
+        }
+      },
+      () => {
+        this.isCreatingNew = false;
+        this.onUpdate();
       }
-    });
+    );
 
-    form.append(
+    const innerForm = form.querySelector("form")!;
+    innerForm.append(
       DomHelpers.createLabel("Título", titleInput),
       DomHelpers.createLabel("Peso", weightInput),
-      DomHelpers.createLabel("Questões", questionCountInput),
-      DomHelpers.createButton("Criar item", { type: "submit", className: "corvo-primary-button" })
+      DomHelpers.createLabel("Questões", questionCountInput)
     );
 
     return form;

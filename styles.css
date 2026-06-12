@@ -380,6 +380,20 @@
   color: var(--text-normal);
 }
 
+.corvo-create-form {
+  border: 1px solid var(--corvo-border);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--background-secondary);
+}
+
+.corvo-form-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  margin-top: 8px;
+}
+
 .corvo-table {
   width: 100%;
   border-collapse: collapse;

@@ -23,6 +23,7 @@ export class CycleTab {
   private readonly updateSubjectConfigurationUseCase: UpdateSubjectConfigurationUseCase;
   private readonly exportToCsvUseCase: ExportToCsvUseCase;
   private editingSubjectId: string | null = null;
+  private isCreatingNew = false;
 
   constructor(
     private readonly dataStore: PluginDataStore,
@@ -42,7 +43,16 @@ export class CycleTab {
   async render(container: HTMLElement, data: CorvoPluginData): Promise<void> {
     const header = DomHelpers.createElement("div", "corvo-section-header");
     header.appendChild(DomHelpers.createSectionTitle("Ciclo e Matérias"));
-    header.appendChild(
+    const actions = DomHelpers.createElement("div", "corvo-inline-actions");
+    actions.appendChild(
+      DomHelpers.createIconButton("add", "Nova matéria", {
+        onClick: async () => {
+          this.isCreatingNew = true;
+          await this.onUpdate();
+        }
+      })
+    );
+    actions.appendChild(
       DomHelpers.createIconButton("download", "Exportar CSV", {
         onClick: async () => {
           try {
@@ -53,13 +63,15 @@ export class CycleTab {
         }
       })
     );
+    header.appendChild(actions);
     container.appendChild(header);
     container.appendChild(
       DomHelpers.createParagraph("Gerencie a ordem, o status, o tempo e a etapa das matérias.")
     );
-    container.appendChild(
-      DomHelpers.createDisclosure("Nova matéria", this.renderCreateSubjectForm(data))
-    );
+
+    if (this.isCreatingNew) {
+      container.appendChild(this.renderCreateSubjectForm(data));
+    }
 
     const activeContest =
       data.contests.find((contest) => contest.id === data.activeContestId) ?? null;
@@ -202,27 +214,37 @@ export class CycleTab {
     const nameInput = DomHelpers.createInput("text", "Nome da matéria");
     const minutesInput = DomHelpers.createInput("number", "Minutos planejados", "60");
 
-    const form = DomHelpers.createForm(async () => {
-      try {
-        if (!activeContestId) {
-          throw new NoActiveContestError();
+    const form = DomHelpers.createInlineForm(
+      "Nova matéria",
+      async () => {
+        try {
+          if (!activeContestId) {
+            throw new NoActiveContestError();
+          }
+          await this.createSubjectUseCase.execute({
+            id: `${activeContestId}-subject-${Date.now()}`,
+            contestId: activeContestId,
+            name: nameInput.value,
+            plannedStudyMinutes: Number(minutesInput.value)
+          });
+          nameInput.value = "";
+          minutesInput.value = "60";
+          this.isCreatingNew = false;
+          await this.onUpdate();
+        } catch (error) {
+          this.notifyError(error, "Não foi possível criar a matéria.");
         }
-        await this.createSubjectUseCase.execute({
-          id: `${activeContestId}-subject-${Date.now()}`,
-          contestId: activeContestId,
-          name: nameInput.value,
-          plannedStudyMinutes: Number(minutesInput.value)
-        });
-        await this.onUpdate();
-      } catch (error) {
-        this.notifyError(error, "Não foi possível criar a matéria.");
+      },
+      () => {
+        this.isCreatingNew = false;
+        this.onUpdate();
       }
-    });
+    );
 
-    form.append(
+    const innerForm = form.querySelector("form")!;
+    innerForm.append(
       DomHelpers.createLabel("Nome", nameInput),
-      DomHelpers.createLabel("Minutos", minutesInput),
-      DomHelpers.createButton("Criar matéria", { type: "submit", className: "corvo-primary-button" })
+      DomHelpers.createLabel("Minutos", minutesInput)
     );
 
     return form;

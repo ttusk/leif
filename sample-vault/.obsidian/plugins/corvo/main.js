@@ -1932,6 +1932,34 @@ var DomHelpers = class {
     return td;
   }
   /**
+   * Creates an inline creation form card with cancel and submit actions.
+   * @param title - Title for the form
+   * @param onSubmit - Handler for form submission
+   * @param onCancel - Handler for cancel action
+   * @returns Form element
+   */
+  static createInlineForm(title, onSubmit, onCancel) {
+    const card = this.createElement("section", "corvo-card corvo-create-form");
+    card.appendChild(this.createSectionSubtitle(title, "add"));
+    const form = this.createForm(onSubmit);
+    const actions = this.createElement("div", "corvo-form-actions");
+    actions.appendChild(
+      this.createButton("Cancelar", {
+        className: "corvo-button",
+        onClick: () => onCancel()
+      })
+    );
+    actions.appendChild(
+      this.createButton("Criar", {
+        type: "submit",
+        className: "corvo-primary-button"
+      })
+    );
+    card.appendChild(form);
+    card.appendChild(actions);
+    return card;
+  }
+  /**
    * Displays an error notification using Obsidian's Notice.
    * Checks for specific error types to provide better messages.
    */
@@ -1947,6 +1975,7 @@ var ContestsTab = class {
     this.dataStore = dataStore;
     this.onUpdate = onUpdate;
     this.editingContestId = null;
+    this.isCreatingNew = false;
     this.createContestUseCase = new CreateContestUseCase(dataStore);
     this.setActiveContestUseCase = new SetActiveContestUseCase(dataStore);
     this.updateContestUseCase = new UpdateContestUseCase(dataStore);
@@ -1956,7 +1985,16 @@ var ContestsTab = class {
   async render(container, data) {
     const header = DomHelpers.createElement("div", "corvo-section-header");
     header.appendChild(DomHelpers.createSectionTitle("Concursos"));
-    header.appendChild(
+    const actions = DomHelpers.createElement("div", "corvo-inline-actions");
+    actions.appendChild(
+      DomHelpers.createIconButton("add", "Novo concurso", {
+        onClick: async () => {
+          this.isCreatingNew = true;
+          await this.onUpdate();
+        }
+      })
+    );
+    actions.appendChild(
       DomHelpers.createIconButton("download", "Exportar CSV", {
         onClick: async () => {
           try {
@@ -1967,13 +2005,14 @@ var ContestsTab = class {
         }
       })
     );
+    header.appendChild(actions);
     container.appendChild(header);
     container.appendChild(
       DomHelpers.createParagraph("Cadastre concursos e defina qual deles est\xE1 ativo.")
     );
-    container.appendChild(
-      DomHelpers.createDisclosure("Novo concurso", this.renderCreateContestForm())
-    );
+    if (this.isCreatingNew) {
+      container.appendChild(this.renderCreateContestForm());
+    }
     const contestsCard = DomHelpers.createCard("Lista de concursos");
     if (data.contests.length === 0) {
       contestsCard.appendChild(DomHelpers.createParagraph("Nenhum concurso cadastrado."));
@@ -2085,35 +2124,33 @@ var ContestsTab = class {
     return tr;
   }
   renderCreateContestForm() {
-    const form = DomHelpers.createForm(async () => {
-      const idInput2 = form.querySelector("[data-field='id']");
-      const nameInput2 = form.querySelector("[data-field='name']");
-      if (!idInput2 || !nameInput2) {
-        return;
-      }
-      try {
-        await this.createContestUseCase.execute({
-          id: idInput2.value.trim(),
-          name: nameInput2.value.trim()
-        });
-        idInput2.value = "";
-        nameInput2.value = "";
-        await this.onUpdate();
-      } catch (error) {
-        this.notifyError(error, "N\xE3o foi poss\xEDvel criar o concurso.");
-      }
-    });
     const idInput = DomHelpers.createInput("text", "ID do concurso");
-    idInput.dataset.field = "id";
     const nameInput = DomHelpers.createInput("text", "Nome do concurso");
-    nameInput.dataset.field = "name";
-    form.append(
+    const form = DomHelpers.createInlineForm(
+      "Novo concurso",
+      async () => {
+        try {
+          await this.createContestUseCase.execute({
+            id: idInput.value.trim(),
+            name: nameInput.value.trim()
+          });
+          idInput.value = "";
+          nameInput.value = "";
+          this.isCreatingNew = false;
+          await this.onUpdate();
+        } catch (error) {
+          this.notifyError(error, "N\xE3o foi poss\xEDvel criar o concurso.");
+        }
+      },
+      () => {
+        this.isCreatingNew = false;
+        this.onUpdate();
+      }
+    );
+    const innerForm = form.querySelector("form");
+    innerForm.append(
       DomHelpers.createLabel("ID", idInput),
-      DomHelpers.createLabel("Nome", nameInput),
-      DomHelpers.createButton("Criar concurso", {
-        type: "submit",
-        className: "corvo-primary-button"
-      })
+      DomHelpers.createLabel("Nome", nameInput)
     );
     return form;
   }
@@ -2129,6 +2166,7 @@ var CycleTab = class {
     this.dataStore = dataStore;
     this.onUpdate = onUpdate;
     this.editingSubjectId = null;
+    this.isCreatingNew = false;
     this.createSubjectUseCase = new CreateSubjectUseCase(dataStore);
     this.listSubjectsForActiveContestUseCase = new ListSubjectsForActiveContestUseCase(dataStore);
     this.reorderSubjectsUseCase = new ReorderSubjectsUseCase(dataStore);
@@ -2142,7 +2180,16 @@ var CycleTab = class {
   async render(container, data) {
     const header = DomHelpers.createElement("div", "corvo-section-header");
     header.appendChild(DomHelpers.createSectionTitle("Ciclo e Mat\xE9rias"));
-    header.appendChild(
+    const actions = DomHelpers.createElement("div", "corvo-inline-actions");
+    actions.appendChild(
+      DomHelpers.createIconButton("add", "Nova mat\xE9ria", {
+        onClick: async () => {
+          this.isCreatingNew = true;
+          await this.onUpdate();
+        }
+      })
+    );
+    actions.appendChild(
       DomHelpers.createIconButton("download", "Exportar CSV", {
         onClick: async () => {
           try {
@@ -2153,13 +2200,14 @@ var CycleTab = class {
         }
       })
     );
+    header.appendChild(actions);
     container.appendChild(header);
     container.appendChild(
       DomHelpers.createParagraph("Gerencie a ordem, o status, o tempo e a etapa das mat\xE9rias.")
     );
-    container.appendChild(
-      DomHelpers.createDisclosure("Nova mat\xE9ria", this.renderCreateSubjectForm(data))
-    );
+    if (this.isCreatingNew) {
+      container.appendChild(this.renderCreateSubjectForm(data));
+    }
     const activeContest = data.contests.find((contest) => contest.id === data.activeContestId) ?? null;
     const subjects = await this.listSubjectsForActiveContestUseCase.execute();
     const card = DomHelpers.createCard(
@@ -2269,26 +2317,36 @@ var CycleTab = class {
     const activeContestId = data.activeContestId;
     const nameInput = DomHelpers.createInput("text", "Nome da mat\xE9ria");
     const minutesInput = DomHelpers.createInput("number", "Minutos planejados", "60");
-    const form = DomHelpers.createForm(async () => {
-      try {
-        if (!activeContestId) {
-          throw new NoActiveContestError();
+    const form = DomHelpers.createInlineForm(
+      "Nova mat\xE9ria",
+      async () => {
+        try {
+          if (!activeContestId) {
+            throw new NoActiveContestError();
+          }
+          await this.createSubjectUseCase.execute({
+            id: `${activeContestId}-subject-${Date.now()}`,
+            contestId: activeContestId,
+            name: nameInput.value,
+            plannedStudyMinutes: Number(minutesInput.value)
+          });
+          nameInput.value = "";
+          minutesInput.value = "60";
+          this.isCreatingNew = false;
+          await this.onUpdate();
+        } catch (error) {
+          this.notifyError(error, "N\xE3o foi poss\xEDvel criar a mat\xE9ria.");
         }
-        await this.createSubjectUseCase.execute({
-          id: `${activeContestId}-subject-${Date.now()}`,
-          contestId: activeContestId,
-          name: nameInput.value,
-          plannedStudyMinutes: Number(minutesInput.value)
-        });
-        await this.onUpdate();
-      } catch (error) {
-        this.notifyError(error, "N\xE3o foi poss\xEDvel criar a mat\xE9ria.");
+      },
+      () => {
+        this.isCreatingNew = false;
+        this.onUpdate();
       }
-    });
-    form.append(
+    );
+    const innerForm = form.querySelector("form");
+    innerForm.append(
       DomHelpers.createLabel("Nome", nameInput),
-      DomHelpers.createLabel("Minutos", minutesInput),
-      DomHelpers.createButton("Criar mat\xE9ria", { type: "submit", className: "corvo-primary-button" })
+      DomHelpers.createLabel("Minutos", minutesInput)
     );
     return form;
   }
@@ -2656,6 +2714,7 @@ var ItemsTab = class {
     this.selectedSubjectId = null;
     this.editingItemId = null;
     this.expandedItemId = null;
+    this.isCreatingNew = false;
     this.createStudyItemUseCase = new CreateStudyItemUseCase(dataStore);
     this.addStudyItemResourceReferenceUseCase = new AddStudyItemResourceReferenceUseCase(dataStore);
     this.getActiveContestProgressDashboardUseCase = new GetActiveContestProgressDashboardUseCase(dataStore);
@@ -2666,7 +2725,16 @@ var ItemsTab = class {
   async render(container, data) {
     const header = DomHelpers.createElement("div", "corvo-section-header");
     header.appendChild(DomHelpers.createSectionTitle("Itens e PDFs"));
-    header.appendChild(
+    const actions = DomHelpers.createElement("div", "corvo-inline-actions");
+    actions.appendChild(
+      DomHelpers.createIconButton("add", "Novo item", {
+        onClick: async () => {
+          this.isCreatingNew = true;
+          await this.onUpdate();
+        }
+      })
+    );
+    actions.appendChild(
       DomHelpers.createIconButton("download", "Exportar CSV", {
         onClick: async () => {
           try {
@@ -2677,6 +2745,7 @@ var ItemsTab = class {
         }
       })
     );
+    header.appendChild(actions);
     container.appendChild(header);
     const subject = this.getSelectedSubject(data);
     if (!subject) {
@@ -2689,9 +2758,9 @@ var ItemsTab = class {
       return;
     }
     container.appendChild(this.renderSubjectPicker(data));
-    container.appendChild(
-      DomHelpers.createDisclosure("Novo item", this.renderCreateItemForm(subject.id))
-    );
+    if (this.isCreatingNew) {
+      container.appendChild(this.renderCreateItemForm(subject.id));
+    }
     const progress = await this.getActiveContestProgressDashboardUseCase.execute();
     const subjectProgress = progress.pdfProgressBySubject.find(
       (entry) => entry.subjectId === subject.id
@@ -2884,25 +2953,36 @@ var ItemsTab = class {
     const titleInput = DomHelpers.createInput("text", "T\xEDtulo do item");
     const weightInput = DomHelpers.createInput("number", "Peso", "1");
     const questionCountInput = DomHelpers.createInput("number", "Total de quest\xF5es", "0");
-    const form = DomHelpers.createForm(async () => {
-      try {
-        await this.createStudyItemUseCase.execute({
-          id: `${subjectId}-item-${Date.now()}`,
-          subjectId,
-          title: titleInput.value,
-          weight: Number(weightInput.value),
-          questionCount: Number(questionCountInput.value)
-        });
-        await this.onUpdate();
-      } catch (error) {
-        this.notifyError(error, "N\xE3o foi poss\xEDvel criar o item.");
+    const form = DomHelpers.createInlineForm(
+      "Novo item",
+      async () => {
+        try {
+          await this.createStudyItemUseCase.execute({
+            id: `${subjectId}-item-${Date.now()}`,
+            subjectId,
+            title: titleInput.value,
+            weight: Number(weightInput.value),
+            questionCount: Number(questionCountInput.value)
+          });
+          titleInput.value = "";
+          weightInput.value = "1";
+          questionCountInput.value = "0";
+          this.isCreatingNew = false;
+          await this.onUpdate();
+        } catch (error) {
+          this.notifyError(error, "N\xE3o foi poss\xEDvel criar o item.");
+        }
+      },
+      () => {
+        this.isCreatingNew = false;
+        this.onUpdate();
       }
-    });
-    form.append(
+    );
+    const innerForm = form.querySelector("form");
+    innerForm.append(
       DomHelpers.createLabel("T\xEDtulo", titleInput),
       DomHelpers.createLabel("Peso", weightInput),
-      DomHelpers.createLabel("Quest\xF5es", questionCountInput),
-      DomHelpers.createButton("Criar item", { type: "submit", className: "corvo-primary-button" })
+      DomHelpers.createLabel("Quest\xF5es", questionCountInput)
     );
     return form;
   }
@@ -3007,6 +3087,7 @@ var SessionsTab = class {
     this.dataStore = dataStore;
     this.onUpdate = onUpdate;
     this.editingSessionId = null;
+    this.isCreatingNew = false;
     this.registerStudySessionUseCase = new RegisterStudySessionUseCase(dataStore);
     this.deleteStudySessionUseCase = new DeleteStudySessionUseCase(dataStore);
     this.getActiveContestSummaryUseCase = new GetActiveContestSummaryUseCase(dataStore);
@@ -3017,7 +3098,16 @@ var SessionsTab = class {
   async render(container, data) {
     const header = DomHelpers.createElement("div", "corvo-section-header");
     header.appendChild(DomHelpers.createSectionTitle("Sess\xF5es"));
-    header.appendChild(
+    const actions = DomHelpers.createElement("div", "corvo-inline-actions");
+    actions.appendChild(
+      DomHelpers.createIconButton("add", "Nova sess\xE3o", {
+        onClick: async () => {
+          this.isCreatingNew = true;
+          await this.onUpdate();
+        }
+      })
+    );
+    actions.appendChild(
       DomHelpers.createIconButton("download", "Exportar CSV", {
         onClick: async () => {
           try {
@@ -3028,6 +3118,7 @@ var SessionsTab = class {
         }
       })
     );
+    header.appendChild(actions);
     container.appendChild(header);
     container.appendChild(
       DomHelpers.createParagraph("Registre sess\xF5es manualmente e acompanhe o hist\xF3rico recente.")
@@ -3043,7 +3134,9 @@ var SessionsTab = class {
       return;
     }
     const subjects = data.subjects.filter((subject) => subject.contestId === activeContest.id);
-    container.appendChild(this.renderSessionForm(activeContest.id, subjects, data));
+    if (this.isCreatingNew) {
+      container.appendChild(this.renderSessionForm(activeContest.id, subjects, data));
+    }
     const recentSessions = DomHelpers.createCard("Hist\xF3rico recente");
     const sessions = data.studySessions.filter((session) => session.contestId === activeContest.id).slice().reverse().slice(0, 10);
     if (sessions.length === 0) {
@@ -3147,6 +3240,8 @@ var SessionsTab = class {
     return tr;
   }
   renderSessionForm(contestId, subjects, data) {
+    const card = DomHelpers.createElement("section", "corvo-card corvo-create-form");
+    card.appendChild(DomHelpers.createSectionSubtitle("Nova sess\xE3o", "add"));
     const form = DomHelpers.createForm(async () => {
       try {
         await this.registerStudySessionUseCase.execute({
@@ -3161,12 +3256,12 @@ var SessionsTab = class {
           correctAnswers: typeSelect.value === "questions" ? Number(correctInput.value) : void 0,
           completed: true
         });
+        this.isCreatingNew = false;
         await this.onUpdate();
       } catch (error) {
         this.notifyError(error, "N\xE3o foi poss\xEDvel registrar a sess\xE3o.");
       }
     });
-    form.classList.add("corvo-card", "corvo-form-sheet");
     const subjectSelect = DomHelpers.createSelect(
       subjects.map((subject) => [subject.id, subject.name])
     );
@@ -3214,12 +3309,21 @@ var SessionsTab = class {
     );
     form.append(
       formGrid,
+      DomHelpers.createButton("Cancelar", {
+        type: "button",
+        className: "corvo-button",
+        onClick: () => {
+          this.isCreatingNew = false;
+          this.onUpdate();
+        }
+      }),
       DomHelpers.createButton("Registrar sess\xE3o", {
         type: "submit",
         className: "corvo-primary-button"
       })
     );
-    return form;
+    card.appendChild(form);
+    return card;
   }
   formatSessionType(type) {
     if (type === "questions") return "Quest\xF5es";
@@ -3336,6 +3440,7 @@ var TopicsTab = class {
     this.selectedSubjectId = null;
     this.editingTopicId = null;
     this.expandedTopicId = null;
+    this.isCreatingNew = false;
     this.createTopicUseCase = new CreateTopicUseCase(dataStore);
     this.addTopicResourceReferenceUseCase = new AddTopicResourceReferenceUseCase(dataStore);
     this.linkQuestionNotebookUseCase = new LinkQuestionNotebookUseCase(dataStore);
@@ -3346,7 +3451,16 @@ var TopicsTab = class {
   async render(container, data) {
     const header = DomHelpers.createElement("div", "corvo-section-header");
     header.appendChild(DomHelpers.createSectionTitle("Assuntos e Quest\xF5es"));
-    header.appendChild(
+    const actions = DomHelpers.createElement("div", "corvo-inline-actions");
+    actions.appendChild(
+      DomHelpers.createIconButton("add", "Novo assunto", {
+        onClick: async () => {
+          this.isCreatingNew = true;
+          await this.onUpdate();
+        }
+      })
+    );
+    actions.appendChild(
       DomHelpers.createIconButton("download", "Exportar CSV", {
         onClick: async () => {
           try {
@@ -3357,6 +3471,7 @@ var TopicsTab = class {
         }
       })
     );
+    header.appendChild(actions);
     container.appendChild(header);
     const subject = this.getSelectedSubject(data);
     if (!subject) {
@@ -3369,9 +3484,9 @@ var TopicsTab = class {
       return;
     }
     container.appendChild(this.renderSubjectPicker(data));
-    container.appendChild(
-      DomHelpers.createDisclosure("Novo assunto", this.renderCreateTopicForm(subject.id))
-    );
+    if (this.isCreatingNew) {
+      container.appendChild(this.renderCreateTopicForm(subject.id));
+    }
     const topics = data.topics.filter((topic) => topic.subjectId === subject.id).sort((left, right) => left.order - right.order);
     const card = DomHelpers.createCard(`Assuntos de ${subject.name}`);
     if (topics.length === 0) {
@@ -3598,23 +3713,33 @@ var TopicsTab = class {
   renderCreateTopicForm(subjectId) {
     const nameInput = DomHelpers.createInput("text", "Nome do assunto");
     const orderInput = DomHelpers.createInput("number", "Ordem", "1");
-    const form = DomHelpers.createForm(async () => {
-      try {
-        await this.createTopicUseCase.execute({
-          id: `${subjectId}-topic-${Date.now()}`,
-          subjectId,
-          name: nameInput.value,
-          order: Number(orderInput.value)
-        });
-        await this.onUpdate();
-      } catch (error) {
-        this.notifyError(error, "N\xE3o foi poss\xEDvel criar o assunto.");
+    const form = DomHelpers.createInlineForm(
+      "Novo assunto",
+      async () => {
+        try {
+          await this.createTopicUseCase.execute({
+            id: `${subjectId}-topic-${Date.now()}`,
+            subjectId,
+            name: nameInput.value,
+            order: Number(orderInput.value)
+          });
+          nameInput.value = "";
+          orderInput.value = "1";
+          this.isCreatingNew = false;
+          await this.onUpdate();
+        } catch (error) {
+          this.notifyError(error, "N\xE3o foi poss\xEDvel criar o assunto.");
+        }
+      },
+      () => {
+        this.isCreatingNew = false;
+        this.onUpdate();
       }
-    });
-    form.append(
+    );
+    const innerForm = form.querySelector("form");
+    innerForm.append(
       DomHelpers.createLabel("Nome", nameInput),
-      DomHelpers.createLabel("Ordem", orderInput),
-      DomHelpers.createButton("Criar assunto", { type: "submit", className: "corvo-primary-button" })
+      DomHelpers.createLabel("Ordem", orderInput)
     );
     return form;
   }
@@ -3941,7 +4066,7 @@ function registerCorvoView(plugin, dataStore) {
 }
 async function openCorvoView(plugin) {
   const existingLeaf = plugin.app.workspace.getLeavesOfType(CORVO_VIEW_TYPE)[0];
-  const leaf = existingLeaf ?? plugin.app.workspace.getRightLeaf(false);
+  const leaf = existingLeaf ?? plugin.app.workspace.getLeaf();
   await leaf.setViewState({
     type: CORVO_VIEW_TYPE,
     active: true

@@ -21,7 +21,7 @@ export function registerCorvoView(plugin: Obsidian.Plugin, dataStore: PluginData
 
 export async function openCorvoView(plugin: Obsidian.Plugin): Promise<void> {
   const existingLeaf = plugin.app.workspace.getLeavesOfType(CORVO_VIEW_TYPE)[0];
-  const leaf = existingLeaf ?? plugin.app.workspace.getRightLeaf(false);
+  const leaf = existingLeaf ?? plugin.app.workspace.getLeaf();
 
   await leaf.setViewState({
     type: CORVO_VIEW_TYPE,

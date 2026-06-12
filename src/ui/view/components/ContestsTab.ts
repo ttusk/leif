@@ -20,6 +20,7 @@ export class ContestsTab {
   private readonly exportToCsvUseCase: ExportToCsvUseCase;
 
   private editingContestId: string | null = null;
+  private isCreatingNew = false;
 
   constructor(
     private readonly dataStore: PluginDataStore,
@@ -35,7 +36,16 @@ export class ContestsTab {
   async render(container: HTMLElement, data: CorvoPluginData): Promise<void> {
     const header = DomHelpers.createElement("div", "corvo-section-header");
     header.appendChild(DomHelpers.createSectionTitle("Concursos"));
-    header.appendChild(
+    const actions = DomHelpers.createElement("div", "corvo-inline-actions");
+    actions.appendChild(
+      DomHelpers.createIconButton("add", "Novo concurso", {
+        onClick: async () => {
+          this.isCreatingNew = true;
+          await this.onUpdate();
+        }
+      })
+    );
+    actions.appendChild(
       DomHelpers.createIconButton("download", "Exportar CSV", {
         onClick: async () => {
           try {
@@ -46,13 +56,15 @@ export class ContestsTab {
         }
       })
     );
+    header.appendChild(actions);
     container.appendChild(header);
     container.appendChild(
       DomHelpers.createParagraph("Cadastre concursos e defina qual deles está ativo.")
     );
-    container.appendChild(
-      DomHelpers.createDisclosure("Novo concurso", this.renderCreateContestForm())
-    );
+
+    if (this.isCreatingNew) {
+      container.appendChild(this.renderCreateContestForm());
+    }
 
     const contestsCard = DomHelpers.createCard("Lista de concursos");
     if (data.contests.length === 0) {
@@ -185,39 +197,35 @@ export class ContestsTab {
   }
 
   private renderCreateContestForm(): HTMLElement {
-    const form = DomHelpers.createForm(async () => {
-      const idInput = form.querySelector<HTMLInputElement>("[data-field='id']");
-      const nameInput = form.querySelector<HTMLInputElement>("[data-field='name']");
-
-      if (!idInput || !nameInput) {
-        return;
-      }
-
-      try {
-        await this.createContestUseCase.execute({
-          id: idInput.value.trim(),
-          name: nameInput.value.trim()
-        });
-        idInput.value = "";
-        nameInput.value = "";
-        await this.onUpdate();
-      } catch (error) {
-        this.notifyError(error, "Não foi possível criar o concurso.");
-      }
-    });
-
     const idInput = DomHelpers.createInput("text", "ID do concurso");
-    idInput.dataset.field = "id";
     const nameInput = DomHelpers.createInput("text", "Nome do concurso");
-    nameInput.dataset.field = "name";
 
-    form.append(
+    const form = DomHelpers.createInlineForm(
+      "Novo concurso",
+      async () => {
+        try {
+          await this.createContestUseCase.execute({
+            id: idInput.value.trim(),
+            name: nameInput.value.trim()
+          });
+          idInput.value = "";
+          nameInput.value = "";
+          this.isCreatingNew = false;
+          await this.onUpdate();
+        } catch (error) {
+          this.notifyError(error, "Não foi possível criar o concurso.");
+        }
+      },
+      () => {
+        this.isCreatingNew = false;
+        this.onUpdate();
+      }
+    );
+
+    const innerForm = form.querySelector("form")!;
+    innerForm.append(
       DomHelpers.createLabel("ID", idInput),
-      DomHelpers.createLabel("Nome", nameInput),
-      DomHelpers.createButton("Criar concurso", {
-        type: "submit",
-        className: "corvo-primary-button"
-      })
+      DomHelpers.createLabel("Nome", nameInput)
     );
 
     return form;

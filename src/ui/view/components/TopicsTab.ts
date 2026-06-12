@@ -25,6 +25,7 @@ export class TopicsTab {
   private selectedSubjectId: string | null = null;
   private editingTopicId: string | null = null;
   private expandedTopicId: string | null = null;
+  private isCreatingNew = false;
 
   constructor(
     private readonly dataStore: PluginDataStore,
@@ -41,7 +42,16 @@ export class TopicsTab {
   async render(container: HTMLElement, data: CorvoPluginData): Promise<void> {
     const header = DomHelpers.createElement("div", "corvo-section-header");
     header.appendChild(DomHelpers.createSectionTitle("Assuntos e Questões"));
-    header.appendChild(
+    const actions = DomHelpers.createElement("div", "corvo-inline-actions");
+    actions.appendChild(
+      DomHelpers.createIconButton("add", "Novo assunto", {
+        onClick: async () => {
+          this.isCreatingNew = true;
+          await this.onUpdate();
+        }
+      })
+    );
+    actions.appendChild(
       DomHelpers.createIconButton("download", "Exportar CSV", {
         onClick: async () => {
           try {
@@ -52,6 +62,7 @@ export class TopicsTab {
         }
       })
     );
+    header.appendChild(actions);
     container.appendChild(header);
 
     const subject = this.getSelectedSubject(data);
@@ -66,9 +77,10 @@ export class TopicsTab {
     }
 
     container.appendChild(this.renderSubjectPicker(data));
-    container.appendChild(
-      DomHelpers.createDisclosure("Novo assunto", this.renderCreateTopicForm(subject.id))
-    );
+
+    if (this.isCreatingNew) {
+      container.appendChild(this.renderCreateTopicForm(subject.id));
+    }
 
     const topics = data.topics
       .filter((topic) => topic.subjectId === subject.id)
@@ -339,24 +351,34 @@ export class TopicsTab {
     const nameInput = DomHelpers.createInput("text", "Nome do assunto");
     const orderInput = DomHelpers.createInput("number", "Ordem", "1");
 
-    const form = DomHelpers.createForm(async () => {
-      try {
-        await this.createTopicUseCase.execute({
-          id: `${subjectId}-topic-${Date.now()}`,
-          subjectId,
-          name: nameInput.value,
-          order: Number(orderInput.value)
-        });
-        await this.onUpdate();
-      } catch (error) {
-        this.notifyError(error, "Não foi possível criar o assunto.");
+    const form = DomHelpers.createInlineForm(
+      "Novo assunto",
+      async () => {
+        try {
+          await this.createTopicUseCase.execute({
+            id: `${subjectId}-topic-${Date.now()}`,
+            subjectId,
+            name: nameInput.value,
+            order: Number(orderInput.value)
+          });
+          nameInput.value = "";
+          orderInput.value = "1";
+          this.isCreatingNew = false;
+          await this.onUpdate();
+        } catch (error) {
+          this.notifyError(error, "Não foi possível criar o assunto.");
+        }
+      },
+      () => {
+        this.isCreatingNew = false;
+        this.onUpdate();
       }
-    });
+    );
 
-    form.append(
+    const innerForm = form.querySelector("form")!;
+    innerForm.append(
       DomHelpers.createLabel("Nome", nameInput),
-      DomHelpers.createLabel("Ordem", orderInput),
-      DomHelpers.createButton("Criar assunto", { type: "submit", className: "corvo-primary-button" })
+      DomHelpers.createLabel("Ordem", orderInput)
     );
 
     return form;

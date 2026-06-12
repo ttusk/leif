@@ -22,6 +22,7 @@ export class SessionsTab {
   private readonly exportToCsvUseCase: ExportToCsvUseCase;
 
   private editingSessionId: string | null = null;
+  private isCreatingNew = false;
 
   constructor(
     private readonly dataStore: PluginDataStore,
@@ -38,7 +39,16 @@ export class SessionsTab {
   async render(container: HTMLElement, data: CorvoPluginData): Promise<void> {
     const header = DomHelpers.createElement("div", "corvo-section-header");
     header.appendChild(DomHelpers.createSectionTitle("Sessões"));
-    header.appendChild(
+    const actions = DomHelpers.createElement("div", "corvo-inline-actions");
+    actions.appendChild(
+      DomHelpers.createIconButton("add", "Nova sessão", {
+        onClick: async () => {
+          this.isCreatingNew = true;
+          await this.onUpdate();
+        }
+      })
+    );
+    actions.appendChild(
       DomHelpers.createIconButton("download", "Exportar CSV", {
         onClick: async () => {
           try {
@@ -49,6 +59,7 @@ export class SessionsTab {
         }
       })
     );
+    header.appendChild(actions);
     container.appendChild(header);
     container.appendChild(
       DomHelpers.createParagraph("Registre sessões manualmente e acompanhe o histórico recente.")
@@ -69,7 +80,9 @@ export class SessionsTab {
 
     const subjects = data.subjects.filter((subject) => subject.contestId === activeContest.id);
 
-    container.appendChild(this.renderSessionForm(activeContest.id, subjects, data));
+    if (this.isCreatingNew) {
+      container.appendChild(this.renderSessionForm(activeContest.id, subjects, data));
+    }
 
     const recentSessions = DomHelpers.createCard("Histórico recente");
     const sessions = data.studySessions
@@ -205,6 +218,9 @@ export class SessionsTab {
     subjects: Array<{ id: string; name: string }>,
     data: CorvoPluginData
   ): HTMLElement {
+    const card = DomHelpers.createElement("section", "corvo-card corvo-create-form");
+    card.appendChild(DomHelpers.createSectionSubtitle("Nova sessão", "add"));
+
     const form = DomHelpers.createForm(async () => {
       try {
         await this.registerStudySessionUseCase.execute({
@@ -220,12 +236,12 @@ export class SessionsTab {
             typeSelect.value === "questions" ? Number(correctInput.value) : undefined,
           completed: true
         });
+        this.isCreatingNew = false;
         await this.onUpdate();
       } catch (error) {
         this.notifyError(error, "Não foi possível registrar a sessão.");
       }
     });
-    form.classList.add("corvo-card", "corvo-form-sheet");
 
     const subjectSelect = DomHelpers.createSelect(
       subjects.map((subject) => [subject.id, subject.name])
@@ -285,13 +301,22 @@ export class SessionsTab {
     );
     form.append(
       formGrid,
+      DomHelpers.createButton("Cancelar", {
+        type: "button",
+        className: "corvo-button",
+        onClick: () => {
+          this.isCreatingNew = false;
+          this.onUpdate();
+        }
+      }),
       DomHelpers.createButton("Registrar sessão", {
         type: "submit",
         className: "corvo-primary-button"
       })
     );
 
-    return form;
+    card.appendChild(form);
+    return card;
   }
 
   private formatSessionType(type: "pdf" | "video" | "questions"): string {

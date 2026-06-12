@@ -62,10 +62,14 @@ export class Workspace {
     return this.leaves.filter((leaf) => leaf.view?.getViewType() === type);
   }
 
-  getRightLeaf(_split: boolean): WorkspaceLeaf {
+  getLeaf(): WorkspaceLeaf {
     const leaf = new WorkspaceLeaf(this);
     this.leaves.push(leaf);
     return leaf;
+  }
+
+  getRightLeaf(_split: boolean): WorkspaceLeaf {
+    return this.getLeaf();
   }
 
   async revealLeaf(_leaf: WorkspaceLeaf): Promise<void> {
