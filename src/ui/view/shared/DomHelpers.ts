@@ -1,4 +1,4 @@
-import { setIcon } from "obsidian";
+import { setIcon, setTooltip } from "obsidian";
 import { ICON_NAMES } from "@/ui/constants";
 
 /**
@@ -307,7 +307,6 @@ export class DomHelpers {
     const button = document.createElement("button");
     button.type = "button";
     button.className = options.className || "corvo-icon-button";
-    button.title = title;
     button.appendChild(this.createIcon(icon, "corvo-icon-button-icon"));
 
     if (options.dataset) {
@@ -318,6 +317,12 @@ export class DomHelpers {
 
     if (options.onClick) {
       button.addEventListener("click", options.onClick);
+    }
+
+    if (typeof setTooltip === "function") {
+      setTooltip(button, title, { delay: 300 });
+    } else {
+      button.title = title;
     }
 
     return button;

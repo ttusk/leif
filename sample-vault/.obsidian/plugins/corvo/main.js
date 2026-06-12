@@ -1608,7 +1608,6 @@ var DomHelpers = class {
     const button = document.createElement("button");
     button.type = "button";
     button.className = options.className || "corvo-icon-button";
-    button.title = title;
     button.appendChild(this.createIcon(icon, "corvo-icon-button-icon"));
     if (options.dataset) {
       Object.entries(options.dataset).forEach(([key, value]) => {
@@ -1617,6 +1616,11 @@ var DomHelpers = class {
     }
     if (options.onClick) {
       button.addEventListener("click", options.onClick);
+    }
+    if (typeof import_obsidian2.setTooltip === "function") {
+      (0, import_obsidian2.setTooltip)(button, title, { delay: 300 });
+    } else {
+      button.title = title;
     }
     return button;
   }
