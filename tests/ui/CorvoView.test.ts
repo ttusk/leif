@@ -131,8 +131,7 @@ describe("CorvoView", () => {
     expect(leaf.containerEl.textContent).toContain("Portuguese");
     expect(leaf.containerEl.textContent).toContain("Constitutional Law");
     expect(leaf.containerEl.textContent).toContain("20");
-    expect(leaf.containerEl.textContent).toContain("Planejamento e acompanhamento dos estudos.");
-    expect(leaf.containerEl.textContent).toContain("Finalizar ciclo atual");
+    expect(leaf.containerEl.textContent).toContain("Visão geral do concurso ativo.");
   });
 
   it("switches the active contest from the contests tab and rerenders the dashboard", async () => {
@@ -187,6 +186,23 @@ describe("CorvoView", () => {
     expect(leaf.containerEl.textContent).toContain("11/06/2026");
     expect(leaf.containerEl.textContent).not.toMatch(/\b\d{2}:\d{2}\b/);
     expect(leaf.containerEl.textContent).toContain("PDF");
+  });
+
+  it("shows cycle advance button in sessions tab", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiData(dataStore);
+
+    const { leaf } = await openCorvoView(dataStore);
+    const sessionsTabButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='sessions']");
+
+    if (!sessionsTabButton) {
+      throw new Error("Sessions tab button was not rendered.");
+    }
+
+    sessionsTabButton.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(leaf.containerEl.textContent).toContain("Finalizar ciclo atual");
   });
 
   it("deletes a session from recent history", async () => {

@@ -1,5 +1,6 @@
 import { Notice } from "obsidian";
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import { AdvanceCycleUseCase } from "@/application/use-cases/AdvanceCycleUseCase";
 import { DeleteStudySessionUseCase } from "@/application/use-cases/DeleteStudySessionUseCase";
 import { ExportToCsvUseCase } from "@/application/use-cases/ExportToCsvUseCase";
 import { GetActiveContestSummaryUseCase } from "@/application/use-cases/GetActiveContestSummaryUseCase";
@@ -20,6 +21,7 @@ export class SessionsTab {
   private readonly listSubjectsForActiveContestUseCase: ListSubjectsForActiveContestUseCase;
   private readonly updateStudySessionUseCase: UpdateStudySessionUseCase;
   private readonly exportToCsvUseCase: ExportToCsvUseCase;
+  private readonly advanceCycleUseCase: AdvanceCycleUseCase;
 
   private editingSessionId: string | null = null;
   private isCreatingNew = false;
@@ -34,6 +36,7 @@ export class SessionsTab {
     this.listSubjectsForActiveContestUseCase = new ListSubjectsForActiveContestUseCase(dataStore);
     this.updateStudySessionUseCase = new UpdateStudySessionUseCase(dataStore);
     this.exportToCsvUseCase = new ExportToCsvUseCase(dataStore);
+    this.advanceCycleUseCase = new AdvanceCycleUseCase(dataStore);
   }
 
   async render(container: HTMLElement, data: CorvoPluginData): Promise<void> {
@@ -67,6 +70,25 @@ export class SessionsTab {
 
     const activeContest =
       data.contests.find((contest) => contest.id === data.activeContestId) ?? null;
+
+    if (activeContest) {
+      const cycleAction = DomHelpers.createElement("div", "corvo-cycle-action");
+      cycleAction.appendChild(
+        DomHelpers.createButton("Finalizar ciclo atual", {
+          className: "corvo-primary-button",
+          icon: "refresh-cw",
+          onClick: async () => {
+            try {
+              await this.advanceCycleUseCase.execute();
+              await this.onUpdate();
+            } catch (error) {
+              this.notifyError(error, "Não foi possível finalizar o ciclo.");
+            }
+          }
+        })
+      );
+      container.appendChild(cycleAction);
+    }
 
     if (!activeContest) {
       container.appendChild(

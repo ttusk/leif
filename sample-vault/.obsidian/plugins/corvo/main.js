@@ -23,7 +23,7 @@ __export(main_exports, {
   default: () => CorvoPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian12 = require("obsidian");
+var import_obsidian11 = require("obsidian");
 
 // src/domain/types/CorvoPluginData.ts
 function createDefaultCorvoPluginData() {
@@ -1351,10 +1351,10 @@ function registerCommands(plugin, dataStore) {
 }
 
 // src/ui/settings/CorvoSettingTab.ts
-var import_obsidian11 = require("obsidian");
+var import_obsidian10 = require("obsidian");
 
 // src/ui/view/CorvoView.ts
-var import_obsidian10 = require("obsidian");
+var import_obsidian9 = require("obsidian");
 
 // src/application/use-cases/DeleteContestUseCase.ts
 var DeleteContestUseCase = class {
@@ -2436,16 +2436,12 @@ var CycleTab = class {
 };
 
 // src/ui/view/components/DashboardTab.ts
-var import_obsidian5 = require("obsidian");
 var DashboardTab = class {
   constructor(dataStore, onUpdate) {
     this.dataStore = dataStore;
     this.onUpdate = onUpdate;
-    this.advanceCycleUseCase = new AdvanceCycleUseCase(dataStore);
     this.getActiveCycleSnapshotUseCase = new GetActiveCycleSnapshotUseCase(dataStore);
     this.getActiveContestSummaryUseCase = new GetActiveContestSummaryUseCase(dataStore);
-    this.registerStudySessionUseCase = new RegisterStudySessionUseCase(dataStore);
-    this.listSubjectsForActiveContestUseCase = new ListSubjectsForActiveContestUseCase(dataStore);
   }
   /**
    * Renders the dashboard tab content.
@@ -2466,7 +2462,7 @@ var DashboardTab = class {
     const summary = await this.getActiveContestSummaryUseCase.execute();
     container.appendChild(DomHelpers.createSectionTitle("Dashboard"));
     container.appendChild(
-      DomHelpers.createParagraph("Vis\xE3o geral do concurso ativo e das pr\xF3ximas a\xE7\xF5es.")
+      DomHelpers.createParagraph("Vis\xE3o geral do concurso ativo.")
     );
     const overview = DomHelpers.createCard("Controle do ciclo");
     overview.appendChild(
@@ -2482,33 +2478,6 @@ var DashboardTab = class {
       )
     );
     container.appendChild(overview);
-    const cycleActions = DomHelpers.createCard("A\xE7\xF5es");
-    const actionRow = DomHelpers.createElement("div", "corvo-inline-actions");
-    actionRow.append(
-      DomHelpers.createButton("Finalizar ciclo atual", {
-        className: "corvo-primary-button",
-        onClick: async () => {
-          try {
-            await this.advanceCycleUseCase.execute();
-            await this.onUpdate();
-          } catch (error) {
-            this.notifyError(error, "N\xE3o foi poss\xEDvel finalizar o ciclo.");
-          }
-        }
-      }),
-      DomHelpers.createButton("Registrar sess\xE3o de quest\xF5es", {
-        onClick: async () => {
-          await this.registerQuickSession("questions");
-        }
-      }),
-      DomHelpers.createButton("Registrar sess\xE3o de v\xEDdeo", {
-        onClick: async () => {
-          await this.registerQuickSession("video");
-        }
-      })
-    );
-    cycleActions.appendChild(actionRow);
-    container.appendChild(cycleActions);
     const subjectSummaryCard = DomHelpers.createCard("Resumo por mat\xE9ria");
     subjectSummaryCard.appendChild(
       DomHelpers.createTable(
@@ -2532,44 +2501,10 @@ var DashboardTab = class {
     const parts = id.split("-");
     return parts.length > 0 ? parts[parts.length - 1] : id;
   }
-  /**
-   * Registers a quick study session for the current subject.
-   */
-  async registerQuickSession(type) {
-    const data = await this.dataStore.load();
-    if (!data.activeContestId) {
-      new import_obsidian5.Notice("Nenhum concurso ativo.");
-      return;
-    }
-    const subject = (await this.listSubjectsForActiveContestUseCase.execute())[0];
-    if (!subject) {
-      new import_obsidian5.Notice("Nenhuma mat\xE9ria ativa encontrada.");
-      return;
-    }
-    const topic = data.topics.find((candidate) => candidate.subjectId === subject.id);
-    await this.registerStudySessionUseCase.execute({
-      id: `${type}-${Date.now()}`,
-      contestId: data.activeContestId,
-      subjectId: subject.id,
-      topicId: topic?.id,
-      type,
-      studiedAt: (/* @__PURE__ */ new Date()).toISOString(),
-      pagesOrCount: type === "questions" ? 10 : 1,
-      correctAnswers: type === "questions" ? 8 : void 0,
-      completed: true
-    });
-    await this.onUpdate();
-  }
-  /**
-   * Displays an error notification.
-   */
-  notifyError(error, fallbackMessage) {
-    new import_obsidian5.Notice(error instanceof Error ? error.message : fallbackMessage);
-  }
 };
 
 // src/ui/view/components/ItemsTab.ts
-var import_obsidian6 = require("obsidian");
+var import_obsidian5 = require("obsidian");
 
 // src/application/use-cases/AddStudyItemResourceReferenceUseCase.ts
 var AddStudyItemResourceReferenceUseCase = class {
@@ -2995,12 +2930,12 @@ var ItemsTab = class {
     return subjects.find((subject) => subject.id === this.selectedSubjectId) ?? subjects[0];
   }
   notifyError(error, fallbackMessage) {
-    new import_obsidian6.Notice(error instanceof Error ? error.message : fallbackMessage);
+    new import_obsidian5.Notice(error instanceof Error ? error.message : fallbackMessage);
   }
 };
 
 // src/ui/view/components/SessionsTab.ts
-var import_obsidian7 = require("obsidian");
+var import_obsidian6 = require("obsidian");
 
 // src/application/use-cases/DeleteStudySessionUseCase.ts
 var DeleteStudySessionUseCase = class {
@@ -3083,6 +3018,7 @@ var SessionsTab = class {
     this.listSubjectsForActiveContestUseCase = new ListSubjectsForActiveContestUseCase(dataStore);
     this.updateStudySessionUseCase = new UpdateStudySessionUseCase(dataStore);
     this.exportToCsvUseCase = new ExportToCsvUseCase(dataStore);
+    this.advanceCycleUseCase = new AdvanceCycleUseCase(dataStore);
   }
   async render(container, data) {
     const header = DomHelpers.createElement("div", "corvo-section-header");
@@ -3113,6 +3049,24 @@ var SessionsTab = class {
       DomHelpers.createParagraph("Registre sess\xF5es manualmente e acompanhe o hist\xF3rico recente.")
     );
     const activeContest = data.contests.find((contest) => contest.id === data.activeContestId) ?? null;
+    if (activeContest) {
+      const cycleAction = DomHelpers.createElement("div", "corvo-cycle-action");
+      cycleAction.appendChild(
+        DomHelpers.createButton("Finalizar ciclo atual", {
+          className: "corvo-primary-button",
+          icon: "refresh-cw",
+          onClick: async () => {
+            try {
+              await this.advanceCycleUseCase.execute();
+              await this.onUpdate();
+            } catch (error) {
+              this.notifyError(error, "N\xE3o foi poss\xEDvel finalizar o ciclo.");
+            }
+          }
+        })
+      );
+      container.appendChild(cycleAction);
+    }
     if (!activeContest) {
       container.appendChild(
         DomHelpers.createEmptyState(
@@ -3326,12 +3280,12 @@ var SessionsTab = class {
     return localDate.toISOString().split("T")[0];
   }
   notifyError(error, fallbackMessage) {
-    new import_obsidian7.Notice(error instanceof Error ? error.message : fallbackMessage);
+    new import_obsidian6.Notice(error instanceof Error ? error.message : fallbackMessage);
   }
 };
 
 // src/ui/view/components/TopicsTab.ts
-var import_obsidian8 = require("obsidian");
+var import_obsidian7 = require("obsidian");
 
 // src/application/use-cases/AddTopicResourceReferenceUseCase.ts
 var AddTopicResourceReferenceUseCase = class {
@@ -3752,12 +3706,12 @@ var TopicsTab = class {
     return subjects.find((subject) => subject.id === this.selectedSubjectId) ?? subjects[0];
   }
   notifyError(error, fallbackMessage) {
-    new import_obsidian8.Notice(error instanceof Error ? error.message : fallbackMessage);
+    new import_obsidian7.Notice(error instanceof Error ? error.message : fallbackMessage);
   }
 };
 
 // src/ui/view/components/WallTab.ts
-var import_obsidian9 = require("obsidian");
+var import_obsidian8 = require("obsidian");
 var WallTab = class {
   constructor(dataStore, onUpdate) {
     this.dataStore = dataStore;
@@ -3875,10 +3829,10 @@ var WallTab = class {
   }
   notifyError(error, fallbackMessage) {
     if (error instanceof NoActiveContestError) {
-      new import_obsidian9.Notice("Nenhum concurso ativo. Selecione um concurso para continuar.");
+      new import_obsidian8.Notice("Nenhum concurso ativo. Selecione um concurso para continuar.");
       return;
     }
-    new import_obsidian9.Notice(error instanceof Error ? error.message : fallbackMessage);
+    new import_obsidian8.Notice(error instanceof Error ? error.message : fallbackMessage);
   }
 };
 
@@ -3892,7 +3846,7 @@ var TABS2 = [
   { id: "sessions", label: "Sess\xF5es" },
   { id: "wall", label: "Mural" }
 ];
-var CorvoView = class extends import_obsidian10.ItemView {
+var CorvoView = class extends import_obsidian9.ItemView {
   constructor(leaf, dataStore) {
     super(leaf);
     this.dataStore = dataStore;
@@ -4064,7 +4018,7 @@ async function openCorvoView(plugin) {
 }
 
 // src/ui/settings/CorvoSettingTab.ts
-var CorvoSettingTab = class extends import_obsidian11.PluginSettingTab {
+var CorvoSettingTab = class extends import_obsidian10.PluginSettingTab {
   constructor(app, corvoPlugin) {
     super(app, corvoPlugin);
     this.corvoPlugin = corvoPlugin;
@@ -4092,7 +4046,7 @@ var CorvoSettingTab = class extends import_obsidian11.PluginSettingTab {
 };
 
 // src/main.ts
-var CorvoPlugin = class extends import_obsidian12.Plugin {
+var CorvoPlugin = class extends import_obsidian11.Plugin {
   async onload() {
     this.dataStore = new PluginDataStore(new ObsidianStorageAdapter(this));
     await this.dataStore.load();
