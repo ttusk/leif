@@ -2044,12 +2044,9 @@ var CycleTab = class {
     const table = DomHelpers.createElement("table", "corvo-table");
     const thead = DomHelpers.createElement("thead");
     const headerRow = DomHelpers.createElement("tr");
-    ["", "Ordem", "Mat\xE9ria", "Tempo", "Etapa", "Status", "A\xE7\xF5es"].forEach((header2, index) => {
+    ["Ordem", "Mat\xE9ria", "Tempo", "Etapa", "Status", "A\xE7\xF5es"].forEach((header2) => {
       const th = DomHelpers.createElement("th");
       th.textContent = header2;
-      if (index === 0) {
-        th.className = "corvo-th-reorder";
-      }
       headerRow.appendChild(th);
     });
     thead.appendChild(headerRow);
@@ -2065,9 +2062,8 @@ var CycleTab = class {
     card.appendChild(tableWrapper);
     container.appendChild(card);
   }
-  renderDisplayRow(subject, subjects, index, activeContestId) {
+  renderDisplayRow(subject, _subjects, _index, activeContestId) {
     const tr = DomHelpers.createElement("tr");
-    tr.appendChild(DomHelpers.createCell(null, this.renderReorderCell(subject, subjects, index, activeContestId)));
     tr.appendChild(DomHelpers.createCell(String(subject.order)));
     tr.appendChild(DomHelpers.createCell(subject.name));
     tr.appendChild(DomHelpers.createCell(`${subject.plannedStudyMinutes} min`));
@@ -2129,7 +2125,6 @@ var CycleTab = class {
         })
       );
     }
-    tr.appendChild(DomHelpers.createCell(""));
     tr.appendChild(DomHelpers.createCell(String(subject.order)));
     tr.appendChild(DomHelpers.createCell(subject.name));
     tr.appendChild(DomHelpers.createCell(null, minutesInput));
@@ -2174,30 +2169,6 @@ var CycleTab = class {
       DomHelpers.createLabel("Minutos", minutesInput)
     );
     return form;
-  }
-  renderReorderCell(subject, subjects, index, activeContestId) {
-    const cell = DomHelpers.createElement("div", "corvo-reorder-cell");
-    if (index > 0) {
-      cell.appendChild(
-        DomHelpers.createIconButton("up", "Subir", {
-          className: "corvo-reorder-button",
-          onClick: async () => {
-            await this.moveSubject(subjects, index, index - 1, activeContestId);
-          }
-        })
-      );
-    }
-    if (index < subjects.length - 1) {
-      cell.appendChild(
-        DomHelpers.createIconButton("down", "Descer", {
-          className: "corvo-reorder-button",
-          onClick: async () => {
-            await this.moveSubject(subjects, index, index + 1, activeContestId);
-          }
-        })
-      );
-    }
-    return cell;
   }
   renderStatusCell(subject, activeContestId) {
     const td = DomHelpers.createElement("td", "corvo-status-cell");

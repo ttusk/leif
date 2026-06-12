@@ -78,12 +78,9 @@ export class CycleTab {
     // Header
     const thead = DomHelpers.createElement("thead");
     const headerRow = DomHelpers.createElement("tr");
-    ["", "Ordem", "Matéria", "Tempo", "Etapa", "Status", "Ações"].forEach((header, index) => {
+    ["Ordem", "Matéria", "Tempo", "Etapa", "Status", "Ações"].forEach((header) => {
       const th = DomHelpers.createElement("th");
       th.textContent = header;
-      if (index === 0) {
-        th.className = "corvo-th-reorder";
-      }
       headerRow.appendChild(th);
     });
     thead.appendChild(headerRow);
@@ -107,12 +104,11 @@ export class CycleTab {
 
   private renderDisplayRow(
     subject: Subject,
-    subjects: Subject[],
-    index: number,
+    _subjects: Subject[],
+    _index: number,
     activeContestId: string | null
   ): HTMLElement {
     const tr = DomHelpers.createElement("tr");
-    tr.appendChild(DomHelpers.createCell(null, this.renderReorderCell(subject, subjects, index, activeContestId)));
     tr.appendChild(DomHelpers.createCell(String(subject.order)));
     tr.appendChild(DomHelpers.createCell(subject.name));
     tr.appendChild(DomHelpers.createCell(`${subject.plannedStudyMinutes} min`));
@@ -188,7 +184,6 @@ export class CycleTab {
       );
     }
 
-    tr.appendChild(DomHelpers.createCell(""));
     tr.appendChild(DomHelpers.createCell(String(subject.order)));
     tr.appendChild(DomHelpers.createCell(subject.name));
     tr.appendChild(DomHelpers.createCell(null, minutesInput));
@@ -237,39 +232,6 @@ export class CycleTab {
     );
 
     return form;
-  }
-
-  private renderReorderCell(
-    subject: Subject,
-    subjects: Subject[],
-    index: number,
-    activeContestId: string | null
-  ): HTMLElement {
-    const cell = DomHelpers.createElement("div", "corvo-reorder-cell");
-
-    if (index > 0) {
-      cell.appendChild(
-        DomHelpers.createIconButton("up", "Subir", {
-          className: "corvo-reorder-button",
-          onClick: async () => {
-            await this.moveSubject(subjects, index, index - 1, activeContestId);
-          }
-        })
-      );
-    }
-
-    if (index < subjects.length - 1) {
-      cell.appendChild(
-        DomHelpers.createIconButton("down", "Descer", {
-          className: "corvo-reorder-button",
-          onClick: async () => {
-            await this.moveSubject(subjects, index, index + 1, activeContestId);
-          }
-        })
-      );
-    }
-
-    return cell;
   }
 
   private renderStatusCell(
