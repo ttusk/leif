@@ -1,57 +1,91 @@
 # Leif
 
-Leif é um plugin para Obsidian voltado ao acompanhamento de estudos para concursos públicos.
+![Versão](https://img.shields.io/badge/vers%C3%A3o-0.1.0-blue)
+![Obsidian](https://img.shields.io/badge/Obsidian-1.5.0%2B-7c3aed)
+![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-green)
+![Testes](https://img.shields.io/badge/testes-Vitest-orange)
 
-O objetivo do projeto é trazer para o Obsidian um fluxo estruturado de planejamento, execução e acompanhamento de estudos, com suporte a múltiplos concursos, ciclo de matérias, itens de estudo, assuntos, cadernos de questões, sessões registradas manualmente e mural de referências.
+Leif é um plugin para [Obsidian](https://obsidian.md/) voltado ao acompanhamento de estudos para concursos públicos.
 
-## Principais recursos
+Ele organiza o estudo por concurso, matéria, item, assunto e sessão. A proposta é substituir controles dispersos em planilhas por um painel integrado ao vault, preservando um fluxo simples: escolher o concurso ativo, seguir o ciclo de matérias, registrar sessões e acompanhar progresso.
 
-- Gestão de múltiplos concursos, com separação de dados por concurso.
-- Definição de concurso ativo para estudo e acompanhamento.
-- Cadastro de matérias com ordem, tempo planejado, etapa atual e status no ciclo.
+## Status do projeto
+
+O projeto está em desenvolvimento inicial.
+
+As funcionalidades principais já estão implementadas e cobertas por testes, mas o plugin ainda não foi publicado na lista oficial de plugins da comunidade do Obsidian.
+
+## Funcionalidades
+
+- Gestão de múltiplos concursos.
+- Seleção de concurso ativo.
+- Mural por concurso, com links, notas e informações de referência.
+- Cadastro de matérias com ordem, tempo planejado, etapa e status no ciclo.
 - Ciclo de estudo entre matérias ativas.
-- Recomendação determinística da matéria e do item a estudar no momento.
-- Cadastro de itens de estudo por matéria, com referências de PDF, vídeo e link.
+- Indicação da matéria e do item recomendados para estudo.
+- Cadastro de itens de estudo por matéria.
+- Associação de PDF, vídeo e link aos itens de estudo.
 - Cadastro de assuntos por matéria.
-- Vínculo de caderno de questões por assunto, com link clicável.
-- Registro manual de sessões de estudo de PDF, vídeo e questões.
+- Associação de caderno de questões aos assuntos.
+- Abertura do link do caderno no navegador.
+- Registro manual de sessões de PDF, vídeo e questões.
 - Acompanhamento de páginas lidas, questões resolvidas e acertos.
 - Dashboard com resumo por matéria.
-- Mural por concurso, com links, notas e informações de referência.
 - Exportação de dados em CSV.
 - Vault de exemplo com dados de demonstração.
 
-## Modelo de organização
+## Instalação
 
-O Leif organiza o estudo em torno do concurso ativo.
+### Instalação pela comunidade do Obsidian
 
-Cada concurso possui suas próprias matérias, itens, assuntos, sessões e mural. Uma mesma matéria pode existir em mais de um concurso, mas cada concurso mantém seu próprio recorte, prioridade e histórico.
+O Leif ainda não está disponível na lista oficial de plugins da comunidade.
 
-### Concurso
+Quando for publicado, a instalação poderá ser feita por:
 
-É a unidade principal de organização. O concurso ativo define quais dados serão exibidos e usados no ciclo de estudo.
+1. Abrir `Settings` no Obsidian.
+2. Acessar `Community plugins`.
+3. Procurar por `Leif`.
+4. Instalar e ativar o plugin.
 
-### Matéria
+### Instalação manual
 
-Representa uma disciplina do concurso. Cada matéria pode ter ordem no ciclo, tempo planejado, etapa atual e status ativo ou inativo.
+1. Baixe os arquivos gerados do plugin:
 
-### Item
+   - `main.js`
+   - `styles.css`
+   - `manifest.json`
 
-Representa um material ou unidade de estudo dentro de uma matéria. É o local correto para associar PDFs, vídeos e links.
+2. Crie a pasta do plugin dentro do vault:
 
-### Assunto
+   ```text
+   .obsidian/plugins/leif/
+   ```
 
-Representa um tópico da matéria. É o local correto para associar um caderno de questões.
+3. Copie os três arquivos para essa pasta.
 
-### Sessão
+4. Reinicie o Obsidian.
 
-Representa um registro manual de estudo. Pode ser uma sessão de PDF, vídeo ou questões.
+5. Ative o plugin em `Settings > Community plugins`.
 
-## Interface
+### Instalação com BRAT
 
-O painel principal do Leif é aberto em uma visualização própria do Obsidian.
+Se você usa o plugin [BRAT](https://github.com/TfTHacker/obsidian42-brat), adicione este repositório como plugin beta:
 
-As abas disponíveis são:
+```text
+https://github.com/ttusk/leif
+```
+
+Depois disso, ative o Leif na lista de plugins da comunidade.
+
+## Como usar
+
+Abra o painel principal pela faixa lateral esquerda ou pela paleta de comandos:
+
+```text
+Leif: Abrir painel do Leif
+```
+
+O painel é dividido nas seguintes abas:
 
 - `Dashboard`
 - `Concursos`
@@ -61,61 +95,107 @@ As abas disponíveis são:
 - `Sessões`
 - `Mural`
 
-O painel pode ser aberto pela faixa lateral esquerda ou pela paleta de comandos com:
+### Fluxo recomendado
 
-```text
-Leif: Abrir painel do Leif
-```
+1. Crie ou selecione um concurso.
+2. Cadastre as matérias do concurso.
+3. Defina a ordem e o status das matérias no ciclo.
+4. Cadastre os itens de estudo de cada matéria.
+5. Cadastre os assuntos e associe cadernos de questões quando necessário.
+6. Registre sessões de estudo conforme avançar.
+7. Use o Dashboard para acompanhar progresso e desempenho.
 
-## Instalação para desenvolvimento
+## Conceitos principais
 
-Clone o repositório e instale as dependências:
+### Concurso
 
-```bash
-npm install
-```
+É a unidade principal de organização. Cada concurso possui seus próprios dados, incluindo matérias, itens, assuntos, sessões e mural.
 
-Gere o build de produção:
+### Matéria
 
-```bash
-npm run build
-```
+Representa uma disciplina do concurso. Pode ser ativada ou desativada no ciclo e possui ordem, tempo planejado e etapa atual.
 
-Execute a suíte de testes:
+### Item
 
-```bash
-npm test
-```
+Representa uma unidade de estudo dentro de uma matéria. PDFs, vídeos e links pertencem aos itens.
 
-Durante o desenvolvimento, use:
+### Assunto
 
-```bash
-npm run dev
-```
+Representa um tópico da matéria. Cadernos de questões pertencem aos assuntos.
 
-## Vault de exemplo
+### Sessão
 
-O repositório inclui um vault de demonstração em `sample-vault/`.
+Representa um registro manual de estudo. Pode ser de PDF, vídeo ou questões.
 
-Esse vault contém:
+## Vault de demonstração
 
-- plugin Leif já instalado;
-- dados de demonstração para três concursos;
-- matérias, itens, assuntos, cadernos de questões e sessões já cadastrados;
-- configuração pronta para alternar entre concursos.
+O repositório inclui um vault de exemplo em `sample-vault/`.
+
+Ele já contém:
+
+- Leif instalado e ativado.
+- Três concursos de demonstração.
+- Matérias, itens, assuntos, cadernos e sessões cadastrados.
+- Dados suficientes para testar alternância entre concursos e visualização de progresso.
 
 Para usar:
 
 1. Abra o Obsidian.
 2. Selecione `Open folder as vault`.
 3. Escolha a pasta `sample-vault/`.
-4. Abra o Leif pela faixa lateral esquerda ou pela paleta de comandos.
+4. Abra o Leif pela faixa lateral ou pela paleta de comandos.
 
-Ao executar `npm run build`, o bundle é copiado automaticamente para `sample-vault/.obsidian/plugins/leif/`.
+## Desenvolvimento
 
-## Comandos disponíveis
+### Requisitos
 
-Além do painel principal, o plugin registra comandos auxiliares para demonstração e desenvolvimento:
+- Node.js 20 ou superior.
+- npm.
+- Obsidian instalado para teste manual.
+
+### Preparação
+
+```bash
+npm install
+```
+
+### Modo de desenvolvimento
+
+```bash
+npm run dev
+```
+
+### Build de produção
+
+```bash
+npm run build
+```
+
+O build copia automaticamente `main.js` e `styles.css` para:
+
+```text
+sample-vault/.obsidian/plugins/leif/
+```
+
+### Testes
+
+```bash
+npm test
+```
+
+## Estrutura do projeto
+
+```text
+src/
+  domain/          Entidades, serviços de domínio e erros
+  application/     Casos de uso, portas, validações e guards
+  infrastructure/  Persistência, migrations, seed e adapters
+  ui/              Comandos, view principal e componentes
+```
+
+## Comandos registrados
+
+O plugin registra comandos auxiliares para uso e desenvolvimento:
 
 - `Leif: Abrir painel do Leif`
 - `Leif: Seed demo data`
@@ -133,50 +213,29 @@ Além do painel principal, o plugin registra comandos auxiliares para demonstra�
 - `Leif: Register demo video session`
 - `Leif: Reset plugin data`
 
-## Arquitetura
+## Roadmap
 
-O projeto segue uma arquitetura em camadas, com separação entre domínio, casos de uso, infraestrutura e interface.
-
-```text
-src/
-  domain/          Entidades, serviços de domínio e erros
-  application/     Casos de uso, portas, validações e guards
-  infrastructure/  Persistência, migrations, seed e adapters
-  ui/              Comandos, view principal e componentes
-```
-
-### Stack
-
-- TypeScript
-- Obsidian API
-- Vitest
-- esbuild
-
-## Qualidade
-
-A base possui testes automatizados para regras de domínio, casos de uso, persistência, comandos e fluxos principais da UI.
-
-Antes de abrir uma contribuição, rode:
-
-```bash
-npm test
-npm run build
-```
+- Publicar o plugin na comunidade do Obsidian.
+- Adicionar filtros e busca nas tabelas.
+- Melhorar a visualização de estatísticas.
+- Adicionar importação de CSV.
+- Revisar a experiência mobile.
+- Criar documentação com capturas de tela.
 
 ## Contribuição
 
 Contribuições são bem-vindas.
 
-Para propor uma alteração:
+Antes de abrir um pull request:
 
-1. Abra uma issue descrevendo o problema ou melhoria.
-2. Crie uma branch a partir da branch principal.
-3. Implemente a mudança com testes quando aplicável.
-4. Garanta que `npm test` e `npm run build` passam.
-5. Abra um pull request com uma descrição objetiva da alteração.
+1. Descreva claramente o problema ou a melhoria.
+2. Mantenha a alteração focada.
+3. Inclua testes quando a mudança afetar comportamento.
+4. Execute `npm test`.
+5. Execute `npm run build`.
 
 ## Licença
 
 Este projeto é de código aberto e está licenciado sob os termos da licença MIT.
 
-Consulte o arquivo `LICENSE` para mais detalhes.
+Consulte o arquivo [LICENSE](LICENSE) para mais informações.
