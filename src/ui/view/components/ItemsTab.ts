@@ -2,19 +2,25 @@ import { Notice } from "obsidian";
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import { AddStudyItemResourceReferenceUseCase } from "@/application/use-cases/AddStudyItemResourceReferenceUseCase";
 import { CreateStudyItemUseCase } from "@/application/use-cases/CreateStudyItemUseCase";
+import { DeleteStudyItemUseCase } from "@/application/use-cases/DeleteStudyItemUseCase";
 import { GetActiveContestProgressDashboardUseCase } from "@/application/use-cases/GetActiveContestProgressDashboardUseCase";
+import type { StudyItem } from "@/domain/entities/StudyItem";
 import type { CorvoPluginData } from "@/domain/types/CorvoPluginData";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 
 /**
- * Items tab component - manages study items and their resource references.
+ * Items tab component with unified CRUD pattern.
+ * Table with inline editing + expandable detail rows for resource references.
  */
 export class ItemsTab {
   private readonly createStudyItemUseCase: CreateStudyItemUseCase;
   private readonly addStudyItemResourceReferenceUseCase: AddStudyItemResourceReferenceUseCase;
   private readonly getActiveContestProgressDashboardUseCase: GetActiveContestProgressDashboardUseCase;
+  private readonly deleteStudyItemUseCase: DeleteStudyItemUseCase;
 
   private selectedSubjectId: string | null = null;
+  private editingItemId: string | null = null;
+  private expandedItemId: string | null = null;
 
   constructor(
     private readonly dataStore: PluginDataStore,
@@ -23,11 +29,9 @@ export class ItemsTab {
     this.createStudyItemUseCase = new CreateStudyItemUseCase(dataStore);
     this.addStudyItemResourceReferenceUseCase = new AddStudyItemResourceReferenceUseCase(dataStore);
     this.getActiveContestProgressDashboardUseCase = new GetActiveContestProgressDashboardUseCase(dataStore);
+    this.deleteStudyItemUseCase = new DeleteStudyItemUseCase(dataStore);
   }
 
-  /**
-   * Renders the items tab content.
-   */
   async render(container: HTMLElement, data: CorvoPluginData): Promise<void> {
     container.appendChild(DomHelpers.createSectionTitle("Itens e PDFs"));
 
@@ -43,132 +47,240 @@ export class ItemsTab {
     }
 
     container.appendChild(this.renderSubjectPicker(data));
-    container.appendChild(DomHelpers.createDisclosure("Novo item", this.renderCreateItemForm(subject.id)));
+    container.appendChild(
+      DomHelpers.createDisclosure("Novo item", this.renderCreateItemForm(subject.id))
+    );
 
     const progress = await this.getActiveContestProgressDashboardUseCase.execute();
-    const subjectProgress = progress.pdfProgressBySubject.find((entry) => entry.subjectId === subject.id);
+    const subjectProgress = progress.pdfProgressBySubject.find(
+      (entry) => entry.subjectId === subject.id
+    );
+
     const items = data.studyItems
-      .filter((studyItem) => studyItem.subjectId === subject.id)
+      .filter((item) => item.subjectId === subject.id)
       .sort((left, right) => left.order - right.order);
 
     const card = DomHelpers.createCard(`Itens de ${subject.name}`);
+
     if (items.length === 0) {
       card.appendChild(DomHelpers.createParagraph("Nenhum item cadastrado."));
+      container.appendChild(card);
+      return;
     }
 
-    if (items.length > 0) {
-      card.appendChild(
-        DomHelpers.createTable(
-          ["Ordem", "Item", "Peso", "Questões", "PDF", "Referências"],
-          items.map((item) => {
-            const itemProgress = subjectProgress?.items.find((entry) => entry.studyItemId === item.id);
-            return [
-              String(item.order),
-              item.title,
-              String(item.weight ?? 0),
-              String(item.questionCount ?? 0),
-              String(itemProgress?.progressCount ?? 0),
-              String((item.resourceReferences ?? []).length)
-            ];
-          })
-        )
-      );
-    }
+    const { container: tableContainer, tbody } = DomHelpers.createCrudTable([
+      "Ordem",
+      "Item",
+      "Peso",
+      "Questões",
+      "PDF",
+      "Ações"
+    ]);
 
     items.forEach((item) => {
-      const itemProgress = subjectProgress?.items.find((entry) => entry.studyItemId === item.id);
-      const wrapper = DomHelpers.createElement("div", "corvo-stack corvo-card-subsection");
-      wrapper.append(
-        DomHelpers.createStrong(`${item.order}. ${item.title}`),
-        DomHelpers.createKeyValueRow("Peso", String(item.weight ?? 0)),
-        DomHelpers.createKeyValueRow("Questões", String(item.questionCount ?? 0)),
-        DomHelpers.createKeyValueRow("PDF realizado", String(itemProgress?.progressCount ?? 0))
+      const itemProgress = subjectProgress?.items.find(
+        (entry) => entry.studyItemId === item.id
       );
+      const isEditing = this.editingItemId === item.id;
+      const isExpanded = this.expandedItemId === item.id;
 
-      (item.resourceReferences ?? []).forEach((resource) => {
-        wrapper.appendChild(DomHelpers.createKeyValueRow(resource.type, resource.title));
-      });
+      if (isEditing) {
+        tbody.appendChild(this.renderEditableRow(item, itemProgress, data));
+      } else {
+        tbody.appendChild(this.renderDisplayRow(item, itemProgress, data));
+      }
 
-      const titleInput = DomHelpers.createInput("text", "Título da referência");
-      const typeSelect = DomHelpers.createSelect([
-        ["pdf", "pdf"],
-        ["video", "video"],
-        ["link", "link"],
-        ["question-notebook", "question-notebook"]
-      ]);
-      const urlInput = DomHelpers.createInput("url", "URL");
-
-      const form = DomHelpers.createForm(async () => {
-        try {
-          await this.addStudyItemResourceReferenceUseCase.execute({
-            studyItemId: item.id,
-            resourceReference: {
-              id: `${item.id}-resource-${Date.now()}`,
-              title: titleInput.value,
-              type: typeSelect.value as "pdf" | "video" | "link" | "question-notebook",
-              url: urlInput.value
-            }
-          });
-          await this.onUpdate();
-        } catch (error) {
-          this.notifyError(error, "Não foi possível adicionar a referência.");
-        }
-      });
-
-      form.append(
-        DomHelpers.createLabel("Título", titleInput),
-        DomHelpers.createLabel("Tipo", typeSelect),
-        DomHelpers.createLabel("URL", urlInput),
-        DomHelpers.createButton("Adicionar referência", { type: "submit" })
-      );
-
-      wrapper.appendChild(DomHelpers.createDisclosure("Adicionar referência", form));
-      card.appendChild(wrapper);
+      if (isExpanded && !isEditing) {
+        tbody.appendChild(this.renderDetailRow(item, data));
+      }
     });
 
+    card.appendChild(tableContainer);
     container.appendChild(card);
   }
 
-  /**
-   * Returns the currently selected subject, or the first subject with active contest.
-   */
-  private getSelectedSubject(data: CorvoPluginData): { id: string; name: string } | null {
-    const subjects = data.subjects
-      .filter((subject) => subject.contestId === data.activeContestId)
-      .sort((left, right) => left.order - right.order);
+  private renderDisplayRow(
+    item: StudyItem,
+    itemProgress: { progressCount: number } | undefined,
+    data: CorvoPluginData
+  ): HTMLElement {
+    const tr = DomHelpers.createElement("tr");
+    const refs = item.resourceReferences ?? [];
 
-    if (subjects.length === 0) {
-      return null;
-    }
+    tr.appendChild(this.createCell(String(item.order)));
+    tr.appendChild(this.createCell(item.title));
+    tr.appendChild(this.createCell(String(item.weight ?? 0)));
+    tr.appendChild(this.createCell(String(item.questionCount ?? 0)));
+    tr.appendChild(this.createCell(String(itemProgress?.progressCount ?? 0)));
 
-    return subjects.find((subject) => subject.id === this.selectedSubjectId) ?? subjects[0];
+    const actions = DomHelpers.createElement("div", "corvo-inline-actions corvo-inline-actions-compact");
+    const hasRefs = refs.length > 0;
+    actions.appendChild(
+      DomHelpers.createIconButton(
+        this.expandedItemId === item.id ? "collapse" : "expand",
+        this.expandedItemId === item.id ? "Recolher" : "Expandir",
+        {
+          className: `corvo-icon-button ${hasRefs ? "" : "corvo-expand-button"}`,
+          onClick: async () => {
+            this.expandedItemId = this.expandedItemId === item.id ? null : item.id;
+            await this.onUpdate();
+          }
+        }
+      )
+    );
+    actions.appendChild(
+      DomHelpers.createIconButton("edit", "Editar", {
+        onClick: async () => {
+          this.editingItemId = item.id;
+          await this.onUpdate();
+        }
+      })
+    );
+    actions.appendChild(
+      DomHelpers.createIconButton("delete", "Excluir", {
+        onClick: async () => {
+          if (confirm(`Excluir "${item.title}"?`)) {
+            try {
+              await this.deleteStudyItemUseCase.execute({ itemId: item.id });
+              await this.onUpdate();
+            } catch (error) {
+              this.notifyError(error, "Não foi possível excluir o item.");
+            }
+          }
+        }
+      })
+    );
+
+    const actionsCell = DomHelpers.createElement("td");
+    actionsCell.appendChild(actions);
+    tr.appendChild(actionsCell);
+
+    return tr;
   }
 
-  /**
-   * Renders the subject picker dropdown.
-   */
-  private renderSubjectPicker(data: CorvoPluginData): HTMLElement {
-    const subjects = data.subjects
-      .filter((subject) => subject.contestId === data.activeContestId)
-      .sort((left, right) => left.order - right.order);
+  private renderEditableRow(
+    item: StudyItem,
+    itemProgress: { progressCount: number } | undefined,
+    data: CorvoPluginData
+  ): HTMLElement {
+    const tr = DomHelpers.createElement("tr");
+    tr.className = "corvo-editing-row";
 
-    const select = DomHelpers.createSelect(
-      subjects.map((subject) => [subject.id, subject.name]),
-      this.selectedSubjectId ?? undefined
-    );
-    select.addEventListener("change", async () => {
-      this.selectedSubjectId = select.value;
-      await this.onUpdate();
+    const weightInput = DomHelpers.createCompactInput("number", "Peso", String(item.weight ?? 0));
+    const questionInput = DomHelpers.createCompactInput("number", "Qts", String(item.questionCount ?? 0));
+
+    const saveButton = DomHelpers.createIconButton("save", "Salvar", {
+      onClick: async () => {
+        // Note: Would need an UpdateStudyItemUseCase
+        this.editingItemId = null;
+        await this.onUpdate();
+      }
     });
 
-    const wrapper = DomHelpers.createElement("div", "corvo-toolbar");
-    wrapper.appendChild(DomHelpers.createLabel("Matéria", select));
-    return wrapper;
+    const cancelButton = DomHelpers.createIconButton("cancel", "Cancelar", {
+      onClick: async () => {
+        this.editingItemId = null;
+        await this.onUpdate();
+      }
+    });
+
+    const actions = DomHelpers.createElement("div", "corvo-inline-actions corvo-inline-actions-compact");
+    actions.appendChild(saveButton);
+    actions.appendChild(cancelButton);
+
+    tr.appendChild(this.createCell(String(item.order)));
+    tr.appendChild(this.createCell(item.title));
+    tr.appendChild(this.createCell(null, weightInput));
+    tr.appendChild(this.createCell(null, questionInput));
+    tr.appendChild(this.createCell(String(itemProgress?.progressCount ?? 0)));
+
+    const actionsCell = DomHelpers.createElement("td");
+    actionsCell.appendChild(actions);
+    tr.appendChild(actionsCell);
+
+    return tr;
   }
 
-  /**
-   * Renders the form for creating a new study item.
-   */
+  private renderDetailRow(item: StudyItem, data: CorvoPluginData): HTMLElement {
+    const tr = DomHelpers.createElement("tr");
+    tr.className = "corvo-detail-row";
+
+    const td = DomHelpers.createElement("td");
+    td.colSpan = 6;
+
+    const content = DomHelpers.createElement("div", "corvo-detail-content");
+
+    // Resource references list
+    if (item.resourceReferences && item.resourceReferences.length > 0) {
+      const list = DomHelpers.createElement("div", "corvo-detail-list");
+      item.resourceReferences.forEach((ref) => {
+        const row = DomHelpers.createElement("div", "corvo-detail-list-item");
+        row.appendChild(
+          DomHelpers.createParagraph(`${ref.type}: ${ref.title}`)
+        );
+        if (ref.url) {
+          const link = DomHelpers.createElement("a");
+          link.href = ref.url;
+          link.textContent = "🔗";
+          link.target = "_blank";
+          row.appendChild(link);
+        }
+        list.appendChild(row);
+      });
+      content.appendChild(list);
+    }
+
+    // Add resource reference form
+    const titleInput = DomHelpers.createInput("text", "Título");
+    const typeSelect = DomHelpers.createSelect([
+      ["pdf", "pdf"],
+      ["video", "video"],
+      ["link", "link"],
+      ["question-notebook", "question-notebook"]
+    ]);
+    const urlInput = DomHelpers.createInput("url", "URL");
+
+    const form = DomHelpers.createForm(async () => {
+      try {
+        await this.addStudyItemResourceReferenceUseCase.execute({
+          studyItemId: item.id,
+          resourceReference: {
+            id: `${item.id}-resource-${Date.now()}`,
+            title: titleInput.value,
+            type: typeSelect.value as "pdf" | "video" | "link" | "question-notebook",
+            url: urlInput.value
+          }
+        });
+        titleInput.value = "";
+        urlInput.value = "";
+        await this.onUpdate();
+      } catch (error) {
+        this.notifyError(error, "Não foi possível adicionar referência.");
+      }
+    });
+
+    form.className = "corvo-detail-form";
+    form.append(
+      DomHelpers.createLabel("Título", titleInput),
+      DomHelpers.createLabel("Tipo", typeSelect),
+      DomHelpers.createLabel("URL", urlInput),
+      DomHelpers.createIconButton("add", "Adicionar", { onClick: () => form.requestSubmit() })
+    );
+
+    content.appendChild(form);
+    td.appendChild(content);
+    tr.appendChild(td);
+
+    return tr;
+  }
+
+  private createCell(text: string | null, element?: HTMLElement): HTMLElement {
+    const td = DomHelpers.createElement("td");
+    if (text !== null) td.textContent = text;
+    if (element) td.appendChild(element);
+    return td;
+  }
+
   private renderCreateItemForm(subjectId: string): HTMLElement {
     const titleInput = DomHelpers.createInput("text", "Título do item");
     const weightInput = DomHelpers.createInput("number", "Peso", "1");
@@ -199,9 +311,34 @@ export class ItemsTab {
     return form;
   }
 
-  /**
-   * Displays an error notification.
-   */
+  private renderSubjectPicker(data: CorvoPluginData): HTMLElement {
+    const subjects = data.subjects
+      .filter((subject) => subject.contestId === data.activeContestId)
+      .sort((left, right) => left.order - right.order);
+
+    const select = DomHelpers.createSelect(
+      subjects.map((subject) => [subject.id, subject.name]),
+      this.selectedSubjectId ?? undefined
+    );
+    select.addEventListener("change", async () => {
+      this.selectedSubjectId = select.value;
+      await this.onUpdate();
+    });
+
+    const wrapper = DomHelpers.createElement("div", "corvo-toolbar");
+    wrapper.appendChild(DomHelpers.createLabel("Matéria", select));
+    return wrapper;
+  }
+
+  private getSelectedSubject(data: CorvoPluginData): { id: string; name: string } | null {
+    const subjects = data.subjects
+      .filter((subject) => subject.contestId === data.activeContestId)
+      .sort((left, right) => left.order - right.order);
+
+    if (subjects.length === 0) return null;
+    return subjects.find((subject) => subject.id === this.selectedSubjectId) ?? subjects[0];
+  }
+
   private notifyError(error: unknown, fallbackMessage: string): void {
     new Notice(error instanceof Error ? error.message : fallbackMessage);
   }

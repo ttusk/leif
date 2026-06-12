@@ -374,6 +374,60 @@ export class DomHelpers {
   }
 
   /**
+   * Creates a compact input for inline editing.
+   */
+  static createCompactInput(type: string, placeholder: string, value = ""): HTMLInputElement {
+    const input = this.createInput(type, placeholder, value);
+    input.className = "corvo-input corvo-input-compact";
+    return input;
+  }
+
+  /**
+   * Creates a table with inline CRUD support.
+   * Returns a container with the table.
+   */
+  static createCrudTable(headers: string[]): {
+    container: HTMLElement;
+    tbody: HTMLElement;
+  } {
+    const container = this.createElement("div", "corvo-table-wrapper");
+    const table = this.createElement("table", "corvo-table");
+
+    const thead = this.createElement("thead");
+    const headerRow = this.createElement("tr");
+    headers.forEach((header) => {
+      const th = this.createElement("th");
+      th.textContent = header;
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+
+    const tbody = this.createElement("tbody");
+    table.appendChild(tbody);
+    container.appendChild(table);
+
+    return { container, tbody };
+  }
+
+  /**
+   * Creates a standard action cell with edit and delete buttons.
+   */
+  static createCrudActions(
+    onEdit: () => void | Promise<void>,
+    onDelete: () => void | Promise<void>
+  ): HTMLElement {
+    const actions = this.createElement("div", "corvo-inline-actions corvo-inline-actions-compact");
+    actions.appendChild(
+      this.createIconButton("edit", "Editar", { onClick: onEdit })
+    );
+    actions.appendChild(
+      this.createIconButton("delete", "Excluir", { onClick: onDelete })
+    );
+    return actions;
+  }
+
+  /**
    * Creates a form row for organizing form elements.
    */
   static createFormRow(): HTMLElement {

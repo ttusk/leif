@@ -1356,6 +1356,37 @@ var import_obsidian11 = require("obsidian");
 // src/ui/view/CorvoView.ts
 var import_obsidian10 = require("obsidian");
 
+// src/application/use-cases/DeleteContestUseCase.ts
+var DeleteContestUseCase = class {
+  constructor(dataStore) {
+    this.dataStore = dataStore;
+    this.contestRepository = new EntityRepository(dataStore, "contests");
+  }
+  async execute(input) {
+    const contest = await this.contestRepository.findById(input.contestId);
+    await this.contestRepository.delete(input.contestId);
+    return contest;
+  }
+};
+
+// src/application/use-cases/UpdateContestUseCase.ts
+var UpdateContestUseCase = class {
+  constructor(dataStore) {
+    this.dataStore = dataStore;
+    this.contestRepository = new EntityRepository(dataStore, "contests");
+  }
+  async execute(input) {
+    return await this.contestRepository.update(input.contestId, (contest) => ({
+      ...contest,
+      name: input.name ?? contest.name,
+      wall: {
+        ...contest.wall,
+        notes: input.notes ?? contest.wall.notes
+      }
+    }));
+  }
+};
+
 // src/ui/view/shared/DomHelpers.ts
 var import_obsidian2 = require("obsidian");
 
@@ -1376,7 +1407,9 @@ var ICON_NAMES = {
   up: "arrow-up",
   down: "arrow-down",
   toggleOn: "toggle-right",
-  toggleOff: "toggle-left"
+  toggleOff: "toggle-left",
+  expand: "chevron-down",
+  collapse: "chevron-up"
 };
 var TABS = [
   { id: "dashboard", label: "Dashboard", icon: ICON_NAMES.dashboard },
@@ -1689,6 +1722,48 @@ var DomHelpers = class {
     });
   }
   /**
+   * Creates a compact input for inline editing.
+   */
+  static createCompactInput(type, placeholder, value = "") {
+    const input = this.createInput(type, placeholder, value);
+    input.className = "corvo-input corvo-input-compact";
+    return input;
+  }
+  /**
+   * Creates a table with inline CRUD support.
+   * Returns a container with the table.
+   */
+  static createCrudTable(headers) {
+    const container = this.createElement("div", "corvo-table-wrapper");
+    const table = this.createElement("table", "corvo-table");
+    const thead = this.createElement("thead");
+    const headerRow = this.createElement("tr");
+    headers.forEach((header) => {
+      const th = this.createElement("th");
+      th.textContent = header;
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+    const tbody = this.createElement("tbody");
+    table.appendChild(tbody);
+    container.appendChild(table);
+    return { container, tbody };
+  }
+  /**
+   * Creates a standard action cell with edit and delete buttons.
+   */
+  static createCrudActions(onEdit, onDelete) {
+    const actions = this.createElement("div", "corvo-inline-actions corvo-inline-actions-compact");
+    actions.appendChild(
+      this.createIconButton("edit", "Editar", { onClick: onEdit })
+    );
+    actions.appendChild(
+      this.createIconButton("delete", "Excluir", { onClick: onDelete })
+    );
+    return actions;
+  }
+  /**
    * Creates a form row for organizing form elements.
    */
   static createFormRow() {
@@ -1702,12 +1777,12 @@ var ContestsTab = class {
   constructor(dataStore, onUpdate) {
     this.dataStore = dataStore;
     this.onUpdate = onUpdate;
+    this.editingContestId = null;
     this.createContestUseCase = new CreateContestUseCase(dataStore);
     this.setActiveContestUseCase = new SetActiveContestUseCase(dataStore);
+    this.updateContestUseCase = new UpdateContestUseCase(dataStore);
+    this.deleteContestUseCase = new DeleteContestUseCase(dataStore);
   }
-  /**
-   * Renders the contests tab content.
-   */
   async render(container, data) {
     container.appendChild(DomHelpers.createSectionTitle("Concursos"));
     container.appendChild(
@@ -1720,41 +1795,120 @@ var ContestsTab = class {
     if (data.contests.length === 0) {
       contestsCard.appendChild(DomHelpers.createParagraph("Nenhum concurso cadastrado."));
     }
+    const { container: tableContainer, tbody } = DomHelpers.createCrudTable([
+      "Concurso",
+      "ID",
+      "Notas",
+      "Status",
+      "A\xE7\xF5es"
+    ]);
     data.contests.forEach((contest) => {
-      const row = DomHelpers.createElement("div", "corvo-list-row");
-      const info = DomHelpers.createElement("div", "corvo-stack");
-      info.append(
-        DomHelpers.createStrong(contest.name),
-        DomHelpers.createParagraph(`ID: ${contest.id}`),
-        DomHelpers.createParagraph(contest.wall.notes ?? "Sem observa\xE7\xF5es no mural.")
-      );
-      const actions = DomHelpers.createElement("div", "corvo-inline-actions");
-      if (data.activeContestId === contest.id) {
-        actions.appendChild(DomHelpers.createBadge("Ativo"));
+      const isEditing = this.editingContestId === contest.id;
+      if (isEditing) {
+        tbody.appendChild(this.renderEditableRow(contest, data));
       } else {
-        actions.appendChild(
-          DomHelpers.createButton(`Ativar ${contest.name}`, {
-            onClick: async () => {
-              try {
-                await this.setActiveContestUseCase.execute({ contestId: contest.id });
-                await this.onUpdate();
-              } catch (error) {
-                this.notifyError(error, "N\xE3o foi poss\xEDvel ativar o concurso.");
-              }
-            }
-          })
-        );
+        tbody.appendChild(this.renderDisplayRow(contest, data));
       }
-      row.append(info, actions);
-      contestsCard.appendChild(row);
     });
+    contestsCard.appendChild(tableContainer);
     container.appendChild(contestsCard);
   }
-  /**
-   * Renders the create contest form.
-   */
+  renderDisplayRow(contest, data) {
+    const tr = DomHelpers.createElement("tr");
+    const isActive = data.activeContestId === contest.id;
+    tr.appendChild(this.createCell(contest.name));
+    tr.appendChild(this.createCell(contest.id));
+    tr.appendChild(this.createCell(contest.wall.notes ?? "\u2014"));
+    tr.appendChild(this.createCell(isActive ? "Ativo" : "Inativo"));
+    const actions = DomHelpers.createElement("div", "corvo-inline-actions corvo-inline-actions-compact");
+    if (!isActive) {
+      actions.appendChild(
+        DomHelpers.createIconButton("toggleOn", "Ativar", {
+          dataset: { contestId: contest.id },
+          onClick: async () => {
+            try {
+              await this.setActiveContestUseCase.execute({ contestId: contest.id });
+              await this.onUpdate();
+            } catch (error) {
+              this.notifyError(error, "N\xE3o foi poss\xEDvel ativar o concurso.");
+            }
+          }
+        })
+      );
+    }
+    actions.appendChild(
+      DomHelpers.createIconButton("edit", "Editar", {
+        onClick: async () => {
+          this.editingContestId = contest.id;
+          await this.onUpdate();
+        }
+      })
+    );
+    actions.appendChild(
+      DomHelpers.createIconButton("delete", "Excluir", {
+        onClick: async () => {
+          if (confirm(`Excluir "${contest.name}"?`)) {
+            try {
+              await this.deleteContestUseCase.execute({ contestId: contest.id });
+              await this.onUpdate();
+            } catch (error) {
+              this.notifyError(error, "N\xE3o foi poss\xEDvel excluir o concurso.");
+            }
+          }
+        }
+      })
+    );
+    const actionsCell = DomHelpers.createElement("td");
+    actionsCell.appendChild(actions);
+    tr.appendChild(actionsCell);
+    return tr;
+  }
+  renderEditableRow(contest, data) {
+    const tr = DomHelpers.createElement("tr");
+    tr.className = "corvo-editing-row";
+    const nameInput = DomHelpers.createCompactInput("text", "Nome", contest.name);
+    const notesInput = DomHelpers.createCompactInput("text", "Notas", contest.wall.notes ?? "");
+    const saveButton = DomHelpers.createIconButton("save", "Salvar", {
+      onClick: async () => {
+        try {
+          await this.updateContestUseCase.execute({
+            contestId: contest.id,
+            name: nameInput.value,
+            notes: notesInput.value
+          });
+          this.editingContestId = null;
+          await this.onUpdate();
+        } catch (error) {
+          this.notifyError(error, "N\xE3o foi poss\xEDvel salvar.");
+        }
+      }
+    });
+    const cancelButton = DomHelpers.createIconButton("cancel", "Cancelar", {
+      onClick: async () => {
+        this.editingContestId = null;
+        await this.onUpdate();
+      }
+    });
+    const actions = DomHelpers.createElement("div", "corvo-inline-actions corvo-inline-actions-compact");
+    actions.appendChild(saveButton);
+    actions.appendChild(cancelButton);
+    tr.appendChild(this.createCell(null, nameInput));
+    tr.appendChild(this.createCell(contest.id));
+    tr.appendChild(this.createCell(null, notesInput));
+    tr.appendChild(this.createCell(data.activeContestId === contest.id ? "Ativo" : "Inativo"));
+    const actionsCell = DomHelpers.createElement("td");
+    actionsCell.appendChild(actions);
+    tr.appendChild(actionsCell);
+    return tr;
+  }
+  createCell(text, element) {
+    const td = DomHelpers.createElement("td");
+    if (text !== null) td.textContent = text;
+    if (element) td.appendChild(element);
+    return td;
+  }
   renderCreateContestForm() {
-    const form = DomHelpers.createForm(async (event) => {
+    const form = DomHelpers.createForm(async () => {
       const idInput2 = form.querySelector("[data-field='id']");
       const nameInput2 = form.querySelector("[data-field='name']");
       if (!idInput2 || !nameInput2) {
@@ -1786,9 +1940,6 @@ var ContestsTab = class {
     );
     return form;
   }
-  /**
-   * Displays an error notification.
-   */
   notifyError(error, fallbackMessage) {
     new import_obsidian3.Notice(error instanceof Error ? error.message : fallbackMessage);
   }
@@ -2279,19 +2430,32 @@ var AddStudyItemResourceReferenceUseCase = class {
   }
 };
 
+// src/application/use-cases/DeleteStudyItemUseCase.ts
+var DeleteStudyItemUseCase = class {
+  constructor(dataStore) {
+    this.dataStore = dataStore;
+    this.itemRepository = new EntityRepository(dataStore, "studyItems");
+  }
+  async execute(input) {
+    const item = await this.itemRepository.findById(input.itemId);
+    await this.itemRepository.delete(input.itemId);
+    return item;
+  }
+};
+
 // src/ui/view/components/ItemsTab.ts
 var ItemsTab = class {
   constructor(dataStore, onUpdate) {
     this.dataStore = dataStore;
     this.onUpdate = onUpdate;
     this.selectedSubjectId = null;
+    this.editingItemId = null;
+    this.expandedItemId = null;
     this.createStudyItemUseCase = new CreateStudyItemUseCase(dataStore);
     this.addStudyItemResourceReferenceUseCase = new AddStudyItemResourceReferenceUseCase(dataStore);
     this.getActiveContestProgressDashboardUseCase = new GetActiveContestProgressDashboardUseCase(dataStore);
+    this.deleteStudyItemUseCase = new DeleteStudyItemUseCase(dataStore);
   }
-  /**
-   * Renders the items tab content.
-   */
   async render(container, data) {
     container.appendChild(DomHelpers.createSectionTitle("Itens e PDFs"));
     const subject = this.getSelectedSubject(data);
@@ -2305,109 +2469,194 @@ var ItemsTab = class {
       return;
     }
     container.appendChild(this.renderSubjectPicker(data));
-    container.appendChild(DomHelpers.createDisclosure("Novo item", this.renderCreateItemForm(subject.id)));
+    container.appendChild(
+      DomHelpers.createDisclosure("Novo item", this.renderCreateItemForm(subject.id))
+    );
     const progress = await this.getActiveContestProgressDashboardUseCase.execute();
-    const subjectProgress = progress.pdfProgressBySubject.find((entry) => entry.subjectId === subject.id);
-    const items = data.studyItems.filter((studyItem) => studyItem.subjectId === subject.id).sort((left, right) => left.order - right.order);
+    const subjectProgress = progress.pdfProgressBySubject.find(
+      (entry) => entry.subjectId === subject.id
+    );
+    const items = data.studyItems.filter((item) => item.subjectId === subject.id).sort((left, right) => left.order - right.order);
     const card = DomHelpers.createCard(`Itens de ${subject.name}`);
     if (items.length === 0) {
       card.appendChild(DomHelpers.createParagraph("Nenhum item cadastrado."));
+      container.appendChild(card);
+      return;
     }
-    if (items.length > 0) {
-      card.appendChild(
-        DomHelpers.createTable(
-          ["Ordem", "Item", "Peso", "Quest\xF5es", "PDF", "Refer\xEAncias"],
-          items.map((item) => {
-            const itemProgress = subjectProgress?.items.find((entry) => entry.studyItemId === item.id);
-            return [
-              String(item.order),
-              item.title,
-              String(item.weight ?? 0),
-              String(item.questionCount ?? 0),
-              String(itemProgress?.progressCount ?? 0),
-              String((item.resourceReferences ?? []).length)
-            ];
-          })
-        )
-      );
-    }
+    const { container: tableContainer, tbody } = DomHelpers.createCrudTable([
+      "Ordem",
+      "Item",
+      "Peso",
+      "Quest\xF5es",
+      "PDF",
+      "A\xE7\xF5es"
+    ]);
     items.forEach((item) => {
-      const itemProgress = subjectProgress?.items.find((entry) => entry.studyItemId === item.id);
-      const wrapper = DomHelpers.createElement("div", "corvo-stack corvo-card-subsection");
-      wrapper.append(
-        DomHelpers.createStrong(`${item.order}. ${item.title}`),
-        DomHelpers.createKeyValueRow("Peso", String(item.weight ?? 0)),
-        DomHelpers.createKeyValueRow("Quest\xF5es", String(item.questionCount ?? 0)),
-        DomHelpers.createKeyValueRow("PDF realizado", String(itemProgress?.progressCount ?? 0))
+      const itemProgress = subjectProgress?.items.find(
+        (entry) => entry.studyItemId === item.id
       );
-      (item.resourceReferences ?? []).forEach((resource) => {
-        wrapper.appendChild(DomHelpers.createKeyValueRow(resource.type, resource.title));
-      });
-      const titleInput = DomHelpers.createInput("text", "T\xEDtulo da refer\xEAncia");
-      const typeSelect = DomHelpers.createSelect([
-        ["pdf", "pdf"],
-        ["video", "video"],
-        ["link", "link"],
-        ["question-notebook", "question-notebook"]
-      ]);
-      const urlInput = DomHelpers.createInput("url", "URL");
-      const form = DomHelpers.createForm(async () => {
-        try {
-          await this.addStudyItemResourceReferenceUseCase.execute({
-            studyItemId: item.id,
-            resourceReference: {
-              id: `${item.id}-resource-${Date.now()}`,
-              title: titleInput.value,
-              type: typeSelect.value,
-              url: urlInput.value
-            }
-          });
-          await this.onUpdate();
-        } catch (error) {
-          this.notifyError(error, "N\xE3o foi poss\xEDvel adicionar a refer\xEAncia.");
-        }
-      });
-      form.append(
-        DomHelpers.createLabel("T\xEDtulo", titleInput),
-        DomHelpers.createLabel("Tipo", typeSelect),
-        DomHelpers.createLabel("URL", urlInput),
-        DomHelpers.createButton("Adicionar refer\xEAncia", { type: "submit" })
-      );
-      wrapper.appendChild(DomHelpers.createDisclosure("Adicionar refer\xEAncia", form));
-      card.appendChild(wrapper);
+      const isEditing = this.editingItemId === item.id;
+      const isExpanded = this.expandedItemId === item.id;
+      if (isEditing) {
+        tbody.appendChild(this.renderEditableRow(item, itemProgress, data));
+      } else {
+        tbody.appendChild(this.renderDisplayRow(item, itemProgress, data));
+      }
+      if (isExpanded && !isEditing) {
+        tbody.appendChild(this.renderDetailRow(item, data));
+      }
     });
+    card.appendChild(tableContainer);
     container.appendChild(card);
   }
-  /**
-   * Returns the currently selected subject, or the first subject with active contest.
-   */
-  getSelectedSubject(data) {
-    const subjects = data.subjects.filter((subject) => subject.contestId === data.activeContestId).sort((left, right) => left.order - right.order);
-    if (subjects.length === 0) {
-      return null;
-    }
-    return subjects.find((subject) => subject.id === this.selectedSubjectId) ?? subjects[0];
-  }
-  /**
-   * Renders the subject picker dropdown.
-   */
-  renderSubjectPicker(data) {
-    const subjects = data.subjects.filter((subject) => subject.contestId === data.activeContestId).sort((left, right) => left.order - right.order);
-    const select = DomHelpers.createSelect(
-      subjects.map((subject) => [subject.id, subject.name]),
-      this.selectedSubjectId ?? void 0
+  renderDisplayRow(item, itemProgress, data) {
+    const tr = DomHelpers.createElement("tr");
+    const refs = item.resourceReferences ?? [];
+    tr.appendChild(this.createCell(String(item.order)));
+    tr.appendChild(this.createCell(item.title));
+    tr.appendChild(this.createCell(String(item.weight ?? 0)));
+    tr.appendChild(this.createCell(String(item.questionCount ?? 0)));
+    tr.appendChild(this.createCell(String(itemProgress?.progressCount ?? 0)));
+    const actions = DomHelpers.createElement("div", "corvo-inline-actions corvo-inline-actions-compact");
+    const hasRefs = refs.length > 0;
+    actions.appendChild(
+      DomHelpers.createIconButton(
+        this.expandedItemId === item.id ? "collapse" : "expand",
+        this.expandedItemId === item.id ? "Recolher" : "Expandir",
+        {
+          className: `corvo-icon-button ${hasRefs ? "" : "corvo-expand-button"}`,
+          onClick: async () => {
+            this.expandedItemId = this.expandedItemId === item.id ? null : item.id;
+            await this.onUpdate();
+          }
+        }
+      )
     );
-    select.addEventListener("change", async () => {
-      this.selectedSubjectId = select.value;
-      await this.onUpdate();
-    });
-    const wrapper = DomHelpers.createElement("div", "corvo-toolbar");
-    wrapper.appendChild(DomHelpers.createLabel("Mat\xE9ria", select));
-    return wrapper;
+    actions.appendChild(
+      DomHelpers.createIconButton("edit", "Editar", {
+        onClick: async () => {
+          this.editingItemId = item.id;
+          await this.onUpdate();
+        }
+      })
+    );
+    actions.appendChild(
+      DomHelpers.createIconButton("delete", "Excluir", {
+        onClick: async () => {
+          if (confirm(`Excluir "${item.title}"?`)) {
+            try {
+              await this.deleteStudyItemUseCase.execute({ itemId: item.id });
+              await this.onUpdate();
+            } catch (error) {
+              this.notifyError(error, "N\xE3o foi poss\xEDvel excluir o item.");
+            }
+          }
+        }
+      })
+    );
+    const actionsCell = DomHelpers.createElement("td");
+    actionsCell.appendChild(actions);
+    tr.appendChild(actionsCell);
+    return tr;
   }
-  /**
-   * Renders the form for creating a new study item.
-   */
+  renderEditableRow(item, itemProgress, data) {
+    const tr = DomHelpers.createElement("tr");
+    tr.className = "corvo-editing-row";
+    const weightInput = DomHelpers.createCompactInput("number", "Peso", String(item.weight ?? 0));
+    const questionInput = DomHelpers.createCompactInput("number", "Qts", String(item.questionCount ?? 0));
+    const saveButton = DomHelpers.createIconButton("save", "Salvar", {
+      onClick: async () => {
+        this.editingItemId = null;
+        await this.onUpdate();
+      }
+    });
+    const cancelButton = DomHelpers.createIconButton("cancel", "Cancelar", {
+      onClick: async () => {
+        this.editingItemId = null;
+        await this.onUpdate();
+      }
+    });
+    const actions = DomHelpers.createElement("div", "corvo-inline-actions corvo-inline-actions-compact");
+    actions.appendChild(saveButton);
+    actions.appendChild(cancelButton);
+    tr.appendChild(this.createCell(String(item.order)));
+    tr.appendChild(this.createCell(item.title));
+    tr.appendChild(this.createCell(null, weightInput));
+    tr.appendChild(this.createCell(null, questionInput));
+    tr.appendChild(this.createCell(String(itemProgress?.progressCount ?? 0)));
+    const actionsCell = DomHelpers.createElement("td");
+    actionsCell.appendChild(actions);
+    tr.appendChild(actionsCell);
+    return tr;
+  }
+  renderDetailRow(item, data) {
+    const tr = DomHelpers.createElement("tr");
+    tr.className = "corvo-detail-row";
+    const td = DomHelpers.createElement("td");
+    td.colSpan = 6;
+    const content = DomHelpers.createElement("div", "corvo-detail-content");
+    if (item.resourceReferences && item.resourceReferences.length > 0) {
+      const list = DomHelpers.createElement("div", "corvo-detail-list");
+      item.resourceReferences.forEach((ref) => {
+        const row = DomHelpers.createElement("div", "corvo-detail-list-item");
+        row.appendChild(
+          DomHelpers.createParagraph(`${ref.type}: ${ref.title}`)
+        );
+        if (ref.url) {
+          const link = DomHelpers.createElement("a");
+          link.href = ref.url;
+          link.textContent = "\u{1F517}";
+          link.target = "_blank";
+          row.appendChild(link);
+        }
+        list.appendChild(row);
+      });
+      content.appendChild(list);
+    }
+    const titleInput = DomHelpers.createInput("text", "T\xEDtulo");
+    const typeSelect = DomHelpers.createSelect([
+      ["pdf", "pdf"],
+      ["video", "video"],
+      ["link", "link"],
+      ["question-notebook", "question-notebook"]
+    ]);
+    const urlInput = DomHelpers.createInput("url", "URL");
+    const form = DomHelpers.createForm(async () => {
+      try {
+        await this.addStudyItemResourceReferenceUseCase.execute({
+          studyItemId: item.id,
+          resourceReference: {
+            id: `${item.id}-resource-${Date.now()}`,
+            title: titleInput.value,
+            type: typeSelect.value,
+            url: urlInput.value
+          }
+        });
+        titleInput.value = "";
+        urlInput.value = "";
+        await this.onUpdate();
+      } catch (error) {
+        this.notifyError(error, "N\xE3o foi poss\xEDvel adicionar refer\xEAncia.");
+      }
+    });
+    form.className = "corvo-detail-form";
+    form.append(
+      DomHelpers.createLabel("T\xEDtulo", titleInput),
+      DomHelpers.createLabel("Tipo", typeSelect),
+      DomHelpers.createLabel("URL", urlInput),
+      DomHelpers.createIconButton("add", "Adicionar", { onClick: () => form.requestSubmit() })
+    );
+    content.appendChild(form);
+    td.appendChild(content);
+    tr.appendChild(td);
+    return tr;
+  }
+  createCell(text, element) {
+    const td = DomHelpers.createElement("td");
+    if (text !== null) td.textContent = text;
+    if (element) td.appendChild(element);
+    return td;
+  }
   renderCreateItemForm(subjectId) {
     const titleInput = DomHelpers.createInput("text", "T\xEDtulo do item");
     const weightInput = DomHelpers.createInput("number", "Peso", "1");
@@ -2434,9 +2683,25 @@ var ItemsTab = class {
     );
     return form;
   }
-  /**
-   * Displays an error notification.
-   */
+  renderSubjectPicker(data) {
+    const subjects = data.subjects.filter((subject) => subject.contestId === data.activeContestId).sort((left, right) => left.order - right.order);
+    const select = DomHelpers.createSelect(
+      subjects.map((subject) => [subject.id, subject.name]),
+      this.selectedSubjectId ?? void 0
+    );
+    select.addEventListener("change", async () => {
+      this.selectedSubjectId = select.value;
+      await this.onUpdate();
+    });
+    const wrapper = DomHelpers.createElement("div", "corvo-toolbar");
+    wrapper.appendChild(DomHelpers.createLabel("Mat\xE9ria", select));
+    return wrapper;
+  }
+  getSelectedSubject(data) {
+    const subjects = data.subjects.filter((subject) => subject.contestId === data.activeContestId).sort((left, right) => left.order - right.order);
+    if (subjects.length === 0) return null;
+    return subjects.find((subject) => subject.id === this.selectedSubjectId) ?? subjects[0];
+  }
   notifyError(error, fallbackMessage) {
     new import_obsidian6.Notice(error instanceof Error ? error.message : fallbackMessage);
   }
@@ -2487,14 +2752,12 @@ var SessionsTab = class {
   constructor(dataStore, onUpdate) {
     this.dataStore = dataStore;
     this.onUpdate = onUpdate;
+    this.editingSessionId = null;
     this.registerStudySessionUseCase = new RegisterStudySessionUseCase(dataStore);
     this.deleteStudySessionUseCase = new DeleteStudySessionUseCase(dataStore);
     this.getActiveContestSummaryUseCase = new GetActiveContestSummaryUseCase(dataStore);
     this.listSubjectsForActiveContestUseCase = new ListSubjectsForActiveContestUseCase(dataStore);
   }
-  /**
-   * Renders the sessions tab content.
-   */
   async render(container, data) {
     container.appendChild(DomHelpers.createSectionTitle("Sess\xF5es"));
     container.appendChild(
@@ -2511,11 +2774,113 @@ var SessionsTab = class {
       return;
     }
     const subjects = data.subjects.filter((subject) => subject.contestId === activeContest.id);
+    container.appendChild(this.renderSessionForm(activeContest.id, subjects, data));
+    const recentSessions = DomHelpers.createCard("Hist\xF3rico recente");
+    const sessions = data.studySessions.filter((session) => session.contestId === activeContest.id).slice().reverse().slice(0, 10);
+    if (sessions.length === 0) {
+      recentSessions.appendChild(DomHelpers.createParagraph("Nenhuma sess\xE3o registrada."));
+    } else {
+      const { container: tableContainer, tbody } = DomHelpers.createCrudTable([
+        "Data",
+        "Mat\xE9ria",
+        "Assunto",
+        "Tipo",
+        "Progresso",
+        "A\xE7\xF5es"
+      ]);
+      sessions.forEach((session) => {
+        const isEditing = this.editingSessionId === session.id;
+        if (isEditing) {
+          tbody.appendChild(this.renderEditableRow(session, data));
+        } else {
+          tbody.appendChild(this.renderDisplayRow(session, data));
+        }
+      });
+      recentSessions.appendChild(tableContainer);
+    }
+    container.appendChild(recentSessions);
+  }
+  renderDisplayRow(session, data) {
+    const tr = DomHelpers.createElement("tr");
+    const subjectName = data.subjects.find((subject) => subject.id === session.subjectId)?.name ?? "\u2014";
+    const topicName = data.topics.find((topic) => topic.id === session.topicId)?.name ?? "\u2014";
+    tr.appendChild(this.createCell(new Date(session.studiedAt).toLocaleDateString("pt-BR")));
+    tr.appendChild(this.createCell(subjectName));
+    tr.appendChild(this.createCell(topicName));
+    tr.appendChild(this.createCell(this.formatSessionType(session.type)));
+    tr.appendChild(this.createCell(String(session.pagesOrCount ?? 0)));
+    const actions = DomHelpers.createElement("div", "corvo-inline-actions corvo-inline-actions-compact");
+    actions.appendChild(
+      DomHelpers.createIconButton("edit", "Editar", {
+        onClick: async () => {
+          this.editingSessionId = session.id;
+          await this.onUpdate();
+        }
+      })
+    );
+    actions.appendChild(
+      DomHelpers.createIconButton("delete", "Excluir", {
+        dataset: { sessionDeleteId: session.id },
+        onClick: async () => {
+          if (confirm("Excluir esta sess\xE3o?")) {
+            try {
+              await this.deleteStudySessionUseCase.execute({ sessionId: session.id });
+              await this.onUpdate();
+            } catch (error) {
+              this.notifyError(error, "N\xE3o foi poss\xEDvel excluir a sess\xE3o.");
+            }
+          }
+        }
+      })
+    );
+    const actionsCell = DomHelpers.createElement("td");
+    actionsCell.appendChild(actions);
+    tr.appendChild(actionsCell);
+    return tr;
+  }
+  renderEditableRow(session, data) {
+    const tr = DomHelpers.createElement("tr");
+    tr.className = "corvo-editing-row";
+    const countInput = DomHelpers.createCompactInput("number", "Qtd", String(session.pagesOrCount ?? 0));
+    const saveButton = DomHelpers.createIconButton("save", "Salvar", {
+      onClick: async () => {
+        this.editingSessionId = null;
+        await this.onUpdate();
+      }
+    });
+    const cancelButton = DomHelpers.createIconButton("cancel", "Cancelar", {
+      onClick: async () => {
+        this.editingSessionId = null;
+        await this.onUpdate();
+      }
+    });
+    const actions = DomHelpers.createElement("div", "corvo-inline-actions corvo-inline-actions-compact");
+    actions.appendChild(saveButton);
+    actions.appendChild(cancelButton);
+    const subjectName = data.subjects.find((subject) => subject.id === session.subjectId)?.name ?? "\u2014";
+    const topicName = data.topics.find((topic) => topic.id === session.topicId)?.name ?? "\u2014";
+    tr.appendChild(this.createCell(new Date(session.studiedAt).toLocaleDateString("pt-BR")));
+    tr.appendChild(this.createCell(subjectName));
+    tr.appendChild(this.createCell(topicName));
+    tr.appendChild(this.createCell(this.formatSessionType(session.type)));
+    tr.appendChild(this.createCell(null, countInput));
+    const actionsCell = DomHelpers.createElement("td");
+    actionsCell.appendChild(actions);
+    tr.appendChild(actionsCell);
+    return tr;
+  }
+  createCell(text, element) {
+    const td = DomHelpers.createElement("td");
+    if (text !== null) td.textContent = text;
+    if (element) td.appendChild(element);
+    return td;
+  }
+  renderSessionForm(contestId, subjects, data) {
     const form = DomHelpers.createForm(async () => {
       try {
         await this.registerStudySessionUseCase.execute({
           id: `session-${Date.now()}`,
-          contestId: activeContest.id,
+          contestId,
           subjectId: subjectSelect.value,
           studyItemId: itemSelect.value || void 0,
           topicId: topicSelect.value || void 0,
@@ -2583,62 +2948,19 @@ var SessionsTab = class {
         className: "corvo-primary-button"
       })
     );
-    const recentSessions = DomHelpers.createCard("Hist\xF3rico recente");
-    const sessionRows = data.studySessions.filter((session) => session.contestId === activeContest.id).slice().reverse().slice(0, 8).map((session) => {
-      const subjectName = data.subjects.find((subject) => subject.id === session.subjectId)?.name ?? "sem mat\xE9ria";
-      const topicName = data.topics.find((topic) => topic.id === session.topicId)?.name ?? "-";
-      const deleteButton = DomHelpers.createIconButton("delete", "Excluir", {
-        dataset: { sessionDeleteId: session.id },
-        onClick: async () => {
-          try {
-            await this.deleteStudySessionUseCase.execute({ sessionId: session.id });
-            await this.onUpdate();
-          } catch (error) {
-            this.notifyError(error, "N\xE3o foi poss\xEDvel excluir a sess\xE3o.");
-          }
-        }
-      });
-      return [
-        new Date(session.studiedAt).toLocaleDateString("pt-BR"),
-        subjectName,
-        topicName,
-        this.formatSessionType(session.type),
-        String(session.pagesOrCount ?? 0),
-        deleteButton
-      ];
-    });
-    recentSessions.appendChild(
-      DomHelpers.createTable(
-        ["Data", "Mat\xE9ria", "Assunto", "Tipo", "Progresso", "A\xE7\xF5es"],
-        sessionRows
-      )
-    );
-    container.append(form, recentSessions);
+    return form;
   }
-  /**
-   * Formats a session type for display.
-   */
   formatSessionType(type) {
-    if (type === "questions") {
-      return "Quest\xF5es";
-    }
-    if (type === "video") {
-      return "V\xEDdeo";
-    }
+    if (type === "questions") return "Quest\xF5es";
+    if (type === "video") return "V\xEDdeo";
     return "PDF";
   }
-  /**
-   * Returns the default date value for the date input (YYYY-MM-DD).
-   */
   getDefaultDateValue() {
     const now = /* @__PURE__ */ new Date();
     const timezoneOffset = now.getTimezoneOffset() * 6e4;
     const localDate = new Date(now.getTime() - timezoneOffset);
     return localDate.toISOString().split("T")[0];
   }
-  /**
-   * Displays an error notification.
-   */
   notifyError(error, fallbackMessage) {
     new import_obsidian7.Notice(error instanceof Error ? error.message : fallbackMessage);
   }
@@ -2662,6 +2984,19 @@ var AddTopicResourceReferenceUseCase = class {
       ...topic,
       resourceReferences: [...topic.resourceReferences, input.resourceReference]
     }));
+  }
+};
+
+// src/application/use-cases/DeleteTopicUseCase.ts
+var DeleteTopicUseCase = class {
+  constructor(dataStore) {
+    this.dataStore = dataStore;
+    this.topicRepository = new EntityRepository(dataStore, "topics");
+  }
+  async execute(input) {
+    const topic = await this.topicRepository.findById(input.topicId);
+    await this.topicRepository.delete(input.topicId);
+    return topic;
   }
 };
 
@@ -2689,13 +3024,13 @@ var TopicsTab = class {
     this.dataStore = dataStore;
     this.onUpdate = onUpdate;
     this.selectedSubjectId = null;
+    this.editingTopicId = null;
+    this.expandedTopicId = null;
     this.createTopicUseCase = new CreateTopicUseCase(dataStore);
     this.addTopicResourceReferenceUseCase = new AddTopicResourceReferenceUseCase(dataStore);
     this.linkQuestionNotebookUseCase = new LinkQuestionNotebookUseCase(dataStore);
+    this.deleteTopicUseCase = new DeleteTopicUseCase(dataStore);
   }
-  /**
-   * Renders the topics tab content.
-   */
   async render(container, data) {
     container.appendChild(DomHelpers.createSectionTitle("Assuntos e Quest\xF5es"));
     const subject = this.getSelectedSubject(data);
@@ -2716,67 +3051,180 @@ var TopicsTab = class {
     const card = DomHelpers.createCard(`Assuntos de ${subject.name}`);
     if (topics.length === 0) {
       card.appendChild(DomHelpers.createParagraph("Nenhum assunto cadastrado."));
+      container.appendChild(card);
+      return;
     }
-    if (topics.length > 0) {
-      card.appendChild(
-        DomHelpers.createTable(
-          ["Ordem", "Assunto", "Caderno", "Resolvidas", "Acertos", "Refer\xEAncias"],
-          topics.map((topic) => [
-            String(topic.order),
-            topic.name,
-            topic.questionNotebook?.name ?? "-",
-            String(topic.questionNotebook?.solvedQuestions ?? 0),
-            String(topic.questionNotebook?.correctAnswers ?? 0),
-            String(topic.resourceReferences.length)
-          ])
-        )
-      );
-    }
+    const { container: tableContainer, tbody } = DomHelpers.createCrudTable([
+      "Ordem",
+      "Assunto",
+      "Caderno",
+      "Resolv.",
+      "Acert.",
+      "A\xE7\xF5es"
+    ]);
     topics.forEach((topic) => {
-      const wrapper = DomHelpers.createElement("div", "corvo-stack corvo-card-subsection");
-      wrapper.append(
-        DomHelpers.createStrong(`${topic.order}. ${topic.name}`),
-        topic.questionNotebook ? DomHelpers.createKeyValueRow(
-          "Caderno",
-          `${topic.questionNotebook.name} | Resolvidas ${topic.questionNotebook.solvedQuestions} | Acertos ${topic.questionNotebook.correctAnswers}`
-        ) : DomHelpers.createParagraph("Sem caderno vinculado.")
-      );
-      topic.resourceReferences.forEach((resource) => {
-        wrapper.appendChild(DomHelpers.createKeyValueRow(resource.type, resource.title));
-      });
-      const resourceTitle = DomHelpers.createInput("text", "T\xEDtulo da refer\xEAncia");
-      const resourceType = DomHelpers.createSelect([
-        ["pdf", "pdf"],
-        ["video", "video"],
-        ["link", "link"],
-        ["question-notebook", "question-notebook"]
-      ]);
-      const resourceUrl = DomHelpers.createInput("url", "URL");
-      const resourceForm = DomHelpers.createForm(async () => {
-        try {
-          await this.addTopicResourceReferenceUseCase.execute({
-            topicId: topic.id,
-            resourceReference: {
-              id: `${topic.id}-resource-${Date.now()}`,
-              title: resourceTitle.value,
-              type: resourceType.value,
-              url: resourceUrl.value
-            }
-          });
-          await this.onUpdate();
-        } catch (error) {
-          this.notifyError(error, "N\xE3o foi poss\xEDvel adicionar refer\xEAncia.");
+      const isEditing = this.editingTopicId === topic.id;
+      const isExpanded = this.expandedTopicId === topic.id;
+      if (isEditing) {
+        tbody.appendChild(this.renderEditableRow(topic, data));
+      } else {
+        tbody.appendChild(this.renderDisplayRow(topic, data));
+      }
+      if (isExpanded && !isEditing) {
+        tbody.appendChild(this.renderDetailRow(topic, data));
+      }
+    });
+    card.appendChild(tableContainer);
+    container.appendChild(card);
+  }
+  renderDisplayRow(topic, data) {
+    const tr = DomHelpers.createElement("tr");
+    const hasDetails = topic.resourceReferences.length > 0 || topic.questionNotebook;
+    tr.appendChild(this.createCell(String(topic.order)));
+    tr.appendChild(this.createCell(topic.name));
+    tr.appendChild(this.createCell(topic.questionNotebook?.name ?? "\u2014"));
+    tr.appendChild(this.createCell(String(topic.questionNotebook?.solvedQuestions ?? 0)));
+    tr.appendChild(this.createCell(String(topic.questionNotebook?.correctAnswers ?? 0)));
+    const actions = DomHelpers.createElement("div", "corvo-inline-actions corvo-inline-actions-compact");
+    actions.appendChild(
+      DomHelpers.createIconButton(
+        this.expandedTopicId === topic.id ? "collapse" : "expand",
+        this.expandedTopicId === topic.id ? "Recolher" : "Expandir",
+        {
+          className: `corvo-icon-button ${hasDetails ? "" : "corvo-expand-button"}`,
+          onClick: async () => {
+            this.expandedTopicId = this.expandedTopicId === topic.id ? null : topic.id;
+            await this.onUpdate();
+          }
         }
+      )
+    );
+    actions.appendChild(
+      DomHelpers.createIconButton("edit", "Editar", {
+        onClick: async () => {
+          this.editingTopicId = topic.id;
+          await this.onUpdate();
+        }
+      })
+    );
+    actions.appendChild(
+      DomHelpers.createIconButton("delete", "Excluir", {
+        onClick: async () => {
+          if (confirm(`Excluir "${topic.name}"?`)) {
+            try {
+              await this.deleteTopicUseCase.execute({ topicId: topic.id });
+              await this.onUpdate();
+            } catch (error) {
+              this.notifyError(error, "N\xE3o foi poss\xEDvel excluir o assunto.");
+            }
+          }
+        }
+      })
+    );
+    const actionsCell = DomHelpers.createElement("td");
+    actionsCell.appendChild(actions);
+    tr.appendChild(actionsCell);
+    return tr;
+  }
+  renderEditableRow(topic, data) {
+    const tr = DomHelpers.createElement("tr");
+    tr.className = "corvo-editing-row";
+    const nameInput = DomHelpers.createCompactInput("text", "Nome", topic.name);
+    const solvedInput = DomHelpers.createCompactInput(
+      "number",
+      "Resolv.",
+      String(topic.questionNotebook?.solvedQuestions ?? 0)
+    );
+    const correctInput = DomHelpers.createCompactInput(
+      "number",
+      "Acert.",
+      String(topic.questionNotebook?.correctAnswers ?? 0)
+    );
+    const saveButton = DomHelpers.createIconButton("save", "Salvar", {
+      onClick: async () => {
+        this.editingTopicId = null;
+        await this.onUpdate();
+      }
+    });
+    const cancelButton = DomHelpers.createIconButton("cancel", "Cancelar", {
+      onClick: async () => {
+        this.editingTopicId = null;
+        await this.onUpdate();
+      }
+    });
+    const actions = DomHelpers.createElement("div", "corvo-inline-actions corvo-inline-actions-compact");
+    actions.appendChild(saveButton);
+    actions.appendChild(cancelButton);
+    tr.appendChild(this.createCell(String(topic.order)));
+    tr.appendChild(this.createCell(null, nameInput));
+    tr.appendChild(this.createCell(null, DomHelpers.createParagraph(topic.questionNotebook?.name ?? "\u2014")));
+    tr.appendChild(this.createCell(null, solvedInput));
+    tr.appendChild(this.createCell(null, correctInput));
+    const actionsCell = DomHelpers.createElement("td");
+    actionsCell.appendChild(actions);
+    tr.appendChild(actionsCell);
+    return tr;
+  }
+  renderDetailRow(topic, data) {
+    const tr = DomHelpers.createElement("tr");
+    tr.className = "corvo-detail-row";
+    const td = DomHelpers.createElement("td");
+    td.colSpan = 6;
+    const content = DomHelpers.createElement("div", "corvo-detail-content");
+    if (topic.resourceReferences.length > 0) {
+      const list = DomHelpers.createElement("div", "corvo-detail-list");
+      topic.resourceReferences.forEach((ref) => {
+        const row = DomHelpers.createElement("div", "corvo-detail-list-item");
+        row.appendChild(DomHelpers.createParagraph(`${ref.type}: ${ref.title}`));
+        if (ref.url) {
+          const link = DomHelpers.createElement("a");
+          link.href = ref.url;
+          link.textContent = "\u{1F517}";
+          link.target = "_blank";
+          row.appendChild(link);
+        }
+        list.appendChild(row);
       });
-      resourceForm.append(
-        DomHelpers.createLabel("T\xEDtulo", resourceTitle),
-        DomHelpers.createLabel("Tipo", resourceType),
-        DomHelpers.createLabel("URL", resourceUrl),
-        DomHelpers.createButton("Adicionar refer\xEAncia", { type: "submit" })
-      );
-      const notebookName = DomHelpers.createInput("text", "Nome do caderno", topic.questionNotebook?.name ?? "");
-      const notebookSolved = DomHelpers.createInput("number", "Resolvidas", String(topic.questionNotebook?.solvedQuestions ?? 0));
-      const notebookCorrect = DomHelpers.createInput("number", "Acertos", String(topic.questionNotebook?.correctAnswers ?? 0));
+      content.appendChild(list);
+    }
+    const titleInput = DomHelpers.createInput("text", "T\xEDtulo");
+    const typeSelect = DomHelpers.createSelect([
+      ["pdf", "pdf"],
+      ["video", "video"],
+      ["link", "link"],
+      ["question-notebook", "question-notebook"]
+    ]);
+    const urlInput = DomHelpers.createInput("url", "URL");
+    const resourceForm = DomHelpers.createForm(async () => {
+      try {
+        await this.addTopicResourceReferenceUseCase.execute({
+          topicId: topic.id,
+          resourceReference: {
+            id: `${topic.id}-resource-${Date.now()}`,
+            title: titleInput.value,
+            type: typeSelect.value,
+            url: urlInput.value
+          }
+        });
+        titleInput.value = "";
+        urlInput.value = "";
+        await this.onUpdate();
+      } catch (error) {
+        this.notifyError(error, "N\xE3o foi poss\xEDvel adicionar refer\xEAncia.");
+      }
+    });
+    resourceForm.className = "corvo-detail-form";
+    resourceForm.append(
+      DomHelpers.createLabel("T\xEDtulo", titleInput),
+      DomHelpers.createLabel("Tipo", typeSelect),
+      DomHelpers.createLabel("URL", urlInput),
+      DomHelpers.createIconButton("add", "Adicionar", { onClick: () => resourceForm.requestSubmit() })
+    );
+    content.appendChild(resourceForm);
+    if (topic.questionNotebook) {
+      const notebookName = DomHelpers.createInput("text", "Nome", topic.questionNotebook.name);
+      const notebookSolved = DomHelpers.createInput("number", "Resolv.", String(topic.questionNotebook.solvedQuestions));
+      const notebookCorrect = DomHelpers.createInput("number", "Acert.", String(topic.questionNotebook.correctAnswers));
       const notebookForm = DomHelpers.createForm(async () => {
         try {
           await this.linkQuestionNotebookUseCase.execute({
@@ -2794,40 +3242,25 @@ var TopicsTab = class {
           this.notifyError(error, "N\xE3o foi poss\xEDvel vincular caderno.");
         }
       });
+      notebookForm.className = "corvo-detail-form";
       notebookForm.append(
-        DomHelpers.createLabel("Nome do caderno", notebookName),
-        DomHelpers.createLabel("Resolvidas", notebookSolved),
-        DomHelpers.createLabel("Acertos", notebookCorrect),
-        DomHelpers.createButton("Vincular caderno", { type: "submit" })
+        DomHelpers.createLabel("Caderno", notebookName),
+        DomHelpers.createLabel("Resolv.", notebookSolved),
+        DomHelpers.createLabel("Acert.", notebookCorrect),
+        DomHelpers.createIconButton("save", "Salvar", { onClick: () => notebookForm.requestSubmit() })
       );
-      wrapper.append(
-        DomHelpers.createDisclosure("Adicionar refer\xEAncia", resourceForm),
-        DomHelpers.createDisclosure("Vincular caderno", notebookForm)
-      );
-      card.appendChild(wrapper);
-    });
-    container.appendChild(card);
+      content.appendChild(notebookForm);
+    }
+    td.appendChild(content);
+    tr.appendChild(td);
+    return tr;
   }
-  /**
-   * Renders the subject picker dropdown.
-   */
-  renderSubjectPicker(data) {
-    const subjects = data.subjects.filter((subject) => subject.contestId === data.activeContestId).sort((left, right) => left.order - right.order);
-    const select = DomHelpers.createSelect(
-      subjects.map((subject) => [subject.id, subject.name]),
-      this.selectedSubjectId ?? void 0
-    );
-    select.addEventListener("change", async () => {
-      this.selectedSubjectId = select.value;
-      await this.onUpdate();
-    });
-    const wrapper = DomHelpers.createElement("div", "corvo-toolbar");
-    wrapper.appendChild(DomHelpers.createLabel("Mat\xE9ria", select));
-    return wrapper;
+  createCell(text, element) {
+    const td = DomHelpers.createElement("td");
+    if (text !== null) td.textContent = text;
+    if (element) td.appendChild(element);
+    return td;
   }
-  /**
-   * Renders the form for creating a new topic.
-   */
   renderCreateTopicForm(subjectId) {
     const nameInput = DomHelpers.createInput("text", "Nome do assunto");
     const orderInput = DomHelpers.createInput("number", "Ordem", "1");
@@ -2851,19 +3284,25 @@ var TopicsTab = class {
     );
     return form;
   }
-  /**
-   * Returns the currently selected subject, or the first subject with active contest.
-   */
+  renderSubjectPicker(data) {
+    const subjects = data.subjects.filter((subject) => subject.contestId === data.activeContestId).sort((left, right) => left.order - right.order);
+    const select = DomHelpers.createSelect(
+      subjects.map((subject) => [subject.id, subject.name]),
+      this.selectedSubjectId ?? void 0
+    );
+    select.addEventListener("change", async () => {
+      this.selectedSubjectId = select.value;
+      await this.onUpdate();
+    });
+    const wrapper = DomHelpers.createElement("div", "corvo-toolbar");
+    wrapper.appendChild(DomHelpers.createLabel("Mat\xE9ria", select));
+    return wrapper;
+  }
   getSelectedSubject(data) {
     const subjects = data.subjects.filter((subject) => subject.contestId === data.activeContestId).sort((left, right) => left.order - right.order);
-    if (subjects.length === 0) {
-      return null;
-    }
+    if (subjects.length === 0) return null;
     return subjects.find((subject) => subject.id === this.selectedSubjectId) ?? subjects[0];
   }
-  /**
-   * Displays an error notification.
-   */
   notifyError(error, fallbackMessage) {
     new import_obsidian8.Notice(error instanceof Error ? error.message : fallbackMessage);
   }
@@ -2877,9 +3316,6 @@ var WallTab = class {
     this.onUpdate = onUpdate;
     this.updateContestWallUseCase = new UpdateContestWallUseCase(dataStore);
   }
-  /**
-   * Renders the wall tab content.
-   */
   async render(container, data) {
     container.appendChild(DomHelpers.createSectionTitle("Mural"));
     container.appendChild(
@@ -2895,34 +3331,8 @@ var WallTab = class {
       );
       return;
     }
-    const summaryCard = DomHelpers.createCard("Resumo do mural");
-    summaryCard.append(
-      DomHelpers.createKeyValueRow("Editais", String(activeContest.wall.noticeLinks.length)),
-      DomHelpers.createKeyValueRow("Provas", String(activeContest.wall.examLinks.length)),
-      DomHelpers.createParagraph(activeContest.wall.notes ?? "Sem observa\xE7\xF5es.")
-    );
-    container.appendChild(summaryCard);
     container.appendChild(this.renderWallForm(activeContest));
-    const snapshotsCard = DomHelpers.createCard("Snapshots das mat\xE9rias");
-    if (activeContest.wall.subjectSnapshots.length === 0) {
-      snapshotsCard.appendChild(
-        DomHelpers.createParagraph("Nenhum snapshot de mat\xE9ria cadastrado.")
-      );
-    } else {
-      const subjectMap = new Map(data.subjects.map((s) => [s.id, s.name]));
-      snapshotsCard.appendChild(
-        DomHelpers.createTable(
-          ["Mat\xE9ria", "Peso", "Pontua\xE7\xE3o", "Itens alvo"],
-          activeContest.wall.subjectSnapshots.map((snapshot) => [
-            subjectMap.get(snapshot.subjectId) ?? snapshot.subjectId,
-            snapshot.weight !== void 0 ? String(snapshot.weight) : "-",
-            snapshot.score !== void 0 ? String(snapshot.score) : "-",
-            snapshot.targetItems?.join(", ") ?? "-"
-          ])
-        )
-      );
-    }
-    container.appendChild(snapshotsCard);
+    container.appendChild(this.renderSnapshotsCard(activeContest, data));
   }
   renderWallForm(activeContest) {
     const noticeLabel = DomHelpers.createInput(
@@ -2930,30 +3340,25 @@ var WallTab = class {
       "R\xF3tulo do edital",
       activeContest.wall.noticeLinks[0]?.label ?? ""
     );
-    noticeLabel.dataset.field = "notice-label";
     const noticeUrl = DomHelpers.createInput(
       "url",
       "URL do edital",
       activeContest.wall.noticeLinks[0]?.url ?? ""
     );
-    noticeUrl.dataset.field = "notice-url";
     const examLabel = DomHelpers.createInput(
       "text",
       "R\xF3tulo da prova",
       activeContest.wall.examLinks[0]?.label ?? ""
     );
-    examLabel.dataset.field = "exam-label";
     const examUrl = DomHelpers.createInput(
       "url",
       "URL da prova",
       activeContest.wall.examLinks[0]?.url ?? ""
     );
-    examUrl.dataset.field = "exam-url";
     const notes = DomHelpers.createTextarea(
       "Notas do concurso",
       activeContest.wall.notes ?? ""
     );
-    notes.dataset.field = "notes";
     const form = DomHelpers.createForm(async () => {
       try {
         const noticeLink = noticeUrl.value ? [
@@ -2998,9 +3403,28 @@ var WallTab = class {
     );
     return form;
   }
-  /**
-   * Displays an error notification.
-   */
+  renderSnapshotsCard(activeContest, data) {
+    const card = DomHelpers.createCard("Snapshots das mat\xE9rias");
+    if (activeContest.wall.subjectSnapshots.length === 0) {
+      card.appendChild(
+        DomHelpers.createParagraph("Nenhum snapshot de mat\xE9ria cadastrado.")
+      );
+    } else {
+      const subjectMap = new Map(data.subjects.map((s) => [s.id, s.name]));
+      card.appendChild(
+        DomHelpers.createTable(
+          ["Mat\xE9ria", "Peso", "Pontua\xE7\xE3o", "Itens alvo"],
+          activeContest.wall.subjectSnapshots.map((snapshot) => [
+            subjectMap.get(snapshot.subjectId) ?? snapshot.subjectId,
+            snapshot.weight !== void 0 ? String(snapshot.weight) : "\u2014",
+            snapshot.score !== void 0 ? String(snapshot.score) : "\u2014",
+            snapshot.targetItems?.join(", ") ?? "\u2014"
+          ])
+        )
+      );
+    }
+    return card;
+  }
   notifyError(error, fallbackMessage) {
     if (error instanceof NoActiveContestError) {
       new import_obsidian9.Notice("Nenhum concurso ativo. Selecione um concurso para continuar.");

@@ -1,16 +1,23 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import { CreateContestUseCase } from "@/application/use-cases/CreateContestUseCase";
+import { DeleteContestUseCase } from "@/application/use-cases/DeleteContestUseCase";
 import { SetActiveContestUseCase } from "@/application/use-cases/SetActiveContestUseCase";
+import { UpdateContestUseCase } from "@/application/use-cases/UpdateContestUseCase";
+import type { Contest } from "@/domain/entities/Contest";
 import type { CorvoPluginData } from "@/domain/types/CorvoPluginData";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 import { Notice } from "obsidian";
 
 /**
- * Contests tab component - shows contest list and creation form.
+ * Contests tab component with unified CRUD pattern.
  */
 export class ContestsTab {
   private readonly createContestUseCase: CreateContestUseCase;
   private readonly setActiveContestUseCase: SetActiveContestUseCase;
+  private readonly updateContestUseCase: UpdateContestUseCase;
+  private readonly deleteContestUseCase: DeleteContestUseCase;
+
+  private editingContestId: string | null = null;
 
   constructor(
     private readonly dataStore: PluginDataStore,
@@ -18,11 +25,10 @@ export class ContestsTab {
   ) {
     this.createContestUseCase = new CreateContestUseCase(dataStore);
     this.setActiveContestUseCase = new SetActiveContestUseCase(dataStore);
+    this.updateContestUseCase = new UpdateContestUseCase(dataStore);
+    this.deleteContestUseCase = new DeleteContestUseCase(dataStore);
   }
 
-  /**
-   * Renders the contests tab content.
-   */
   async render(container: HTMLElement, data: CorvoPluginData): Promise<void> {
     container.appendChild(DomHelpers.createSectionTitle("Concursos"));
     container.appendChild(
@@ -37,45 +43,140 @@ export class ContestsTab {
       contestsCard.appendChild(DomHelpers.createParagraph("Nenhum concurso cadastrado."));
     }
 
+    const { container: tableContainer, tbody } = DomHelpers.createCrudTable([
+      "Concurso",
+      "ID",
+      "Notas",
+      "Status",
+      "Ações"
+    ]);
+
     data.contests.forEach((contest) => {
-      const row = DomHelpers.createElement("div", "corvo-list-row");
-      const info = DomHelpers.createElement("div", "corvo-stack");
-      info.append(
-        DomHelpers.createStrong(contest.name),
-        DomHelpers.createParagraph(`ID: ${contest.id}`),
-        DomHelpers.createParagraph(contest.wall.notes ?? "Sem observações no mural.")
-      );
-
-      const actions = DomHelpers.createElement("div", "corvo-inline-actions");
-      if (data.activeContestId === contest.id) {
-        actions.appendChild(DomHelpers.createBadge("Ativo"));
+      const isEditing = this.editingContestId === contest.id;
+      if (isEditing) {
+        tbody.appendChild(this.renderEditableRow(contest, data));
       } else {
-        actions.appendChild(
-          DomHelpers.createButton(`Ativar ${contest.name}`, {
-            onClick: async () => {
-              try {
-                await this.setActiveContestUseCase.execute({ contestId: contest.id });
-                await this.onUpdate();
-              } catch (error) {
-                this.notifyError(error, "Não foi possível ativar o concurso.");
-              }
-            }
-          })
-        );
+        tbody.appendChild(this.renderDisplayRow(contest, data));
       }
-
-      row.append(info, actions);
-      contestsCard.appendChild(row);
     });
 
+    contestsCard.appendChild(tableContainer);
     container.appendChild(contestsCard);
   }
 
-  /**
-   * Renders the create contest form.
-   */
+  private renderDisplayRow(contest: Contest, data: CorvoPluginData): HTMLElement {
+    const tr = DomHelpers.createElement("tr");
+    const isActive = data.activeContestId === contest.id;
+
+    tr.appendChild(this.createCell(contest.name));
+    tr.appendChild(this.createCell(contest.id));
+    tr.appendChild(this.createCell(contest.wall.notes ?? "—"));
+    tr.appendChild(this.createCell(isActive ? "Ativo" : "Inativo"));
+
+    const actions = DomHelpers.createElement("div", "corvo-inline-actions corvo-inline-actions-compact");
+
+    if (!isActive) {
+      actions.appendChild(
+        DomHelpers.createIconButton("toggleOn", "Ativar", {
+          dataset: { contestId: contest.id },
+          onClick: async () => {
+            try {
+              await this.setActiveContestUseCase.execute({ contestId: contest.id });
+              await this.onUpdate();
+            } catch (error) {
+              this.notifyError(error, "Não foi possível ativar o concurso.");
+            }
+          }
+        })
+      );
+    }
+
+    actions.appendChild(
+      DomHelpers.createIconButton("edit", "Editar", {
+        onClick: async () => {
+          this.editingContestId = contest.id;
+          await this.onUpdate();
+        }
+      })
+    );
+
+    actions.appendChild(
+      DomHelpers.createIconButton("delete", "Excluir", {
+        onClick: async () => {
+          if (confirm(`Excluir "${contest.name}"?`)) {
+            try {
+              await this.deleteContestUseCase.execute({ contestId: contest.id });
+              await this.onUpdate();
+            } catch (error) {
+              this.notifyError(error, "Não foi possível excluir o concurso.");
+            }
+          }
+        }
+      })
+    );
+
+    const actionsCell = DomHelpers.createElement("td");
+    actionsCell.appendChild(actions);
+    tr.appendChild(actionsCell);
+
+    return tr;
+  }
+
+  private renderEditableRow(contest: Contest, data: CorvoPluginData): HTMLElement {
+    const tr = DomHelpers.createElement("tr");
+    tr.className = "corvo-editing-row";
+
+    const nameInput = DomHelpers.createCompactInput("text", "Nome", contest.name);
+    const notesInput = DomHelpers.createCompactInput("text", "Notas", contest.wall.notes ?? "");
+
+    const saveButton = DomHelpers.createIconButton("save", "Salvar", {
+      onClick: async () => {
+        try {
+          await this.updateContestUseCase.execute({
+            contestId: contest.id,
+            name: nameInput.value,
+            notes: notesInput.value
+          });
+          this.editingContestId = null;
+          await this.onUpdate();
+        } catch (error) {
+          this.notifyError(error, "Não foi possível salvar.");
+        }
+      }
+    });
+
+    const cancelButton = DomHelpers.createIconButton("cancel", "Cancelar", {
+      onClick: async () => {
+        this.editingContestId = null;
+        await this.onUpdate();
+      }
+    });
+
+    const actions = DomHelpers.createElement("div", "corvo-inline-actions corvo-inline-actions-compact");
+    actions.appendChild(saveButton);
+    actions.appendChild(cancelButton);
+
+    tr.appendChild(this.createCell(null, nameInput));
+    tr.appendChild(this.createCell(contest.id));
+    tr.appendChild(this.createCell(null, notesInput));
+    tr.appendChild(this.createCell(data.activeContestId === contest.id ? "Ativo" : "Inativo"));
+
+    const actionsCell = DomHelpers.createElement("td");
+    actionsCell.appendChild(actions);
+    tr.appendChild(actionsCell);
+
+    return tr;
+  }
+
+  private createCell(text: string | null, element?: HTMLElement): HTMLElement {
+    const td = DomHelpers.createElement("td");
+    if (text !== null) td.textContent = text;
+    if (element) td.appendChild(element);
+    return td;
+  }
+
   private renderCreateContestForm(): HTMLElement {
-    const form = DomHelpers.createForm(async (event) => {
+    const form = DomHelpers.createForm(async () => {
       const idInput = form.querySelector<HTMLInputElement>("[data-field='id']");
       const nameInput = form.querySelector<HTMLInputElement>("[data-field='name']");
 
@@ -113,9 +214,6 @@ export class ContestsTab {
     return form;
   }
 
-  /**
-   * Displays an error notification.
-   */
   private notifyError(error: unknown, fallbackMessage: string): void {
     new Notice(error instanceof Error ? error.message : fallbackMessage);
   }

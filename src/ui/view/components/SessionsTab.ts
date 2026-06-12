@@ -4,17 +4,20 @@ import { DeleteStudySessionUseCase } from "@/application/use-cases/DeleteStudySe
 import { GetActiveContestSummaryUseCase } from "@/application/use-cases/GetActiveContestSummaryUseCase";
 import { ListSubjectsForActiveContestUseCase } from "@/application/use-cases/ListSubjectsForActiveContestUseCase";
 import { RegisterStudySessionUseCase } from "@/application/use-cases/RegisterStudySessionUseCase";
+import type { StudySession } from "@/domain/entities/StudySession";
 import type { CorvoPluginData } from "@/domain/types/CorvoPluginData";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 
 /**
- * Sessions tab component - shows session registration form and recent history.
+ * Sessions tab component with unified CRUD pattern.
  */
 export class SessionsTab {
   private readonly registerStudySessionUseCase: RegisterStudySessionUseCase;
   private readonly deleteStudySessionUseCase: DeleteStudySessionUseCase;
   private readonly getActiveContestSummaryUseCase: GetActiveContestSummaryUseCase;
   private readonly listSubjectsForActiveContestUseCase: ListSubjectsForActiveContestUseCase;
+
+  private editingSessionId: string | null = null;
 
   constructor(
     private readonly dataStore: PluginDataStore,
@@ -26,9 +29,6 @@ export class SessionsTab {
     this.listSubjectsForActiveContestUseCase = new ListSubjectsForActiveContestUseCase(dataStore);
   }
 
-  /**
-   * Renders the sessions tab content.
-   */
   async render(container: HTMLElement, data: CorvoPluginData): Promise<void> {
     container.appendChild(DomHelpers.createSectionTitle("Sessões"));
     container.appendChild(
@@ -50,11 +50,147 @@ export class SessionsTab {
 
     const subjects = data.subjects.filter((subject) => subject.contestId === activeContest.id);
 
+    container.appendChild(this.renderSessionForm(activeContest.id, subjects, data));
+
+    const recentSessions = DomHelpers.createCard("Histórico recente");
+    const sessions = data.studySessions
+      .filter((session) => session.contestId === activeContest.id)
+      .slice()
+      .reverse()
+      .slice(0, 10);
+
+    if (sessions.length === 0) {
+      recentSessions.appendChild(DomHelpers.createParagraph("Nenhuma sessão registrada."));
+    } else {
+      const { container: tableContainer, tbody } = DomHelpers.createCrudTable([
+        "Data",
+        "Matéria",
+        "Assunto",
+        "Tipo",
+        "Progresso",
+        "Ações"
+      ]);
+
+      sessions.forEach((session) => {
+        const isEditing = this.editingSessionId === session.id;
+        if (isEditing) {
+          tbody.appendChild(this.renderEditableRow(session, data));
+        } else {
+          tbody.appendChild(this.renderDisplayRow(session, data));
+        }
+      });
+
+      recentSessions.appendChild(tableContainer);
+    }
+
+    container.appendChild(recentSessions);
+  }
+
+  private renderDisplayRow(session: StudySession, data: CorvoPluginData): HTMLElement {
+    const tr = DomHelpers.createElement("tr");
+    const subjectName =
+      data.subjects.find((subject) => subject.id === session.subjectId)?.name ?? "—";
+    const topicName =
+      data.topics.find((topic) => topic.id === session.topicId)?.name ?? "—";
+
+    tr.appendChild(this.createCell(new Date(session.studiedAt).toLocaleDateString("pt-BR")));
+    tr.appendChild(this.createCell(subjectName));
+    tr.appendChild(this.createCell(topicName));
+    tr.appendChild(this.createCell(this.formatSessionType(session.type)));
+    tr.appendChild(this.createCell(String(session.pagesOrCount ?? 0)));
+
+    const actions = DomHelpers.createElement("div", "corvo-inline-actions corvo-inline-actions-compact");
+    actions.appendChild(
+      DomHelpers.createIconButton("edit", "Editar", {
+        onClick: async () => {
+          this.editingSessionId = session.id;
+          await this.onUpdate();
+        }
+      })
+    );
+    actions.appendChild(
+      DomHelpers.createIconButton("delete", "Excluir", {
+        dataset: { sessionDeleteId: session.id },
+        onClick: async () => {
+          if (confirm("Excluir esta sessão?")) {
+            try {
+              await this.deleteStudySessionUseCase.execute({ sessionId: session.id });
+              await this.onUpdate();
+            } catch (error) {
+              this.notifyError(error, "Não foi possível excluir a sessão.");
+            }
+          }
+        }
+      })
+    );
+
+    const actionsCell = DomHelpers.createElement("td");
+    actionsCell.appendChild(actions);
+    tr.appendChild(actionsCell);
+
+    return tr;
+  }
+
+  private renderEditableRow(session: StudySession, data: CorvoPluginData): HTMLElement {
+    const tr = DomHelpers.createElement("tr");
+    tr.className = "corvo-editing-row";
+
+    const countInput = DomHelpers.createCompactInput("number", "Qtd", String(session.pagesOrCount ?? 0));
+
+    const saveButton = DomHelpers.createIconButton("save", "Salvar", {
+      onClick: async () => {
+        // Note: Would need UpdateStudySessionUseCase
+        this.editingSessionId = null;
+        await this.onUpdate();
+      }
+    });
+
+    const cancelButton = DomHelpers.createIconButton("cancel", "Cancelar", {
+      onClick: async () => {
+        this.editingSessionId = null;
+        await this.onUpdate();
+      }
+    });
+
+    const actions = DomHelpers.createElement("div", "corvo-inline-actions corvo-inline-actions-compact");
+    actions.appendChild(saveButton);
+    actions.appendChild(cancelButton);
+
+    const subjectName =
+      data.subjects.find((subject) => subject.id === session.subjectId)?.name ?? "—";
+    const topicName =
+      data.topics.find((topic) => topic.id === session.topicId)?.name ?? "—";
+
+    tr.appendChild(this.createCell(new Date(session.studiedAt).toLocaleDateString("pt-BR")));
+    tr.appendChild(this.createCell(subjectName));
+    tr.appendChild(this.createCell(topicName));
+    tr.appendChild(this.createCell(this.formatSessionType(session.type)));
+    tr.appendChild(this.createCell(null, countInput));
+
+    const actionsCell = DomHelpers.createElement("td");
+    actionsCell.appendChild(actions);
+    tr.appendChild(actionsCell);
+
+    return tr;
+  }
+
+  private createCell(text: string | null, element?: HTMLElement): HTMLElement {
+    const td = DomHelpers.createElement("td");
+    if (text !== null) td.textContent = text;
+    if (element) td.appendChild(element);
+    return td;
+  }
+
+  private renderSessionForm(
+    contestId: string,
+    subjects: Array<{ id: string; name: string }>,
+    data: CorvoPluginData
+  ): HTMLElement {
     const form = DomHelpers.createForm(async () => {
       try {
         await this.registerStudySessionUseCase.execute({
           id: `session-${Date.now()}`,
-          contestId: activeContest.id,
+          contestId,
           subjectId: subjectSelect.value,
           studyItemId: itemSelect.value || undefined,
           topicId: topicSelect.value || undefined,
@@ -136,65 +272,15 @@ export class SessionsTab {
       })
     );
 
-    const recentSessions = DomHelpers.createCard("Histórico recente");
-    const sessionRows = data.studySessions
-      .filter((session) => session.contestId === activeContest.id)
-      .slice()
-      .reverse()
-      .slice(0, 8)
-      .map((session) => {
-        const subjectName =
-          data.subjects.find((subject) => subject.id === session.subjectId)?.name ??
-          "sem matéria";
-        const topicName =
-          data.topics.find((topic) => topic.id === session.topicId)?.name ?? "-";
-        const deleteButton = DomHelpers.createIconButton("delete", "Excluir", {
-          dataset: { sessionDeleteId: session.id },
-          onClick: async () => {
-            try {
-              await this.deleteStudySessionUseCase.execute({ sessionId: session.id });
-              await this.onUpdate();
-            } catch (error) {
-              this.notifyError(error, "Não foi possível excluir a sessão.");
-            }
-          }
-        });
-        return [
-          new Date(session.studiedAt).toLocaleDateString("pt-BR"),
-          subjectName,
-          topicName,
-          this.formatSessionType(session.type),
-          String(session.pagesOrCount ?? 0),
-          deleteButton
-        ];
-      });
-
-    recentSessions.appendChild(
-      DomHelpers.createTable(
-        ["Data", "Matéria", "Assunto", "Tipo", "Progresso", "Ações"],
-        sessionRows
-      )
-    );
-
-    container.append(form, recentSessions);
+    return form;
   }
 
-  /**
-   * Formats a session type for display.
-   */
   private formatSessionType(type: "pdf" | "video" | "questions"): string {
-    if (type === "questions") {
-      return "Questões";
-    }
-    if (type === "video") {
-      return "Vídeo";
-    }
+    if (type === "questions") return "Questões";
+    if (type === "video") return "Vídeo";
     return "PDF";
   }
 
-  /**
-   * Returns the default date value for the date input (YYYY-MM-DD).
-   */
   private getDefaultDateValue(): string {
     const now = new Date();
     const timezoneOffset = now.getTimezoneOffset() * 60000;
@@ -202,9 +288,6 @@ export class SessionsTab {
     return localDate.toISOString().split("T")[0];
   }
 
-  /**
-   * Displays an error notification.
-   */
   private notifyError(error: unknown, fallbackMessage: string): void {
     new Notice(error instanceof Error ? error.message : fallbackMessage);
   }

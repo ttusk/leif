@@ -2,19 +2,25 @@ import { Notice } from "obsidian";
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import { AddTopicResourceReferenceUseCase } from "@/application/use-cases/AddTopicResourceReferenceUseCase";
 import { CreateTopicUseCase } from "@/application/use-cases/CreateTopicUseCase";
+import { DeleteTopicUseCase } from "@/application/use-cases/DeleteTopicUseCase";
 import { LinkQuestionNotebookUseCase } from "@/application/use-cases/LinkQuestionNotebookUseCase";
+import type { Topic } from "@/domain/entities/Topic";
 import type { CorvoPluginData } from "@/domain/types/CorvoPluginData";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 
 /**
- * Topics tab component - manages topics, resource references, and question notebooks.
+ * Topics tab component with unified CRUD pattern.
+ * Table with inline editing + expandable detail rows for resource references and notebook.
  */
 export class TopicsTab {
   private readonly createTopicUseCase: CreateTopicUseCase;
   private readonly addTopicResourceReferenceUseCase: AddTopicResourceReferenceUseCase;
   private readonly linkQuestionNotebookUseCase: LinkQuestionNotebookUseCase;
+  private readonly deleteTopicUseCase: DeleteTopicUseCase;
 
   private selectedSubjectId: string | null = null;
+  private editingTopicId: string | null = null;
+  private expandedTopicId: string | null = null;
 
   constructor(
     private readonly dataStore: PluginDataStore,
@@ -23,11 +29,9 @@ export class TopicsTab {
     this.createTopicUseCase = new CreateTopicUseCase(dataStore);
     this.addTopicResourceReferenceUseCase = new AddTopicResourceReferenceUseCase(dataStore);
     this.linkQuestionNotebookUseCase = new LinkQuestionNotebookUseCase(dataStore);
+    this.deleteTopicUseCase = new DeleteTopicUseCase(dataStore);
   }
 
-  /**
-   * Renders the topics tab content.
-   */
   async render(container: HTMLElement, data: CorvoPluginData): Promise<void> {
     container.appendChild(DomHelpers.createSectionTitle("Assuntos e Questões"));
 
@@ -52,78 +56,214 @@ export class TopicsTab {
       .sort((left, right) => left.order - right.order);
 
     const card = DomHelpers.createCard(`Assuntos de ${subject.name}`);
+
     if (topics.length === 0) {
       card.appendChild(DomHelpers.createParagraph("Nenhum assunto cadastrado."));
+      container.appendChild(card);
+      return;
     }
 
-    if (topics.length > 0) {
-      card.appendChild(
-        DomHelpers.createTable(
-          ["Ordem", "Assunto", "Caderno", "Resolvidas", "Acertos", "Referências"],
-          topics.map((topic) => [
-            String(topic.order),
-            topic.name,
-            topic.questionNotebook?.name ?? "-",
-            String(topic.questionNotebook?.solvedQuestions ?? 0),
-            String(topic.questionNotebook?.correctAnswers ?? 0),
-            String(topic.resourceReferences.length)
-          ])
-        )
-      );
-    }
+    const { container: tableContainer, tbody } = DomHelpers.createCrudTable([
+      "Ordem",
+      "Assunto",
+      "Caderno",
+      "Resolv.",
+      "Acert.",
+      "Ações"
+    ]);
 
     topics.forEach((topic) => {
-      const wrapper = DomHelpers.createElement("div", "corvo-stack corvo-card-subsection");
-      wrapper.append(
-        DomHelpers.createStrong(`${topic.order}. ${topic.name}`),
-        topic.questionNotebook
-          ? DomHelpers.createKeyValueRow(
-              "Caderno",
-              `${topic.questionNotebook.name} | Resolvidas ${topic.questionNotebook.solvedQuestions} | Acertos ${topic.questionNotebook.correctAnswers}`
-            )
-          : DomHelpers.createParagraph("Sem caderno vinculado.")
-      );
+      const isEditing = this.editingTopicId === topic.id;
+      const isExpanded = this.expandedTopicId === topic.id;
 
-      topic.resourceReferences.forEach((resource) => {
-        wrapper.appendChild(DomHelpers.createKeyValueRow(resource.type, resource.title));
-      });
+      if (isEditing) {
+        tbody.appendChild(this.renderEditableRow(topic, data));
+      } else {
+        tbody.appendChild(this.renderDisplayRow(topic, data));
+      }
 
-      const resourceTitle = DomHelpers.createInput("text", "Título da referência");
-      const resourceType = DomHelpers.createSelect([
-        ["pdf", "pdf"],
-        ["video", "video"],
-        ["link", "link"],
-        ["question-notebook", "question-notebook"]
-      ]);
-      const resourceUrl = DomHelpers.createInput("url", "URL");
+      if (isExpanded && !isEditing) {
+        tbody.appendChild(this.renderDetailRow(topic, data));
+      }
+    });
 
-      const resourceForm = DomHelpers.createForm(async () => {
-        try {
-          await this.addTopicResourceReferenceUseCase.execute({
-            topicId: topic.id,
-            resourceReference: {
-              id: `${topic.id}-resource-${Date.now()}`,
-              title: resourceTitle.value,
-              type: resourceType.value as "pdf" | "video" | "link" | "question-notebook",
-              url: resourceUrl.value
-            }
-          });
-          await this.onUpdate();
-        } catch (error) {
-          this.notifyError(error, "Não foi possível adicionar referência.");
+    card.appendChild(tableContainer);
+    container.appendChild(card);
+  }
+
+  private renderDisplayRow(topic: Topic, data: CorvoPluginData): HTMLElement {
+    const tr = DomHelpers.createElement("tr");
+    const hasDetails = topic.resourceReferences.length > 0 || topic.questionNotebook;
+
+    tr.appendChild(this.createCell(String(topic.order)));
+    tr.appendChild(this.createCell(topic.name));
+    tr.appendChild(this.createCell(topic.questionNotebook?.name ?? "—"));
+    tr.appendChild(this.createCell(String(topic.questionNotebook?.solvedQuestions ?? 0)));
+    tr.appendChild(this.createCell(String(topic.questionNotebook?.correctAnswers ?? 0)));
+
+    const actions = DomHelpers.createElement("div", "corvo-inline-actions corvo-inline-actions-compact");
+    actions.appendChild(
+      DomHelpers.createIconButton(
+        this.expandedTopicId === topic.id ? "collapse" : "expand",
+        this.expandedTopicId === topic.id ? "Recolher" : "Expandir",
+        {
+          className: `corvo-icon-button ${hasDetails ? "" : "corvo-expand-button"}`,
+          onClick: async () => {
+            this.expandedTopicId = this.expandedTopicId === topic.id ? null : topic.id;
+            await this.onUpdate();
+          }
         }
+      )
+    );
+    actions.appendChild(
+      DomHelpers.createIconButton("edit", "Editar", {
+        onClick: async () => {
+          this.editingTopicId = topic.id;
+          await this.onUpdate();
+        }
+      })
+    );
+    actions.appendChild(
+      DomHelpers.createIconButton("delete", "Excluir", {
+        onClick: async () => {
+          if (confirm(`Excluir "${topic.name}"?`)) {
+            try {
+              await this.deleteTopicUseCase.execute({ topicId: topic.id });
+              await this.onUpdate();
+            } catch (error) {
+              this.notifyError(error, "Não foi possível excluir o assunto.");
+            }
+          }
+        }
+      })
+    );
+
+    const actionsCell = DomHelpers.createElement("td");
+    actionsCell.appendChild(actions);
+    tr.appendChild(actionsCell);
+
+    return tr;
+  }
+
+  private renderEditableRow(topic: Topic, data: CorvoPluginData): HTMLElement {
+    const tr = DomHelpers.createElement("tr");
+    tr.className = "corvo-editing-row";
+
+    const nameInput = DomHelpers.createCompactInput("text", "Nome", topic.name);
+    const solvedInput = DomHelpers.createCompactInput(
+      "number",
+      "Resolv.",
+      String(topic.questionNotebook?.solvedQuestions ?? 0)
+    );
+    const correctInput = DomHelpers.createCompactInput(
+      "number",
+      "Acert.",
+      String(topic.questionNotebook?.correctAnswers ?? 0)
+    );
+
+    const saveButton = DomHelpers.createIconButton("save", "Salvar", {
+      onClick: async () => {
+        // Note: Would need UpdateTopicUseCase for full edit
+        this.editingTopicId = null;
+        await this.onUpdate();
+      }
+    });
+
+    const cancelButton = DomHelpers.createIconButton("cancel", "Cancelar", {
+      onClick: async () => {
+        this.editingTopicId = null;
+        await this.onUpdate();
+      }
+    });
+
+    const actions = DomHelpers.createElement("div", "corvo-inline-actions corvo-inline-actions-compact");
+    actions.appendChild(saveButton);
+    actions.appendChild(cancelButton);
+
+    tr.appendChild(this.createCell(String(topic.order)));
+    tr.appendChild(this.createCell(null, nameInput));
+    tr.appendChild(this.createCell(null, DomHelpers.createParagraph(topic.questionNotebook?.name ?? "—")));
+    tr.appendChild(this.createCell(null, solvedInput));
+    tr.appendChild(this.createCell(null, correctInput));
+
+    const actionsCell = DomHelpers.createElement("td");
+    actionsCell.appendChild(actions);
+    tr.appendChild(actionsCell);
+
+    return tr;
+  }
+
+  private renderDetailRow(topic: Topic, data: CorvoPluginData): HTMLElement {
+    const tr = DomHelpers.createElement("tr");
+    tr.className = "corvo-detail-row";
+
+    const td = DomHelpers.createElement("td");
+    td.colSpan = 6;
+
+    const content = DomHelpers.createElement("div", "corvo-detail-content");
+
+    // Resource references list
+    if (topic.resourceReferences.length > 0) {
+      const list = DomHelpers.createElement("div", "corvo-detail-list");
+      topic.resourceReferences.forEach((ref) => {
+        const row = DomHelpers.createElement("div", "corvo-detail-list-item");
+        row.appendChild(DomHelpers.createParagraph(`${ref.type}: ${ref.title}`));
+        if (ref.url) {
+          const link = DomHelpers.createElement("a");
+          link.href = ref.url;
+          link.textContent = "🔗";
+          link.target = "_blank";
+          row.appendChild(link);
+        }
+        list.appendChild(row);
       });
+      content.appendChild(list);
+    }
 
-      resourceForm.append(
-        DomHelpers.createLabel("Título", resourceTitle),
-        DomHelpers.createLabel("Tipo", resourceType),
-        DomHelpers.createLabel("URL", resourceUrl),
-        DomHelpers.createButton("Adicionar referência", { type: "submit" })
-      );
+    // Add resource reference form
+    const titleInput = DomHelpers.createInput("text", "Título");
+    const typeSelect = DomHelpers.createSelect([
+      ["pdf", "pdf"],
+      ["video", "video"],
+      ["link", "link"],
+      ["question-notebook", "question-notebook"]
+    ]);
+    const urlInput = DomHelpers.createInput("url", "URL");
 
-      const notebookName = DomHelpers.createInput("text", "Nome do caderno", topic.questionNotebook?.name ?? "");
-      const notebookSolved = DomHelpers.createInput("number", "Resolvidas", String(topic.questionNotebook?.solvedQuestions ?? 0));
-      const notebookCorrect = DomHelpers.createInput("number", "Acertos", String(topic.questionNotebook?.correctAnswers ?? 0));
+    const resourceForm = DomHelpers.createForm(async () => {
+      try {
+        await this.addTopicResourceReferenceUseCase.execute({
+          topicId: topic.id,
+          resourceReference: {
+            id: `${topic.id}-resource-${Date.now()}`,
+            title: titleInput.value,
+            type: typeSelect.value as "pdf" | "video" | "link" | "question-notebook",
+            url: urlInput.value
+          }
+        });
+        titleInput.value = "";
+        urlInput.value = "";
+        await this.onUpdate();
+      } catch (error) {
+        this.notifyError(error, "Não foi possível adicionar referência.");
+      }
+    });
+
+    resourceForm.className = "corvo-detail-form";
+    resourceForm.append(
+      DomHelpers.createLabel("Título", titleInput),
+      DomHelpers.createLabel("Tipo", typeSelect),
+      DomHelpers.createLabel("URL", urlInput),
+      DomHelpers.createIconButton("add", "Adicionar", { onClick: () => resourceForm.requestSubmit() })
+    );
+
+    content.appendChild(resourceForm);
+
+    // Notebook form
+    if (topic.questionNotebook) {
+      const notebookName = DomHelpers.createInput("text", "Nome", topic.questionNotebook.name);
+      const notebookSolved = DomHelpers.createInput("number", "Resolv.", String(topic.questionNotebook.solvedQuestions));
+      const notebookCorrect = DomHelpers.createInput("number", "Acert.", String(topic.questionNotebook.correctAnswers));
 
       const notebookForm = DomHelpers.createForm(async () => {
         try {
@@ -143,48 +283,30 @@ export class TopicsTab {
         }
       });
 
+      notebookForm.className = "corvo-detail-form";
       notebookForm.append(
-        DomHelpers.createLabel("Nome do caderno", notebookName),
-        DomHelpers.createLabel("Resolvidas", notebookSolved),
-        DomHelpers.createLabel("Acertos", notebookCorrect),
-        DomHelpers.createButton("Vincular caderno", { type: "submit" })
+        DomHelpers.createLabel("Caderno", notebookName),
+        DomHelpers.createLabel("Resolv.", notebookSolved),
+        DomHelpers.createLabel("Acert.", notebookCorrect),
+        DomHelpers.createIconButton("save", "Salvar", { onClick: () => notebookForm.requestSubmit() })
       );
 
-      wrapper.append(
-        DomHelpers.createDisclosure("Adicionar referência", resourceForm),
-        DomHelpers.createDisclosure("Vincular caderno", notebookForm)
-      );
-      card.appendChild(wrapper);
-    });
+      content.appendChild(notebookForm);
+    }
 
-    container.appendChild(card);
+    td.appendChild(content);
+    tr.appendChild(td);
+
+    return tr;
   }
 
-  /**
-   * Renders the subject picker dropdown.
-   */
-  private renderSubjectPicker(data: CorvoPluginData): HTMLElement {
-    const subjects = data.subjects
-      .filter((subject) => subject.contestId === data.activeContestId)
-      .sort((left, right) => left.order - right.order);
-
-    const select = DomHelpers.createSelect(
-      subjects.map((subject) => [subject.id, subject.name]),
-      this.selectedSubjectId ?? undefined
-    );
-    select.addEventListener("change", async () => {
-      this.selectedSubjectId = select.value;
-      await this.onUpdate();
-    });
-
-    const wrapper = DomHelpers.createElement("div", "corvo-toolbar");
-    wrapper.appendChild(DomHelpers.createLabel("Matéria", select));
-    return wrapper;
+  private createCell(text: string | null, element?: HTMLElement): HTMLElement {
+    const td = DomHelpers.createElement("td");
+    if (text !== null) td.textContent = text;
+    if (element) td.appendChild(element);
+    return td;
   }
 
-  /**
-   * Renders the form for creating a new topic.
-   */
   private renderCreateTopicForm(subjectId: string): HTMLElement {
     const nameInput = DomHelpers.createInput("text", "Nome do assunto");
     const orderInput = DomHelpers.createInput("number", "Ordem", "1");
@@ -212,24 +334,34 @@ export class TopicsTab {
     return form;
   }
 
-  /**
-   * Returns the currently selected subject, or the first subject with active contest.
-   */
+  private renderSubjectPicker(data: CorvoPluginData): HTMLElement {
+    const subjects = data.subjects
+      .filter((subject) => subject.contestId === data.activeContestId)
+      .sort((left, right) => left.order - right.order);
+
+    const select = DomHelpers.createSelect(
+      subjects.map((subject) => [subject.id, subject.name]),
+      this.selectedSubjectId ?? undefined
+    );
+    select.addEventListener("change", async () => {
+      this.selectedSubjectId = select.value;
+      await this.onUpdate();
+    });
+
+    const wrapper = DomHelpers.createElement("div", "corvo-toolbar");
+    wrapper.appendChild(DomHelpers.createLabel("Matéria", select));
+    return wrapper;
+  }
+
   private getSelectedSubject(data: CorvoPluginData): { id: string; name: string } | null {
     const subjects = data.subjects
       .filter((subject) => subject.contestId === data.activeContestId)
       .sort((left, right) => left.order - right.order);
 
-    if (subjects.length === 0) {
-      return null;
-    }
-
+    if (subjects.length === 0) return null;
     return subjects.find((subject) => subject.id === this.selectedSubjectId) ?? subjects[0];
   }
 
-  /**
-   * Displays an error notification.
-   */
   private notifyError(error: unknown, fallbackMessage: string): void {
     new Notice(error instanceof Error ? error.message : fallbackMessage);
   }

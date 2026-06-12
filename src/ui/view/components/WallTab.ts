@@ -6,7 +6,7 @@ import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 import { Notice } from "obsidian";
 
 /**
- * Wall tab component - manages contest wall links, notes and subject snapshots.
+ * Wall tab component with unified layout.
  */
 export class WallTab {
   private readonly updateContestWallUseCase: UpdateContestWallUseCase;
@@ -18,9 +18,6 @@ export class WallTab {
     this.updateContestWallUseCase = new UpdateContestWallUseCase(dataStore);
   }
 
-  /**
-   * Renders the wall tab content.
-   */
   async render(container: HTMLElement, data: CorvoPluginData): Promise<void> {
     container.appendChild(DomHelpers.createSectionTitle("Mural"));
     container.appendChild(
@@ -40,39 +37,8 @@ export class WallTab {
       return;
     }
 
-    // Read-only display of current wall
-    const summaryCard = DomHelpers.createCard("Resumo do mural");
-    summaryCard.append(
-      DomHelpers.createKeyValueRow("Editais", String(activeContest.wall.noticeLinks.length)),
-      DomHelpers.createKeyValueRow("Provas", String(activeContest.wall.examLinks.length)),
-      DomHelpers.createParagraph(activeContest.wall.notes ?? "Sem observações.")
-    );
-    container.appendChild(summaryCard);
-
-    // Update form
     container.appendChild(this.renderWallForm(activeContest));
-
-    // Subject snapshots
-    const snapshotsCard = DomHelpers.createCard("Snapshots das matérias");
-    if (activeContest.wall.subjectSnapshots.length === 0) {
-      snapshotsCard.appendChild(
-        DomHelpers.createParagraph("Nenhum snapshot de matéria cadastrado.")
-      );
-    } else {
-      const subjectMap = new Map(data.subjects.map((s) => [s.id, s.name]));
-      snapshotsCard.appendChild(
-        DomHelpers.createTable(
-          ["Matéria", "Peso", "Pontuação", "Itens alvo"],
-          activeContest.wall.subjectSnapshots.map((snapshot) => [
-            subjectMap.get(snapshot.subjectId) ?? snapshot.subjectId,
-            snapshot.weight !== undefined ? String(snapshot.weight) : "-",
-            snapshot.score !== undefined ? String(snapshot.score) : "-",
-            snapshot.targetItems?.join(", ") ?? "-"
-          ])
-        )
-      );
-    }
-    container.appendChild(snapshotsCard);
+    container.appendChild(this.renderSnapshotsCard(activeContest, data));
   }
 
   private renderWallForm(activeContest: NonNullable<CorvoPluginData["contests"][number]>): HTMLElement {
@@ -81,34 +47,25 @@ export class WallTab {
       "Rótulo do edital",
       activeContest.wall.noticeLinks[0]?.label ?? ""
     );
-    noticeLabel.dataset.field = "notice-label";
-
     const noticeUrl = DomHelpers.createInput(
       "url",
       "URL do edital",
       activeContest.wall.noticeLinks[0]?.url ?? ""
     );
-    noticeUrl.dataset.field = "notice-url";
-
     const examLabel = DomHelpers.createInput(
       "text",
       "Rótulo da prova",
       activeContest.wall.examLinks[0]?.label ?? ""
     );
-    examLabel.dataset.field = "exam-label";
-
     const examUrl = DomHelpers.createInput(
       "url",
       "URL da prova",
       activeContest.wall.examLinks[0]?.url ?? ""
     );
-    examUrl.dataset.field = "exam-url";
-
     const notes = DomHelpers.createTextarea(
       "Notas do concurso",
       activeContest.wall.notes ?? ""
     );
-    notes.dataset.field = "notes";
 
     const form = DomHelpers.createForm(async () => {
       try {
@@ -165,9 +122,32 @@ export class WallTab {
     return form;
   }
 
-  /**
-   * Displays an error notification.
-   */
+  private renderSnapshotsCard(
+    activeContest: NonNullable<CorvoPluginData["contests"][number]>,
+    data: CorvoPluginData
+  ): HTMLElement {
+    const card = DomHelpers.createCard("Snapshots das matérias");
+    if (activeContest.wall.subjectSnapshots.length === 0) {
+      card.appendChild(
+        DomHelpers.createParagraph("Nenhum snapshot de matéria cadastrado.")
+      );
+    } else {
+      const subjectMap = new Map(data.subjects.map((s) => [s.id, s.name]));
+      card.appendChild(
+        DomHelpers.createTable(
+          ["Matéria", "Peso", "Pontuação", "Itens alvo"],
+          activeContest.wall.subjectSnapshots.map((snapshot) => [
+            subjectMap.get(snapshot.subjectId) ?? snapshot.subjectId,
+            snapshot.weight !== undefined ? String(snapshot.weight) : "—",
+            snapshot.score !== undefined ? String(snapshot.score) : "—",
+            snapshot.targetItems?.join(", ") ?? "—"
+          ])
+        )
+      );
+    }
+    return card;
+  }
+
   private notifyError(error: unknown, fallbackMessage: string): void {
     if (error instanceof NoActiveContestError) {
       new Notice("Nenhum concurso ativo. Selecione um concurso para continuar.");

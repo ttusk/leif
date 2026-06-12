@@ -149,9 +149,7 @@ describe("CorvoView", () => {
     contestsTabButton.click();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    const activateButton = Array.from(leaf.containerEl.querySelectorAll<HTMLButtonElement>("button")).find((button) =>
-      button.textContent?.includes("Ativar SEFAZ")
-    );
+    const activateButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-contest-id='contest-2']");
 
     if (!activateButton) {
       throw new Error("Activate contest button was not rendered.");
@@ -195,6 +193,9 @@ describe("CorvoView", () => {
     const dataStore = new InMemoryPluginDataStore();
     await seedUiData(dataStore);
 
+    const originalConfirm = window.confirm;
+    window.confirm = () => true;
+
     const { leaf } = await openCorvoView(dataStore);
     const sessionsTabButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='sessions']");
 
@@ -213,6 +214,8 @@ describe("CorvoView", () => {
 
     deleteButton.click();
     await new Promise((resolve) => setTimeout(resolve, 0));
+
+    window.confirm = originalConfirm;
 
     expect(leaf.containerEl.textContent).not.toContain("11/06/2026");
     expect(leaf.containerEl.querySelector("[data-session-delete-id='session-1']")).toBeNull();
