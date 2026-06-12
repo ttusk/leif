@@ -1369,158 +1369,6 @@ var DeleteContestUseCase = class {
   }
 };
 
-// src/domain/services/CsvExportService.ts
-var CsvExportService = class {
-  /**
-   * Converts an array of records to a CSV string.
-   * @param records - Array of objects to convert
-   * @returns CSV string with BOM prefix
-   */
-  static export(records) {
-    if (records.length === 0) {
-      return this.BOM;
-    }
-    const headers = Object.keys(records[0]);
-    const lines = [this.formatRow(headers)];
-    records.forEach((record) => {
-      const values = headers.map((header) => this.formatValue(record[header]));
-      lines.push(this.formatRow(values));
-    });
-    return this.BOM + lines.join(this.LINE_BREAK);
-  }
-  /**
-   * Triggers a browser download of a CSV file.
-   * @param csvContent - The CSV content string
-   * @param filename - The desired filename (without extension)
-   */
-  static download(csvContent, filename) {
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `${filename}.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }
-  static formatRow(values) {
-    return values.join(this.DELIMITER);
-  }
-  static formatValue(value) {
-    if (value === void 0 || value === null) {
-      return "";
-    }
-    const stringValue = String(value);
-    if (stringValue.includes(this.DELIMITER) || stringValue.includes('"') || stringValue.includes(this.LINE_BREAK)) {
-      return `"${stringValue.replace(/"/g, '""')}"`;
-    }
-    return stringValue;
-  }
-};
-CsvExportService.DELIMITER = ",";
-CsvExportService.LINE_BREAK = "\n";
-CsvExportService.BOM = "\uFEFF";
-
-// src/application/use-cases/ExportToCsvUseCase.ts
-var ExportToCsvUseCase = class {
-  constructor(dataStore) {
-    this.dataStore = dataStore;
-  }
-  async execute(input) {
-    const data = await this.dataStore.load();
-    const contestId = input.contestId ?? data.activeContestId;
-    switch (input.entityType) {
-      case "sessions":
-        return this.exportSessions(data, contestId);
-      case "items":
-        return this.exportItems(data, input.subjectId);
-      case "topics":
-        return this.exportTopics(data, input.subjectId);
-      case "subjects":
-        return this.exportSubjects(data, contestId);
-      case "contests":
-        return this.exportContests(data);
-    }
-  }
-  exportSessions(data, contestId) {
-    const sessions = data.studySessions.filter((s) => contestId ? s.contestId === contestId : true).map((s) => {
-      const subject = data.subjects.find((sub) => sub.id === s.subjectId);
-      const topic = data.topics.find((t) => t.id === s.topicId);
-      const item = data.studyItems.find((i) => i.id === s.studyItemId);
-      return {
-        Data: new Date(s.studiedAt).toLocaleDateString("pt-BR"),
-        Mat\u00E9ria: subject?.name ?? "",
-        Assunto: topic?.name ?? "",
-        Item: item?.title ?? "",
-        Tipo: s.type,
-        Quantidade: s.pagesOrCount ?? 0,
-        Acertos: s.correctAnswers ?? 0,
-        Conclu\u00EDdo: s.completed ? "Sim" : "N\xE3o"
-      };
-    });
-    const csv = CsvExportService.export(sessions);
-    CsvExportService.download(csv, `sessoes-${contestId ?? "todos"}`);
-  }
-  exportItems(data, subjectId) {
-    const items = data.studyItems.filter((i) => subjectId ? i.subjectId === subjectId : true).map((i) => {
-      const subject = data.subjects.find((s) => s.id === i.subjectId);
-      return {
-        Ordem: i.order,
-        Mat\u00E9ria: subject?.name ?? "",
-        Item: i.title,
-        Peso: i.weight ?? 0,
-        "Total Quest\xF5es": i.questionCount ?? 0,
-        Refer\u00EAncias: i.resourceReferences?.length ?? 0
-      };
-    });
-    const csv = CsvExportService.export(items);
-    CsvExportService.download(csv, `itens-${subjectId ?? "todos"}`);
-  }
-  exportTopics(data, subjectId) {
-    const topics = data.topics.filter((t) => subjectId ? t.subjectId === subjectId : true).map((t) => {
-      const subject = data.subjects.find((s) => s.id === t.subjectId);
-      return {
-        Ordem: t.order,
-        Mat\u00E9ria: subject?.name ?? "",
-        Assunto: t.name,
-        Caderno: t.questionNotebook?.name ?? "",
-        Resolvidas: t.questionNotebook?.solvedQuestions ?? 0,
-        Acertos: t.questionNotebook?.correctAnswers ?? 0,
-        Refer\u00EAncias: t.resourceReferences.length
-      };
-    });
-    const csv = CsvExportService.export(topics);
-    CsvExportService.download(csv, `assuntos-${subjectId ?? "todos"}`);
-  }
-  exportSubjects(data, contestId) {
-    const subjects = data.subjects.filter((s) => contestId ? s.contestId === contestId : true).map((s) => ({
-      Ordem: s.order,
-      Nome: s.name,
-      "Minutos Planejados": s.plannedStudyMinutes,
-      Etapa: s.currentStage ?? "",
-      Ativa: s.isActive ? "Sim" : "N\xE3o",
-      "Total Itens": data.studyItems.filter((i) => i.subjectId === s.id).length,
-      "Total Assuntos": data.topics.filter((t) => t.subjectId === s.id).length
-    }));
-    const csv = CsvExportService.export(subjects);
-    CsvExportService.download(csv, `materias-${contestId ?? "todos"}`);
-  }
-  exportContests(data) {
-    const contests = data.contests.map((c) => ({
-      ID: c.id,
-      Nome: c.name,
-      Notas: c.wall.notes ?? "",
-      "Links Edital": c.wall.noticeLinks.length,
-      "Links Prova": c.wall.examLinks.length,
-      "Snapshots Mat\xE9rias": c.wall.subjectSnapshots.length,
-      Ativo: data.activeContestId === c.id ? "Sim" : "N\xE3o"
-    }));
-    const csv = CsvExportService.export(contests);
-    CsvExportService.download(csv, "concursos");
-  }
-};
-
 // src/application/use-cases/UpdateContestUseCase.ts
 var UpdateContestUseCase = class {
   constructor(dataStore) {
@@ -1980,13 +1828,11 @@ var ContestsTab = class {
     this.setActiveContestUseCase = new SetActiveContestUseCase(dataStore);
     this.updateContestUseCase = new UpdateContestUseCase(dataStore);
     this.deleteContestUseCase = new DeleteContestUseCase(dataStore);
-    this.exportToCsvUseCase = new ExportToCsvUseCase(dataStore);
   }
   async render(container, data) {
     const header = DomHelpers.createElement("div", "corvo-section-header");
     header.appendChild(DomHelpers.createSectionTitle("Concursos"));
-    const actions = DomHelpers.createElement("div", "corvo-inline-actions");
-    actions.appendChild(
+    header.appendChild(
       DomHelpers.createIconButton("add", "Novo concurso", {
         onClick: async () => {
           this.isCreatingNew = true;
@@ -1994,18 +1840,6 @@ var ContestsTab = class {
         }
       })
     );
-    actions.appendChild(
-      DomHelpers.createIconButton("download", "Exportar CSV", {
-        onClick: async () => {
-          try {
-            await this.exportToCsvUseCase.execute({ entityType: "contests" });
-          } catch (error) {
-            this.notifyError(error, "N\xE3o foi poss\xEDvel exportar.");
-          }
-        }
-      })
-    );
-    header.appendChild(actions);
     container.appendChild(header);
     container.appendChild(
       DomHelpers.createParagraph("Cadastre concursos e defina qual deles est\xE1 ativo.")
@@ -2172,7 +2006,6 @@ var CycleTab = class {
     this.reorderSubjectsUseCase = new ReorderSubjectsUseCase(dataStore);
     this.setSubjectActiveStateUseCase = new SetSubjectActiveStateUseCase(dataStore);
     this.updateSubjectConfigurationUseCase = new UpdateSubjectConfigurationUseCase(dataStore);
-    this.exportToCsvUseCase = new ExportToCsvUseCase(dataStore);
   }
   /**
    * Renders the cycle tab content.
@@ -2180,8 +2013,7 @@ var CycleTab = class {
   async render(container, data) {
     const header = DomHelpers.createElement("div", "corvo-section-header");
     header.appendChild(DomHelpers.createSectionTitle("Ciclo e Mat\xE9rias"));
-    const actions = DomHelpers.createElement("div", "corvo-inline-actions");
-    actions.appendChild(
+    header.appendChild(
       DomHelpers.createIconButton("add", "Nova mat\xE9ria", {
         onClick: async () => {
           this.isCreatingNew = true;
@@ -2189,18 +2021,6 @@ var CycleTab = class {
         }
       })
     );
-    actions.appendChild(
-      DomHelpers.createIconButton("download", "Exportar CSV", {
-        onClick: async () => {
-          try {
-            await this.exportToCsvUseCase.execute({ entityType: "subjects" });
-          } catch (error) {
-            this.notifyError(error, "N\xE3o foi poss\xEDvel exportar.");
-          }
-        }
-      })
-    );
-    header.appendChild(actions);
     container.appendChild(header);
     container.appendChild(
       DomHelpers.createParagraph("Gerencie a ordem, o status, o tempo e a etapa das mat\xE9rias.")
@@ -2655,13 +2475,11 @@ var ItemsTab = class {
     this.getActiveContestProgressDashboardUseCase = new GetActiveContestProgressDashboardUseCase(dataStore);
     this.deleteStudyItemUseCase = new DeleteStudyItemUseCase(dataStore);
     this.updateStudyItemUseCase = new UpdateStudyItemUseCase(dataStore);
-    this.exportToCsvUseCase = new ExportToCsvUseCase(dataStore);
   }
   async render(container, data) {
     const header = DomHelpers.createElement("div", "corvo-section-header");
     header.appendChild(DomHelpers.createSectionTitle("Itens e PDFs"));
-    const actions = DomHelpers.createElement("div", "corvo-inline-actions");
-    actions.appendChild(
+    header.appendChild(
       DomHelpers.createIconButton("add", "Novo item", {
         onClick: async () => {
           this.isCreatingNew = true;
@@ -2669,18 +2487,6 @@ var ItemsTab = class {
         }
       })
     );
-    actions.appendChild(
-      DomHelpers.createIconButton("download", "Exportar CSV", {
-        onClick: async () => {
-          try {
-            await this.exportToCsvUseCase.execute({ entityType: "items", subjectId: this.selectedSubjectId ?? void 0 });
-          } catch (error) {
-            this.notifyError(error, "N\xE3o foi poss\xEDvel exportar.");
-          }
-        }
-      })
-    );
-    header.appendChild(actions);
     container.appendChild(header);
     const subject = this.getSelectedSubject(data);
     if (!subject) {
@@ -3028,15 +2834,13 @@ var SessionsTab = class {
     this.getActiveContestSummaryUseCase = new GetActiveContestSummaryUseCase(dataStore);
     this.listSubjectsForActiveContestUseCase = new ListSubjectsForActiveContestUseCase(dataStore);
     this.updateStudySessionUseCase = new UpdateStudySessionUseCase(dataStore);
-    this.exportToCsvUseCase = new ExportToCsvUseCase(dataStore);
     this.advanceCycleUseCase = new AdvanceCycleUseCase(dataStore);
     this.getActiveCycleSnapshotUseCase = new GetActiveCycleSnapshotUseCase(dataStore);
   }
   async render(container, data) {
     const header = DomHelpers.createElement("div", "corvo-section-header");
     header.appendChild(DomHelpers.createSectionTitle("Sess\xF5es"));
-    const actions = DomHelpers.createElement("div", "corvo-inline-actions");
-    actions.appendChild(
+    header.appendChild(
       DomHelpers.createIconButton("add", "Nova sess\xE3o", {
         onClick: async () => {
           this.isCreatingNew = true;
@@ -3044,18 +2848,6 @@ var SessionsTab = class {
         }
       })
     );
-    actions.appendChild(
-      DomHelpers.createIconButton("download", "Exportar CSV", {
-        onClick: async () => {
-          try {
-            await this.exportToCsvUseCase.execute({ entityType: "sessions" });
-          } catch (error) {
-            this.notifyError(error, "N\xE3o foi poss\xEDvel exportar.");
-          }
-        }
-      })
-    );
-    header.appendChild(actions);
     container.appendChild(header);
     container.appendChild(
       DomHelpers.createParagraph("Registre sess\xF5es e gerencie o ciclo de estudos.")
@@ -3422,13 +3214,11 @@ var TopicsTab = class {
     this.linkQuestionNotebookUseCase = new LinkQuestionNotebookUseCase(dataStore);
     this.deleteTopicUseCase = new DeleteTopicUseCase(dataStore);
     this.updateTopicUseCase = new UpdateTopicUseCase(dataStore);
-    this.exportToCsvUseCase = new ExportToCsvUseCase(dataStore);
   }
   async render(container, data) {
     const header = DomHelpers.createElement("div", "corvo-section-header");
     header.appendChild(DomHelpers.createSectionTitle("Assuntos e Quest\xF5es"));
-    const actions = DomHelpers.createElement("div", "corvo-inline-actions");
-    actions.appendChild(
+    header.appendChild(
       DomHelpers.createIconButton("add", "Novo assunto", {
         onClick: async () => {
           this.isCreatingNew = true;
@@ -3436,18 +3226,6 @@ var TopicsTab = class {
         }
       })
     );
-    actions.appendChild(
-      DomHelpers.createIconButton("download", "Exportar CSV", {
-        onClick: async () => {
-          try {
-            await this.exportToCsvUseCase.execute({ entityType: "topics", subjectId: this.selectedSubjectId ?? void 0 });
-          } catch (error) {
-            this.notifyError(error, "N\xE3o foi poss\xEDvel exportar.");
-          }
-        }
-      })
-    );
-    header.appendChild(actions);
     container.appendChild(header);
     const subject = this.getSelectedSubject(data);
     if (!subject) {

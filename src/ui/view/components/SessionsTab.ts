@@ -2,7 +2,6 @@ import { Notice } from "obsidian";
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import { AdvanceCycleUseCase } from "@/application/use-cases/AdvanceCycleUseCase";
 import { DeleteStudySessionUseCase } from "@/application/use-cases/DeleteStudySessionUseCase";
-import { ExportToCsvUseCase } from "@/application/use-cases/ExportToCsvUseCase";
 import { GetActiveContestSummaryUseCase } from "@/application/use-cases/GetActiveContestSummaryUseCase";
 import { GetActiveCycleSnapshotUseCase } from "@/application/use-cases/GetActiveCycleSnapshotUseCase";
 import { ListSubjectsForActiveContestUseCase } from "@/application/use-cases/ListSubjectsForActiveContestUseCase";
@@ -21,7 +20,6 @@ export class SessionsTab {
   private readonly getActiveContestSummaryUseCase: GetActiveContestSummaryUseCase;
   private readonly listSubjectsForActiveContestUseCase: ListSubjectsForActiveContestUseCase;
   private readonly updateStudySessionUseCase: UpdateStudySessionUseCase;
-  private readonly exportToCsvUseCase: ExportToCsvUseCase;
   private readonly advanceCycleUseCase: AdvanceCycleUseCase;
   private readonly getActiveCycleSnapshotUseCase: GetActiveCycleSnapshotUseCase;
 
@@ -37,7 +35,6 @@ export class SessionsTab {
     this.getActiveContestSummaryUseCase = new GetActiveContestSummaryUseCase(dataStore);
     this.listSubjectsForActiveContestUseCase = new ListSubjectsForActiveContestUseCase(dataStore);
     this.updateStudySessionUseCase = new UpdateStudySessionUseCase(dataStore);
-    this.exportToCsvUseCase = new ExportToCsvUseCase(dataStore);
     this.advanceCycleUseCase = new AdvanceCycleUseCase(dataStore);
     this.getActiveCycleSnapshotUseCase = new GetActiveCycleSnapshotUseCase(dataStore);
   }
@@ -45,8 +42,7 @@ export class SessionsTab {
   async render(container: HTMLElement, data: CorvoPluginData): Promise<void> {
     const header = DomHelpers.createElement("div", "corvo-section-header");
     header.appendChild(DomHelpers.createSectionTitle("Sessões"));
-    const actions = DomHelpers.createElement("div", "corvo-inline-actions");
-    actions.appendChild(
+    header.appendChild(
       DomHelpers.createIconButton("add", "Nova sessão", {
         onClick: async () => {
           this.isCreatingNew = true;
@@ -54,18 +50,6 @@ export class SessionsTab {
         }
       })
     );
-    actions.appendChild(
-      DomHelpers.createIconButton("download", "Exportar CSV", {
-        onClick: async () => {
-          try {
-            await this.exportToCsvUseCase.execute({ entityType: "sessions" });
-          } catch (error) {
-            this.notifyError(error, "Não foi possível exportar.");
-          }
-        }
-      })
-    );
-    header.appendChild(actions);
     container.appendChild(header);
     container.appendChild(
       DomHelpers.createParagraph("Registre sessões e gerencie o ciclo de estudos.")

@@ -1,7 +1,6 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import { CreateContestUseCase } from "@/application/use-cases/CreateContestUseCase";
 import { DeleteContestUseCase } from "@/application/use-cases/DeleteContestUseCase";
-import { ExportToCsvUseCase } from "@/application/use-cases/ExportToCsvUseCase";
 import { SetActiveContestUseCase } from "@/application/use-cases/SetActiveContestUseCase";
 import { UpdateContestUseCase } from "@/application/use-cases/UpdateContestUseCase";
 import type { Contest } from "@/domain/entities/Contest";
@@ -17,7 +16,6 @@ export class ContestsTab {
   private readonly setActiveContestUseCase: SetActiveContestUseCase;
   private readonly updateContestUseCase: UpdateContestUseCase;
   private readonly deleteContestUseCase: DeleteContestUseCase;
-  private readonly exportToCsvUseCase: ExportToCsvUseCase;
 
   private editingContestId: string | null = null;
   private isCreatingNew = false;
@@ -30,14 +28,12 @@ export class ContestsTab {
     this.setActiveContestUseCase = new SetActiveContestUseCase(dataStore);
     this.updateContestUseCase = new UpdateContestUseCase(dataStore);
     this.deleteContestUseCase = new DeleteContestUseCase(dataStore);
-    this.exportToCsvUseCase = new ExportToCsvUseCase(dataStore);
   }
 
   async render(container: HTMLElement, data: CorvoPluginData): Promise<void> {
     const header = DomHelpers.createElement("div", "corvo-section-header");
     header.appendChild(DomHelpers.createSectionTitle("Concursos"));
-    const actions = DomHelpers.createElement("div", "corvo-inline-actions");
-    actions.appendChild(
+    header.appendChild(
       DomHelpers.createIconButton("add", "Novo concurso", {
         onClick: async () => {
           this.isCreatingNew = true;
@@ -45,18 +41,6 @@ export class ContestsTab {
         }
       })
     );
-    actions.appendChild(
-      DomHelpers.createIconButton("download", "Exportar CSV", {
-        onClick: async () => {
-          try {
-            await this.exportToCsvUseCase.execute({ entityType: "contests" });
-          } catch (error) {
-            this.notifyError(error, "Não foi possível exportar.");
-          }
-        }
-      })
-    );
-    header.appendChild(actions);
     container.appendChild(header);
     container.appendChild(
       DomHelpers.createParagraph("Cadastre concursos e defina qual deles está ativo.")

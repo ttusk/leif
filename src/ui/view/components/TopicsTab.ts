@@ -3,7 +3,6 @@ import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import { AddTopicResourceReferenceUseCase } from "@/application/use-cases/AddTopicResourceReferenceUseCase";
 import { CreateTopicUseCase } from "@/application/use-cases/CreateTopicUseCase";
 import { DeleteTopicUseCase } from "@/application/use-cases/DeleteTopicUseCase";
-import { ExportToCsvUseCase } from "@/application/use-cases/ExportToCsvUseCase";
 import { LinkQuestionNotebookUseCase } from "@/application/use-cases/LinkQuestionNotebookUseCase";
 import { UpdateTopicUseCase } from "@/application/use-cases/UpdateTopicUseCase";
 import type { Topic } from "@/domain/entities/Topic";
@@ -20,7 +19,6 @@ export class TopicsTab {
   private readonly linkQuestionNotebookUseCase: LinkQuestionNotebookUseCase;
   private readonly deleteTopicUseCase: DeleteTopicUseCase;
   private readonly updateTopicUseCase: UpdateTopicUseCase;
-  private readonly exportToCsvUseCase: ExportToCsvUseCase;
 
   private selectedSubjectId: string | null = null;
   private editingTopicId: string | null = null;
@@ -36,14 +34,12 @@ export class TopicsTab {
     this.linkQuestionNotebookUseCase = new LinkQuestionNotebookUseCase(dataStore);
     this.deleteTopicUseCase = new DeleteTopicUseCase(dataStore);
     this.updateTopicUseCase = new UpdateTopicUseCase(dataStore);
-    this.exportToCsvUseCase = new ExportToCsvUseCase(dataStore);
   }
 
   async render(container: HTMLElement, data: CorvoPluginData): Promise<void> {
     const header = DomHelpers.createElement("div", "corvo-section-header");
     header.appendChild(DomHelpers.createSectionTitle("Assuntos e Questões"));
-    const actions = DomHelpers.createElement("div", "corvo-inline-actions");
-    actions.appendChild(
+    header.appendChild(
       DomHelpers.createIconButton("add", "Novo assunto", {
         onClick: async () => {
           this.isCreatingNew = true;
@@ -51,18 +47,6 @@ export class TopicsTab {
         }
       })
     );
-    actions.appendChild(
-      DomHelpers.createIconButton("download", "Exportar CSV", {
-        onClick: async () => {
-          try {
-            await this.exportToCsvUseCase.execute({ entityType: "topics", subjectId: this.selectedSubjectId ?? undefined });
-          } catch (error) {
-            this.notifyError(error, "Não foi possível exportar.");
-          }
-        }
-      })
-    );
-    header.appendChild(actions);
     container.appendChild(header);
 
     const subject = this.getSelectedSubject(data);

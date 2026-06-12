@@ -1,6 +1,5 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import { CreateSubjectUseCase } from "@/application/use-cases/CreateSubjectUseCase";
-import { ExportToCsvUseCase } from "@/application/use-cases/ExportToCsvUseCase";
 import { ListSubjectsForActiveContestUseCase } from "@/application/use-cases/ListSubjectsForActiveContestUseCase";
 import { ReorderSubjectsUseCase } from "@/application/use-cases/ReorderSubjectsUseCase";
 import { SetSubjectActiveStateUseCase } from "@/application/use-cases/SetSubjectActiveStateUseCase";
@@ -21,7 +20,6 @@ export class CycleTab {
   private readonly reorderSubjectsUseCase: ReorderSubjectsUseCase;
   private readonly setSubjectActiveStateUseCase: SetSubjectActiveStateUseCase;
   private readonly updateSubjectConfigurationUseCase: UpdateSubjectConfigurationUseCase;
-  private readonly exportToCsvUseCase: ExportToCsvUseCase;
   private editingSubjectId: string | null = null;
   private isCreatingNew = false;
 
@@ -34,7 +32,6 @@ export class CycleTab {
     this.reorderSubjectsUseCase = new ReorderSubjectsUseCase(dataStore);
     this.setSubjectActiveStateUseCase = new SetSubjectActiveStateUseCase(dataStore);
     this.updateSubjectConfigurationUseCase = new UpdateSubjectConfigurationUseCase(dataStore);
-    this.exportToCsvUseCase = new ExportToCsvUseCase(dataStore);
   }
 
   /**
@@ -43,8 +40,7 @@ export class CycleTab {
   async render(container: HTMLElement, data: CorvoPluginData): Promise<void> {
     const header = DomHelpers.createElement("div", "corvo-section-header");
     header.appendChild(DomHelpers.createSectionTitle("Ciclo e Matérias"));
-    const actions = DomHelpers.createElement("div", "corvo-inline-actions");
-    actions.appendChild(
+    header.appendChild(
       DomHelpers.createIconButton("add", "Nova matéria", {
         onClick: async () => {
           this.isCreatingNew = true;
@@ -52,18 +48,6 @@ export class CycleTab {
         }
       })
     );
-    actions.appendChild(
-      DomHelpers.createIconButton("download", "Exportar CSV", {
-        onClick: async () => {
-          try {
-            await this.exportToCsvUseCase.execute({ entityType: "subjects" });
-          } catch (error) {
-            this.notifyError(error, "Não foi possível exportar.");
-          }
-        }
-      })
-    );
-    header.appendChild(actions);
     container.appendChild(header);
     container.appendChild(
       DomHelpers.createParagraph("Gerencie a ordem, o status, o tempo e a etapa das matérias.")

@@ -3,7 +3,6 @@ import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import { AddStudyItemResourceReferenceUseCase } from "@/application/use-cases/AddStudyItemResourceReferenceUseCase";
 import { CreateStudyItemUseCase } from "@/application/use-cases/CreateStudyItemUseCase";
 import { DeleteStudyItemUseCase } from "@/application/use-cases/DeleteStudyItemUseCase";
-import { ExportToCsvUseCase } from "@/application/use-cases/ExportToCsvUseCase";
 import { GetActiveContestProgressDashboardUseCase } from "@/application/use-cases/GetActiveContestProgressDashboardUseCase";
 import { UpdateStudyItemUseCase } from "@/application/use-cases/UpdateStudyItemUseCase";
 import type { StudyItem } from "@/domain/entities/StudyItem";
@@ -20,7 +19,6 @@ export class ItemsTab {
   private readonly getActiveContestProgressDashboardUseCase: GetActiveContestProgressDashboardUseCase;
   private readonly deleteStudyItemUseCase: DeleteStudyItemUseCase;
   private readonly updateStudyItemUseCase: UpdateStudyItemUseCase;
-  private readonly exportToCsvUseCase: ExportToCsvUseCase;
 
   private selectedSubjectId: string | null = null;
   private editingItemId: string | null = null;
@@ -36,14 +34,12 @@ export class ItemsTab {
     this.getActiveContestProgressDashboardUseCase = new GetActiveContestProgressDashboardUseCase(dataStore);
     this.deleteStudyItemUseCase = new DeleteStudyItemUseCase(dataStore);
     this.updateStudyItemUseCase = new UpdateStudyItemUseCase(dataStore);
-    this.exportToCsvUseCase = new ExportToCsvUseCase(dataStore);
   }
 
   async render(container: HTMLElement, data: CorvoPluginData): Promise<void> {
     const header = DomHelpers.createElement("div", "corvo-section-header");
     header.appendChild(DomHelpers.createSectionTitle("Itens e PDFs"));
-    const actions = DomHelpers.createElement("div", "corvo-inline-actions");
-    actions.appendChild(
+    header.appendChild(
       DomHelpers.createIconButton("add", "Novo item", {
         onClick: async () => {
           this.isCreatingNew = true;
@@ -51,18 +47,6 @@ export class ItemsTab {
         }
       })
     );
-    actions.appendChild(
-      DomHelpers.createIconButton("download", "Exportar CSV", {
-        onClick: async () => {
-          try {
-            await this.exportToCsvUseCase.execute({ entityType: "items", subjectId: this.selectedSubjectId ?? undefined });
-          } catch (error) {
-            this.notifyError(error, "Não foi possível exportar.");
-          }
-        }
-      })
-    );
-    header.appendChild(actions);
     container.appendChild(header);
 
     const subject = this.getSelectedSubject(data);
