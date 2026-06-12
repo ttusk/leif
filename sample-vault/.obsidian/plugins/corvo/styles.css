@@ -98,6 +98,32 @@
   white-space: nowrap;
 }
 
+.corvo-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--corvo-border);
+  background: var(--background-primary);
+  color: var(--text-normal);
+  border-radius: 6px;
+  padding: 4px;
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.corvo-icon-button:hover {
+  background: var(--background-modifier-hover);
+}
+
+.corvo-icon-button-icon {
+  width: 1em;
+  height: 1em;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
 .corvo-tab-button.is-active,
 .corvo-primary-button {
   background: var(--corvo-accent);

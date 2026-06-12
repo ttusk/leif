@@ -289,6 +289,41 @@ export class DomHelpers {
   }
 
   /**
+   * Creates an icon-only button with a tooltip title.
+   * @param icon - Icon key from ICON_NAMES
+   * @param title - Tooltip text (shown on hover)
+   * @param options - Additional options (className, dataset, onClick)
+   * @returns HTMLButtonElement
+   */
+  static createIconButton(
+    icon: string,
+    title: string,
+    options: {
+      className?: string;
+      dataset?: Record<string, string>;
+      onClick?: (event: MouseEvent) => void | Promise<void>;
+    } = {}
+  ): HTMLButtonElement {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = options.className || "corvo-icon-button";
+    button.title = title;
+    button.appendChild(this.createIcon(icon, "corvo-icon-button-icon"));
+
+    if (options.dataset) {
+      Object.entries(options.dataset).forEach(([key, value]) => {
+        button.dataset[key] = value;
+      });
+    }
+
+    if (options.onClick) {
+      button.addEventListener("click", options.onClick);
+    }
+
+    return button;
+  }
+
+  /**
    * Creates a button group container.
    */
   static createButtonGroup(): HTMLElement {

@@ -1,22 +1,53 @@
 {
   "version": 1,
   "schemaVersion": 1,
-  "activeContestId": "tce-sp",
+  "activeContestId": "sefaz-ba",
   "contests": [
     {
       "id": "tce-sp",
       "name": "TCE-SP 2026",
-      "subjectIds": ["portuguese", "const-law", "admin-law", "civil-law", "criminal-law", "accounting"],
+      "subjectIds": [
+        "portuguese",
+        "const-law",
+        "admin-law",
+        "civil-law",
+        "criminal-law",
+        "accounting"
+      ],
       "wall": {
         "noticeLinks": [
-          { "id": "edital-1", "label": "Edital TCE-SP 2026", "url": "https://www.tcesp.org.br" }
+          {
+            "id": "edital-1",
+            "label": "Edital TCE-SP 2026",
+            "url": "https://www.tcesp.org.br"
+          }
         ],
         "examLinks": [
-          { "id": "prova-1", "label": "Prova 2022 - TCE-SP", "url": "https://www.tcesp.org.br" }
+          {
+            "id": "prova-1",
+            "label": "Prova 2022 - TCE-SP",
+            "url": "https://www.tcesp.org.br"
+          }
         ],
         "subjectSnapshots": [
-          { "subjectId": "portuguese", "weight": 3, "score": 8.5, "targetItems": ["syntax", "punctuation"] },
-          { "subjectId": "const-law", "weight": 3, "score": 7.2, "targetItems": ["rights", "separation"] }
+          {
+            "subjectId": "portuguese",
+            "weight": 3,
+            "score": 8.5,
+            "targetItems": [
+              "syntax",
+              "punctuation"
+            ]
+          },
+          {
+            "subjectId": "const-law",
+            "weight": 3,
+            "score": 7.2,
+            "targetItems": [
+              "rights",
+              "separation"
+            ]
+          }
         ],
         "notes": "Priorizar Portugues, Constitucional e Direito Administrativo. Objetivo: 80 questoes/dia."
       }
@@ -24,7 +55,11 @@
     {
       "id": "sefaz-ba",
       "name": "SEFAZ-BA 2026",
-      "subjectIds": ["tax-law", "accounting", "portuguese"],
+      "subjectIds": [
+        "tax-law",
+        "accounting",
+        "portuguese"
+      ],
       "wall": {
         "noticeLinks": [],
         "examLinks": [],
@@ -34,19 +69,149 @@
     }
   ],
   "contestStates": [
-    { "contestId": "tce-sp", "currentSubjectId": "portuguese", "currentItemId": "syntax" },
-    { "contestId": "sefaz-ba", "currentSubjectId": null, "currentItemId": null }
+    {
+      "contestId": "tce-sp",
+      "currentSubjectId": "portuguese",
+      "currentItemId": "syntax"
+    },
+    {
+      "contestId": "sefaz-ba",
+      "currentSubjectId": "tax-law",
+      "currentItemId": null
+    }
   ],
   "subjects": [
-    { "id": "portuguese", "contestId": "tce-sp", "name": "Portugues", "order": 1, "isActive": true, "plannedStudyMinutes": 90, "currentStage": "Questoes", "itemIds": ["syntax", "punctuation", "morphology"], "topicIds": ["subordinate", "coordination"] },
-    { "id": "const-law", "contestId": "tce-sp", "name": "Direito Constitucional", "order": 2, "isActive": true, "plannedStudyMinutes": 120, "currentStage": "Revisao", "itemIds": ["rights", "separation", "federalism"], "topicIds": ["habeas-corpus", "amparo"] },
-    { "id": "admin-law", "contestId": "tce-sp", "name": "Direito Administrativo", "order": 3, "isActive": true, "plannedStudyMinutes": 90, "currentStage": "PDF", "itemIds": ["acts", "liability", "contracts"], "topicIds": ["improbity", "tenders"] },
-    { "id": "civil-law", "contestId": "tce-sp", "name": "Direito Civil", "order": 4, "isActive": false, "plannedStudyMinutes": 60, "currentStage": "Teoria", "itemIds": ["obligations", "contracts"], "topicIds": [] },
-    { "id": "criminal-law", "contestId": "tce-sp", "name": "Direito Penal", "order": 5, "isActive": false, "plannedStudyMinutes": 60, "currentStage": "Teoria", "itemIds": ["crimes", "penalties"], "topicIds": [] },
-    { "id": "accounting", "contestId": "tce-sp", "name": "Contabilidade", "order": 6, "isActive": true, "plannedStudyMinutes": 45, "currentStage": "Video", "itemIds": ["balance", "reporting"], "topicIds": ["standards"] },
-    { "id": "tax-law", "contestId": "sefaz-ba", "name": "Direito Tributario", "order": 1, "isActive": true, "plannedStudyMinutes": 120, "currentStage": "PDF", "itemIds": [], "topicIds": [] },
-    { "id": "accounting", "contestId": "sefaz-ba", "name": "Contabilidade", "order": 2, "isActive": true, "plannedStudyMinutes": 90, "currentStage": "Video", "itemIds": [], "topicIds": [] },
-    { "id": "portuguese", "contestId": "sefaz-ba", "name": "Portugues", "order": 3, "isActive": true, "plannedStudyMinutes": 60, "currentStage": "Questoes", "itemIds": [], "topicIds": [] }
+    {
+      "id": "portuguese",
+      "contestId": "tce-sp",
+      "name": "Portugues",
+      "order": 1,
+      "isActive": true,
+      "plannedStudyMinutes": 90,
+      "currentStage": "Questoes",
+      "itemIds": [
+        "syntax",
+        "punctuation",
+        "morphology"
+      ],
+      "topicIds": [
+        "subordinate",
+        "coordination"
+      ]
+    },
+    {
+      "id": "const-law",
+      "contestId": "tce-sp",
+      "name": "Direito Constitucional",
+      "order": 2,
+      "isActive": true,
+      "plannedStudyMinutes": 120,
+      "currentStage": "Revisao",
+      "itemIds": [
+        "rights",
+        "separation",
+        "federalism"
+      ],
+      "topicIds": [
+        "habeas-corpus",
+        "amparo"
+      ]
+    },
+    {
+      "id": "admin-law",
+      "contestId": "tce-sp",
+      "name": "Direito Administrativo",
+      "order": 3,
+      "isActive": true,
+      "plannedStudyMinutes": 90,
+      "currentStage": "PDF",
+      "itemIds": [
+        "acts",
+        "liability",
+        "contracts"
+      ],
+      "topicIds": [
+        "improbity",
+        "tenders"
+      ]
+    },
+    {
+      "id": "civil-law",
+      "contestId": "tce-sp",
+      "name": "Direito Civil",
+      "order": 4,
+      "isActive": false,
+      "plannedStudyMinutes": 60,
+      "currentStage": "Teoria",
+      "itemIds": [
+        "obligations",
+        "contracts"
+      ],
+      "topicIds": []
+    },
+    {
+      "id": "criminal-law",
+      "contestId": "tce-sp",
+      "name": "Direito Penal",
+      "order": 5,
+      "isActive": false,
+      "plannedStudyMinutes": 60,
+      "currentStage": "Teoria",
+      "itemIds": [
+        "crimes",
+        "penalties"
+      ],
+      "topicIds": []
+    },
+    {
+      "id": "accounting",
+      "contestId": "tce-sp",
+      "name": "Contabilidade",
+      "order": 6,
+      "isActive": true,
+      "plannedStudyMinutes": 45,
+      "currentStage": "Video",
+      "itemIds": [
+        "balance",
+        "reporting"
+      ],
+      "topicIds": [
+        "standards"
+      ]
+    },
+    {
+      "id": "tax-law",
+      "contestId": "sefaz-ba",
+      "name": "Direito Tributario",
+      "order": 1,
+      "isActive": true,
+      "plannedStudyMinutes": 120,
+      "currentStage": "PDF",
+      "itemIds": [],
+      "topicIds": []
+    },
+    {
+      "id": "accounting",
+      "contestId": "sefaz-ba",
+      "name": "Contabilidade",
+      "order": 2,
+      "isActive": true,
+      "plannedStudyMinutes": 90,
+      "currentStage": "Video",
+      "itemIds": [],
+      "topicIds": []
+    },
+    {
+      "id": "portuguese",
+      "contestId": "sefaz-ba",
+      "name": "Portugues",
+      "order": 3,
+      "isActive": true,
+      "plannedStudyMinutes": 60,
+      "currentStage": "Questoes",
+      "itemIds": [],
+      "topicIds": []
+    }
   ],
   "topics": [
     {
@@ -55,7 +220,13 @@
       "name": "Oracoes Subordinadas",
       "order": 1,
       "resourceReferences": [
-        { "id": "video-1", "title": "Aula 01 - Subordinadas", "type": "video", "url": "https://youtube.com/watch?v=example1", "notes": "Ver revisao do minuto 15" }
+        {
+          "id": "video-1",
+          "title": "Aula 01 - Subordinadas",
+          "type": "video",
+          "url": "https://youtube.com/watch?v=example1",
+          "notes": "Ver revisao do minuto 15"
+        }
       ],
       "questionNotebook": {
         "id": "tec-1",
@@ -72,7 +243,12 @@
       "name": "Oracoes Coordenadas",
       "order": 2,
       "resourceReferences": [
-        { "id": "pdf-1", "title": "Apostila - Coordenadas", "type": "pdf", "url": "https://example.com/coordenadas.pdf" }
+        {
+          "id": "pdf-1",
+          "title": "Apostila - Coordenadas",
+          "type": "pdf",
+          "url": "https://example.com/coordenadas.pdf"
+        }
       ],
       "questionNotebook": {
         "id": "tec-2",
@@ -102,7 +278,12 @@
       "name": "Mandado de Seguranca",
       "order": 2,
       "resourceReferences": [
-        { "id": "video-2", "title": "Aula MS", "type": "video", "url": "https://youtube.com/watch?v=example2" }
+        {
+          "id": "video-2",
+          "title": "Aula MS",
+          "type": "video",
+          "url": "https://youtube.com/watch?v=example2"
+        }
       ],
       "questionNotebook": null
     },
@@ -112,7 +293,12 @@
       "name": "Improbidade Administrativa",
       "order": 1,
       "resourceReferences": [
-        { "id": "link-1", "title": "Lei 8.429/92", "type": "link", "url": "https://www.planalto.gov.br/ccivil_03/leis/l8429.htm" }
+        {
+          "id": "link-1",
+          "title": "Lei 8.429/92",
+          "type": "link",
+          "url": "https://www.planalto.gov.br/ccivil_03/leis/l8429.htm"
+        }
       ],
       "questionNotebook": {
         "id": "tec-4",
@@ -136,58 +322,511 @@
       "name": "Normas Contabeis",
       "order": 1,
       "resourceReferences": [
-        { "id": "pdf-2", "title": "CPC 00", "type": "pdf", "url": "https://example.com/cpc00.pdf" }
+        {
+          "id": "pdf-2",
+          "title": "CPC 00",
+          "type": "pdf",
+          "url": "https://example.com/cpc00.pdf"
+        }
       ],
       "questionNotebook": null
     }
   ],
   "studyItems": [
-    { "id": "syntax", "subjectId": "portuguese", "title": "Sintaxe", "order": 1, "weight": 3, "questionCount": 30, "resourceReferences": [{ "id": "item-vid-1", "title": "Video: Sintaxe Basica", "type": "video", "url": "https://youtube.com/watch?v=syntax" }] },
-    { "id": "punctuation", "subjectId": "portuguese", "title": "Pontuacao", "order": 2, "weight": 2, "questionCount": 20, "resourceReferences": [] },
-    { "id": "morphology", "subjectId": "portuguese", "title": "Morfologia", "order": 3, "weight": 1, "questionCount": 15, "resourceReferences": [] },
-    { "id": "rights", "subjectId": "const-law", "title": "Direitos Fundamentais", "order": 1, "weight": 3, "questionCount": 40, "resourceReferences": [{ "id": "item-pdf-1", "title": "PDF: CF Art. 5", "type": "pdf", "url": "https://example.com/cf-art5.pdf" }] },
-    { "id": "separation", "subjectId": "const-law", "title": "Separacao de Poderes", "order": 2, "weight": 2, "questionCount": 25, "resourceReferences": [] },
-    { "id": "federalism", "subjectId": "const-law", "title": "Federalismo", "order": 3, "weight": 1, "questionCount": 15, "resourceReferences": [] },
-    { "id": "acts", "subjectId": "admin-law", "title": "Atos Administrativos", "order": 1, "weight": 3, "questionCount": 35, "resourceReferences": [] },
-    { "id": "liability", "subjectId": "admin-law", "title": "Responsabilidade", "order": 2, "weight": 2, "questionCount": 20, "resourceReferences": [] },
-    { "id": "contracts", "subjectId": "admin-law", "title": "Contratos Adm", "order": 3, "weight": 1, "questionCount": 10, "resourceReferences": [] },
-    { "id": "obligations", "subjectId": "civil-law", "title": "Obrigacoes", "order": 1, "weight": 2, "questionCount": 20, "resourceReferences": [] },
-    { "id": "contracts", "subjectId": "civil-law", "title": "Contratos", "order": 2, "weight": 1, "questionCount": 15, "resourceReferences": [] },
-    { "id": "crimes", "subjectId": "criminal-law", "title": "Crimes", "order": 1, "weight": 2, "questionCount": 20, "resourceReferences": [] },
-    { "id": "penalties", "subjectId": "criminal-law", "title": "Penas", "order": 2, "weight": 1, "questionCount": 10, "resourceReferences": [] },
-    { "id": "balance", "subjectId": "accounting", "title": "Balanco", "order": 1, "weight": 2, "questionCount": 15, "resourceReferences": [] },
-    { "id": "reporting", "subjectId": "accounting", "title": "Demonstracoes", "order": 2, "weight": 1, "questionCount": 10, "resourceReferences": [] }
+    {
+      "id": "syntax",
+      "subjectId": "portuguese",
+      "title": "Sintaxe",
+      "order": 1,
+      "weight": 3,
+      "questionCount": 30,
+      "resourceReferences": [
+        {
+          "id": "item-vid-1",
+          "title": "Video: Sintaxe Basica",
+          "type": "video",
+          "url": "https://youtube.com/watch?v=syntax"
+        }
+      ]
+    },
+    {
+      "id": "punctuation",
+      "subjectId": "portuguese",
+      "title": "Pontuacao",
+      "order": 2,
+      "weight": 2,
+      "questionCount": 20,
+      "resourceReferences": []
+    },
+    {
+      "id": "morphology",
+      "subjectId": "portuguese",
+      "title": "Morfologia",
+      "order": 3,
+      "weight": 1,
+      "questionCount": 15,
+      "resourceReferences": []
+    },
+    {
+      "id": "rights",
+      "subjectId": "const-law",
+      "title": "Direitos Fundamentais",
+      "order": 1,
+      "weight": 3,
+      "questionCount": 40,
+      "resourceReferences": [
+        {
+          "id": "item-pdf-1",
+          "title": "PDF: CF Art. 5",
+          "type": "pdf",
+          "url": "https://example.com/cf-art5.pdf"
+        }
+      ]
+    },
+    {
+      "id": "separation",
+      "subjectId": "const-law",
+      "title": "Separacao de Poderes",
+      "order": 2,
+      "weight": 2,
+      "questionCount": 25,
+      "resourceReferences": []
+    },
+    {
+      "id": "federalism",
+      "subjectId": "const-law",
+      "title": "Federalismo",
+      "order": 3,
+      "weight": 1,
+      "questionCount": 15,
+      "resourceReferences": []
+    },
+    {
+      "id": "acts",
+      "subjectId": "admin-law",
+      "title": "Atos Administrativos",
+      "order": 1,
+      "weight": 3,
+      "questionCount": 35,
+      "resourceReferences": []
+    },
+    {
+      "id": "liability",
+      "subjectId": "admin-law",
+      "title": "Responsabilidade",
+      "order": 2,
+      "weight": 2,
+      "questionCount": 20,
+      "resourceReferences": []
+    },
+    {
+      "id": "contracts",
+      "subjectId": "admin-law",
+      "title": "Contratos Adm",
+      "order": 3,
+      "weight": 1,
+      "questionCount": 10,
+      "resourceReferences": []
+    },
+    {
+      "id": "obligations",
+      "subjectId": "civil-law",
+      "title": "Obrigacoes",
+      "order": 1,
+      "weight": 2,
+      "questionCount": 20,
+      "resourceReferences": []
+    },
+    {
+      "id": "contracts",
+      "subjectId": "civil-law",
+      "title": "Contratos",
+      "order": 2,
+      "weight": 1,
+      "questionCount": 15,
+      "resourceReferences": []
+    },
+    {
+      "id": "crimes",
+      "subjectId": "criminal-law",
+      "title": "Crimes",
+      "order": 1,
+      "weight": 2,
+      "questionCount": 20,
+      "resourceReferences": []
+    },
+    {
+      "id": "penalties",
+      "subjectId": "criminal-law",
+      "title": "Penas",
+      "order": 2,
+      "weight": 1,
+      "questionCount": 10,
+      "resourceReferences": []
+    },
+    {
+      "id": "balance",
+      "subjectId": "accounting",
+      "title": "Balanco",
+      "order": 1,
+      "weight": 2,
+      "questionCount": 15,
+      "resourceReferences": []
+    },
+    {
+      "id": "reporting",
+      "subjectId": "accounting",
+      "title": "Demonstracoes",
+      "order": 2,
+      "weight": 1,
+      "questionCount": 10,
+      "resourceReferences": []
+    }
   ],
   "studySessions": [
-    { "id": "sess-1", "contestId": "tce-sp", "subjectId": "portuguese", "studyItemId": "syntax", "topicId": "subordinate", "type": "pdf", "studiedAt": "2026-06-01T10:00:00.000Z", "pagesOrCount": 15, "completed": true },
-    { "id": "sess-2", "contestId": "tce-sp", "subjectId": "portuguese", "studyItemId": "syntax", "topicId": "subordinate", "type": "questions", "studiedAt": "2026-06-01T14:00:00.000Z", "pagesOrCount": 20, "correctAnswers": 18, "completed": true },
-    { "id": "sess-3", "contestId": "tce-sp", "subjectId": "portuguese", "studyItemId": "punctuation", "topicId": "coordination", "type": "video", "studiedAt": "2026-06-02T09:00:00.000Z", "pagesOrCount": 1, "completed": true },
-    { "id": "sess-4", "contestId": "tce-sp", "subjectId": "const-law", "studyItemId": "rights", "topicId": "habeas-corpus", "type": "pdf", "studiedAt": "2026-06-02T10:30:00.000Z", "pagesOrCount": 10, "completed": true },
-    { "id": "sess-5", "contestId": "tce-sp", "subjectId": "const-law", "studyItemId": "rights", "topicId": "habeas-corpus", "type": "questions", "studiedAt": "2026-06-02T15:00:00.000Z", "pagesOrCount": 15, "correctAnswers": 12, "completed": true },
-    { "id": "sess-6", "contestId": "tce-sp", "subjectId": "admin-law", "studyItemId": "acts", "topicId": "improbity", "type": "pdf", "studiedAt": "2026-06-03T08:00:00.000Z", "pagesOrCount": 12, "completed": true },
-    { "id": "sess-7", "contestId": "tce-sp", "subjectId": "portuguese", "studyItemId": "syntax", "topicId": "subordinate", "type": "questions", "studiedAt": "2026-06-03T10:00:00.000Z", "pagesOrCount": 25, "correctAnswers": 22, "completed": true },
-    { "id": "sess-8", "contestId": "tce-sp", "subjectId": "accounting", "studyItemId": "balance", "topicId": "standards", "type": "video", "studiedAt": "2026-06-03T14:00:00.000Z", "pagesOrCount": 1, "completed": true },
-    { "id": "sess-9", "contestId": "tce-sp", "subjectId": "portuguese", "studyItemId": "punctuation", "topicId": "coordination", "type": "questions", "studiedAt": "2026-06-04T09:00:00.000Z", "pagesOrCount": 15, "correctAnswers": 14, "completed": true },
-    { "id": "sess-10", "contestId": "tce-sp", "subjectId": "const-law", "studyItemId": "separation", "topicId": "amparo", "type": "video", "studiedAt": "2026-06-04T11:00:00.000Z", "pagesOrCount": 1, "completed": true },
-    { "id": "sess-11", "contestId": "tce-sp", "subjectId": "admin-law", "studyItemId": "liability", "topicId": "tenders", "type": "questions", "studiedAt": "2026-06-05T08:00:00.000Z", "pagesOrCount": 10, "correctAnswers": 8, "completed": true },
-    { "id": "sess-12", "contestId": "tce-sp", "subjectId": "portuguese", "studyItemId": "morphology", "topicId": "subordinate", "type": "pdf", "studiedAt": "2026-06-05T10:00:00.000Z", "pagesOrCount": 8, "completed": true },
-    { "id": "sess-13", "contestId": "tce-sp", "subjectId": "const-law", "studyItemId": "federalism", "topicId": "habeas-corpus", "type": "questions", "studiedAt": "2026-06-05T14:00:00.000Z", "pagesOrCount": 15, "correctAnswers": 13, "completed": true },
-    { "id": "sess-14", "contestId": "tce-sp", "subjectId": "accounting", "studyItemId": "reporting", "topicId": "standards", "type": "pdf", "studiedAt": "2026-06-06T09:00:00.000Z", "pagesOrCount": 10, "completed": true },
-    { "id": "sess-15", "contestId": "tce-sp", "subjectId": "portuguese", "studyItemId": "syntax", "topicId": "subordinate", "type": "questions", "studiedAt": "2026-06-06T11:00:00.000Z", "pagesOrCount": 30, "correctAnswers": 28, "completed": true },
-    { "id": "sess-16", "contestId": "tce-sp", "subjectId": "admin-law", "studyItemId": "contracts", "topicId": "improbity", "type": "video", "studiedAt": "2026-06-07T08:00:00.000Z", "pagesOrCount": 1, "completed": true },
-    { "id": "sess-17", "contestId": "tce-sp", "subjectId": "portuguese", "studyItemId": "punctuation", "topicId": "coordination", "type": "questions", "studiedAt": "2026-06-07T10:00:00.000Z", "pagesOrCount": 20, "correctAnswers": 18, "completed": true },
-    { "id": "sess-18", "contestId": "tce-sp", "subjectId": "const-law", "studyItemId": "rights", "topicId": "amparo", "type": "pdf", "studiedAt": "2026-06-07T14:00:00.000Z", "pagesOrCount": 15, "completed": true },
-    { "id": "sess-19", "contestId": "tce-sp", "subjectId": "portuguese", "studyItemId": "syntax", "topicId": "subordinate", "type": "questions", "studiedAt": "2026-06-08T09:00:00.000Z", "pagesOrCount": 25, "correctAnswers": 23, "completed": true },
-    { "id": "sess-20", "contestId": "tce-sp", "subjectId": "accounting", "studyItemId": "balance", "topicId": "standards", "type": "questions", "studiedAt": "2026-06-08T11:00:00.000Z", "pagesOrCount": 10, "correctAnswers": 9, "completed": true },
-    { "id": "sess-21", "contestId": "tce-sp", "subjectId": "admin-law", "studyItemId": "acts", "topicId": "tenders", "type": "pdf", "studiedAt": "2026-06-09T08:00:00.000Z", "pagesOrCount": 14, "completed": true },
-    { "id": "sess-22", "contestId": "tce-sp", "subjectId": "portuguese", "studyItemId": "morphology", "topicId": "coordination", "type": "video", "studiedAt": "2026-06-09T10:00:00.000Z", "pagesOrCount": 1, "completed": true },
-    { "id": "sess-23", "contestId": "tce-sp", "subjectId": "const-law", "studyItemId": "separation", "topicId": "habeas-corpus", "type": "questions", "studiedAt": "2026-06-09T14:00:00.000Z", "pagesOrCount": 15, "correctAnswers": 14, "completed": true },
-    { "id": "sess-24", "contestId": "tce-sp", "subjectId": "portuguese", "studyItemId": "syntax", "topicId": "subordinate", "type": "pdf", "studiedAt": "2026-06-10T09:00:00.000Z", "pagesOrCount": 20, "completed": true },
-    { "id": "sess-25", "contestId": "tce-sp", "subjectId": "admin-law", "studyItemId": "liability", "topicId": "improbity", "type": "questions", "studiedAt": "2026-06-10T11:00:00.000Z", "pagesOrCount": 12, "correctAnswers": 10, "completed": true },
-    { "id": "sess-26", "contestId": "tce-sp", "subjectId": "accounting", "studyItemId": "reporting", "topicId": "standards", "type": "video", "studiedAt": "2026-06-10T14:00:00.000Z", "pagesOrCount": 1, "completed": true },
-    { "id": "sess-27", "contestId": "tce-sp", "subjectId": "portuguese", "studyItemId": "punctuation", "topicId": "coordination", "type": "questions", "studiedAt": "2026-06-11T09:00:00.000Z", "pagesOrCount": 20, "correctAnswers": 18, "completed": true },
-    { "id": "sess-28", "contestId": "tce-sp", "subjectId": "const-law", "studyItemId": "rights", "topicId": "amparo", "type": "video", "studiedAt": "2026-06-11T11:00:00.000Z", "pagesOrCount": 1, "completed": true },
-    { "id": "sess-29", "contestId": "tce-sp", "subjectId": "admin-law", "studyItemId": "contracts", "topicId": "tenders", "type": "pdf", "studiedAt": "2026-06-11T14:00:00.000Z", "pagesOrCount": 10, "completed": true },
-    { "id": "sess-30", "contestId": "tce-sp", "subjectId": "portuguese", "studyItemId": "syntax", "topicId": "subordinate", "type": "questions", "studiedAt": "2026-06-11T16:00:00.000Z", "pagesOrCount": 20, "correctAnswers": 19, "completed": true }
+    {
+      "id": "sess-1",
+      "contestId": "tce-sp",
+      "subjectId": "portuguese",
+      "studyItemId": "syntax",
+      "topicId": "subordinate",
+      "type": "pdf",
+      "studiedAt": "2026-06-01T10:00:00.000Z",
+      "pagesOrCount": 15,
+      "completed": true
+    },
+    {
+      "id": "sess-2",
+      "contestId": "tce-sp",
+      "subjectId": "portuguese",
+      "studyItemId": "syntax",
+      "topicId": "subordinate",
+      "type": "questions",
+      "studiedAt": "2026-06-01T14:00:00.000Z",
+      "pagesOrCount": 20,
+      "correctAnswers": 18,
+      "completed": true
+    },
+    {
+      "id": "sess-3",
+      "contestId": "tce-sp",
+      "subjectId": "portuguese",
+      "studyItemId": "punctuation",
+      "topicId": "coordination",
+      "type": "video",
+      "studiedAt": "2026-06-02T09:00:00.000Z",
+      "pagesOrCount": 1,
+      "completed": true
+    },
+    {
+      "id": "sess-4",
+      "contestId": "tce-sp",
+      "subjectId": "const-law",
+      "studyItemId": "rights",
+      "topicId": "habeas-corpus",
+      "type": "pdf",
+      "studiedAt": "2026-06-02T10:30:00.000Z",
+      "pagesOrCount": 10,
+      "completed": true
+    },
+    {
+      "id": "sess-5",
+      "contestId": "tce-sp",
+      "subjectId": "const-law",
+      "studyItemId": "rights",
+      "topicId": "habeas-corpus",
+      "type": "questions",
+      "studiedAt": "2026-06-02T15:00:00.000Z",
+      "pagesOrCount": 15,
+      "correctAnswers": 12,
+      "completed": true
+    },
+    {
+      "id": "sess-6",
+      "contestId": "tce-sp",
+      "subjectId": "admin-law",
+      "studyItemId": "acts",
+      "topicId": "improbity",
+      "type": "pdf",
+      "studiedAt": "2026-06-03T08:00:00.000Z",
+      "pagesOrCount": 12,
+      "completed": true
+    },
+    {
+      "id": "sess-7",
+      "contestId": "tce-sp",
+      "subjectId": "portuguese",
+      "studyItemId": "syntax",
+      "topicId": "subordinate",
+      "type": "questions",
+      "studiedAt": "2026-06-03T10:00:00.000Z",
+      "pagesOrCount": 25,
+      "correctAnswers": 22,
+      "completed": true
+    },
+    {
+      "id": "sess-8",
+      "contestId": "tce-sp",
+      "subjectId": "accounting",
+      "studyItemId": "balance",
+      "topicId": "standards",
+      "type": "video",
+      "studiedAt": "2026-06-03T14:00:00.000Z",
+      "pagesOrCount": 1,
+      "completed": true
+    },
+    {
+      "id": "sess-9",
+      "contestId": "tce-sp",
+      "subjectId": "portuguese",
+      "studyItemId": "punctuation",
+      "topicId": "coordination",
+      "type": "questions",
+      "studiedAt": "2026-06-04T09:00:00.000Z",
+      "pagesOrCount": 15,
+      "correctAnswers": 14,
+      "completed": true
+    },
+    {
+      "id": "sess-10",
+      "contestId": "tce-sp",
+      "subjectId": "const-law",
+      "studyItemId": "separation",
+      "topicId": "amparo",
+      "type": "video",
+      "studiedAt": "2026-06-04T11:00:00.000Z",
+      "pagesOrCount": 1,
+      "completed": true
+    },
+    {
+      "id": "sess-11",
+      "contestId": "tce-sp",
+      "subjectId": "admin-law",
+      "studyItemId": "liability",
+      "topicId": "tenders",
+      "type": "questions",
+      "studiedAt": "2026-06-05T08:00:00.000Z",
+      "pagesOrCount": 10,
+      "correctAnswers": 8,
+      "completed": true
+    },
+    {
+      "id": "sess-12",
+      "contestId": "tce-sp",
+      "subjectId": "portuguese",
+      "studyItemId": "morphology",
+      "topicId": "subordinate",
+      "type": "pdf",
+      "studiedAt": "2026-06-05T10:00:00.000Z",
+      "pagesOrCount": 8,
+      "completed": true
+    },
+    {
+      "id": "sess-13",
+      "contestId": "tce-sp",
+      "subjectId": "const-law",
+      "studyItemId": "federalism",
+      "topicId": "habeas-corpus",
+      "type": "questions",
+      "studiedAt": "2026-06-05T14:00:00.000Z",
+      "pagesOrCount": 15,
+      "correctAnswers": 13,
+      "completed": true
+    },
+    {
+      "id": "sess-14",
+      "contestId": "tce-sp",
+      "subjectId": "accounting",
+      "studyItemId": "reporting",
+      "topicId": "standards",
+      "type": "pdf",
+      "studiedAt": "2026-06-06T09:00:00.000Z",
+      "pagesOrCount": 10,
+      "completed": true
+    },
+    {
+      "id": "sess-15",
+      "contestId": "tce-sp",
+      "subjectId": "portuguese",
+      "studyItemId": "syntax",
+      "topicId": "subordinate",
+      "type": "questions",
+      "studiedAt": "2026-06-06T11:00:00.000Z",
+      "pagesOrCount": 30,
+      "correctAnswers": 28,
+      "completed": true
+    },
+    {
+      "id": "sess-16",
+      "contestId": "tce-sp",
+      "subjectId": "admin-law",
+      "studyItemId": "contracts",
+      "topicId": "improbity",
+      "type": "video",
+      "studiedAt": "2026-06-07T08:00:00.000Z",
+      "pagesOrCount": 1,
+      "completed": true
+    },
+    {
+      "id": "sess-17",
+      "contestId": "tce-sp",
+      "subjectId": "portuguese",
+      "studyItemId": "punctuation",
+      "topicId": "coordination",
+      "type": "questions",
+      "studiedAt": "2026-06-07T10:00:00.000Z",
+      "pagesOrCount": 20,
+      "correctAnswers": 18,
+      "completed": true
+    },
+    {
+      "id": "sess-18",
+      "contestId": "tce-sp",
+      "subjectId": "const-law",
+      "studyItemId": "rights",
+      "topicId": "amparo",
+      "type": "pdf",
+      "studiedAt": "2026-06-07T14:00:00.000Z",
+      "pagesOrCount": 15,
+      "completed": true
+    },
+    {
+      "id": "sess-19",
+      "contestId": "tce-sp",
+      "subjectId": "portuguese",
+      "studyItemId": "syntax",
+      "topicId": "subordinate",
+      "type": "questions",
+      "studiedAt": "2026-06-08T09:00:00.000Z",
+      "pagesOrCount": 25,
+      "correctAnswers": 23,
+      "completed": true
+    },
+    {
+      "id": "sess-20",
+      "contestId": "tce-sp",
+      "subjectId": "accounting",
+      "studyItemId": "balance",
+      "topicId": "standards",
+      "type": "questions",
+      "studiedAt": "2026-06-08T11:00:00.000Z",
+      "pagesOrCount": 10,
+      "correctAnswers": 9,
+      "completed": true
+    },
+    {
+      "id": "sess-21",
+      "contestId": "tce-sp",
+      "subjectId": "admin-law",
+      "studyItemId": "acts",
+      "topicId": "tenders",
+      "type": "pdf",
+      "studiedAt": "2026-06-09T08:00:00.000Z",
+      "pagesOrCount": 14,
+      "completed": true
+    },
+    {
+      "id": "sess-22",
+      "contestId": "tce-sp",
+      "subjectId": "portuguese",
+      "studyItemId": "morphology",
+      "topicId": "coordination",
+      "type": "video",
+      "studiedAt": "2026-06-09T10:00:00.000Z",
+      "pagesOrCount": 1,
+      "completed": true
+    },
+    {
+      "id": "sess-23",
+      "contestId": "tce-sp",
+      "subjectId": "const-law",
+      "studyItemId": "separation",
+      "topicId": "habeas-corpus",
+      "type": "questions",
+      "studiedAt": "2026-06-09T14:00:00.000Z",
+      "pagesOrCount": 15,
+      "correctAnswers": 14,
+      "completed": true
+    },
+    {
+      "id": "sess-24",
+      "contestId": "tce-sp",
+      "subjectId": "portuguese",
+      "studyItemId": "syntax",
+      "topicId": "subordinate",
+      "type": "pdf",
+      "studiedAt": "2026-06-10T09:00:00.000Z",
+      "pagesOrCount": 20,
+      "completed": true
+    },
+    {
+      "id": "sess-25",
+      "contestId": "tce-sp",
+      "subjectId": "admin-law",
+      "studyItemId": "liability",
+      "topicId": "improbity",
+      "type": "questions",
+      "studiedAt": "2026-06-10T11:00:00.000Z",
+      "pagesOrCount": 12,
+      "correctAnswers": 10,
+      "completed": true
+    },
+    {
+      "id": "sess-26",
+      "contestId": "tce-sp",
+      "subjectId": "accounting",
+      "studyItemId": "reporting",
+      "topicId": "standards",
+      "type": "video",
+      "studiedAt": "2026-06-10T14:00:00.000Z",
+      "pagesOrCount": 1,
+      "completed": true
+    },
+    {
+      "id": "sess-27",
+      "contestId": "tce-sp",
+      "subjectId": "portuguese",
+      "studyItemId": "punctuation",
+      "topicId": "coordination",
+      "type": "questions",
+      "studiedAt": "2026-06-11T09:00:00.000Z",
+      "pagesOrCount": 20,
+      "correctAnswers": 18,
+      "completed": true
+    },
+    {
+      "id": "sess-28",
+      "contestId": "tce-sp",
+      "subjectId": "const-law",
+      "studyItemId": "rights",
+      "topicId": "amparo",
+      "type": "video",
+      "studiedAt": "2026-06-11T11:00:00.000Z",
+      "pagesOrCount": 1,
+      "completed": true
+    },
+    {
+      "id": "sess-29",
+      "contestId": "tce-sp",
+      "subjectId": "admin-law",
+      "studyItemId": "contracts",
+      "topicId": "tenders",
+      "type": "pdf",
+      "studiedAt": "2026-06-11T14:00:00.000Z",
+      "pagesOrCount": 10,
+      "completed": true
+    },
+    {
+      "id": "sess-30",
+      "contestId": "tce-sp",
+      "subjectId": "portuguese",
+      "studyItemId": "syntax",
+      "topicId": "subordinate",
+      "type": "questions",
+      "studiedAt": "2026-06-11T16:00:00.000Z",
+      "pagesOrCount": 20,
+      "correctAnswers": 19,
+      "completed": true
+    }
   ]
 }

@@ -148,8 +148,7 @@ export class SessionsTab {
           "sem matéria";
         const topicName =
           data.topics.find((topic) => topic.id === session.topicId)?.name ?? "-";
-        const deleteButton = DomHelpers.createButton("Excluir", {
-          icon: "delete",
+        const deleteButton = DomHelpers.createIconButton("delete", "Excluir", {
           dataset: { sessionDeleteId: session.id },
           onClick: async () => {
             try {

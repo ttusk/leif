@@ -124,8 +124,7 @@ export class CycleTab {
 
     if (index > 0) {
       controls.appendChild(
-        DomHelpers.createButton("Subir", {
-          icon: "keyboard_arrow_up",
+        DomHelpers.createIconButton("up", "Subir", {
           onClick: async () => {
             await this.moveSubject(subjects, index, index - 1, activeContestId);
           }
@@ -135,8 +134,7 @@ export class CycleTab {
 
     if (index < subjects.length - 1) {
       controls.appendChild(
-        DomHelpers.createButton("Descer", {
-          icon: "keyboard_arrow_down",
+        DomHelpers.createIconButton("down", "Descer", {
           onClick: async () => {
             await this.moveSubject(subjects, index, index + 1, activeContestId);
           }
@@ -145,20 +143,23 @@ export class CycleTab {
     }
 
     controls.appendChild(
-      DomHelpers.createButton(subject.isActive ? "Desativar" : "Ativar", {
-        icon: subject.isActive ? "toggle_off" : "toggle_on",
-        onClick: async () => {
-          try {
-            await this.setSubjectActiveStateUseCase.execute({
-              subjectId: subject.id,
-              isActive: !subject.isActive
-            });
-            await this.onUpdate();
-          } catch (error) {
-            this.notifyError(error, "Não foi possível alterar o status da matéria.");
+      DomHelpers.createIconButton(
+        subject.isActive ? "toggleOn" : "toggleOff",
+        subject.isActive ? "Desativar" : "Ativar",
+        {
+          onClick: async () => {
+            try {
+              await this.setSubjectActiveStateUseCase.execute({
+                subjectId: subject.id,
+                isActive: !subject.isActive
+              });
+              await this.onUpdate();
+            } catch (error) {
+              this.notifyError(error, "Não foi possível alterar o status da matéria.");
+            }
           }
         }
-      })
+      )
     );
 
     return controls;

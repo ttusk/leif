@@ -21,8 +21,8 @@ export const ICON_NAMES = {
   edit: "pencil",
   save: "check",
   cancel: "x",
-  up: "chevron-up",
-  down: "chevron-down",
+  up: "arrow-up",
+  down: "arrow-down",
   toggleOn: "toggle-right",
   toggleOff: "toggle-left"
 } as const;

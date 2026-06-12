@@ -1347,8 +1347,8 @@ var ICON_NAMES = {
   edit: "pencil",
   save: "check",
   cancel: "x",
-  up: "chevron-up",
-  down: "chevron-down",
+  up: "arrow-up",
+  down: "arrow-down",
   toggleOn: "toggle-right",
   toggleOff: "toggle-left"
 };
@@ -1598,6 +1598,29 @@ var DomHelpers = class {
     return button;
   }
   /**
+   * Creates an icon-only button with a tooltip title.
+   * @param icon - Icon key from ICON_NAMES
+   * @param title - Tooltip text (shown on hover)
+   * @param options - Additional options (className, dataset, onClick)
+   * @returns HTMLButtonElement
+   */
+  static createIconButton(icon, title, options = {}) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = options.className || "corvo-icon-button";
+    button.title = title;
+    button.appendChild(this.createIcon(icon, "corvo-icon-button-icon"));
+    if (options.dataset) {
+      Object.entries(options.dataset).forEach(([key, value]) => {
+        button.dataset[key] = value;
+      });
+    }
+    if (options.onClick) {
+      button.addEventListener("click", options.onClick);
+    }
+    return button;
+  }
+  /**
    * Creates a button group container.
    */
   static createButtonGroup() {
@@ -1830,8 +1853,7 @@ var CycleTab = class {
     const controls = DomHelpers.createElement("div", "corvo-inline-actions corvo-inline-actions-compact");
     if (index > 0) {
       controls.appendChild(
-        DomHelpers.createButton("Subir", {
-          icon: "keyboard_arrow_up",
+        DomHelpers.createIconButton("up", "Subir", {
           onClick: async () => {
             await this.moveSubject(subjects, index, index - 1, activeContestId);
           }
@@ -1840,8 +1862,7 @@ var CycleTab = class {
     }
     if (index < subjects.length - 1) {
       controls.appendChild(
-        DomHelpers.createButton("Descer", {
-          icon: "keyboard_arrow_down",
+        DomHelpers.createIconButton("down", "Descer", {
           onClick: async () => {
             await this.moveSubject(subjects, index, index + 1, activeContestId);
           }
@@ -1849,20 +1870,23 @@ var CycleTab = class {
       );
     }
     controls.appendChild(
-      DomHelpers.createButton(subject.isActive ? "Desativar" : "Ativar", {
-        icon: subject.isActive ? "toggle_off" : "toggle_on",
-        onClick: async () => {
-          try {
-            await this.setSubjectActiveStateUseCase.execute({
-              subjectId: subject.id,
-              isActive: !subject.isActive
-            });
-            await this.onUpdate();
-          } catch (error) {
-            this.notifyError(error, "N\xE3o foi poss\xEDvel alterar o status da mat\xE9ria.");
+      DomHelpers.createIconButton(
+        subject.isActive ? "toggleOn" : "toggleOff",
+        subject.isActive ? "Desativar" : "Ativar",
+        {
+          onClick: async () => {
+            try {
+              await this.setSubjectActiveStateUseCase.execute({
+                subjectId: subject.id,
+                isActive: !subject.isActive
+              });
+              await this.onUpdate();
+            } catch (error) {
+              this.notifyError(error, "N\xE3o foi poss\xEDvel alterar o status da mat\xE9ria.");
+            }
           }
         }
-      })
+      )
     );
     return controls;
   }
@@ -2471,8 +2495,7 @@ var SessionsTab = class {
     const sessionRows = data.studySessions.filter((session) => session.contestId === activeContest.id).slice().reverse().slice(0, 8).map((session) => {
       const subjectName = data.subjects.find((subject) => subject.id === session.subjectId)?.name ?? "sem mat\xE9ria";
       const topicName = data.topics.find((topic) => topic.id === session.topicId)?.name ?? "-";
-      const deleteButton = DomHelpers.createButton("Excluir", {
-        icon: "delete",
+      const deleteButton = DomHelpers.createIconButton("delete", "Excluir", {
         dataset: { sessionDeleteId: session.id },
         onClick: async () => {
           try {
