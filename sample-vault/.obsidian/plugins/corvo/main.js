@@ -2464,20 +2464,14 @@ var DashboardTab = class {
     container.appendChild(
       DomHelpers.createParagraph("Vis\xE3o geral do concurso ativo.")
     );
-    const overview = DomHelpers.createCard("Controle do ciclo");
-    overview.appendChild(
-      DomHelpers.createTable(
-        ["Campo", "Valor"],
-        [
-          ["Concurso ativo", activeContest.name],
-          ["Mat\xE9ria atual", snapshot.currentSubject?.name ?? "N\xE3o definida"],
-          ["Pr\xF3xima mat\xE9ria", snapshot.nextSubject?.name ?? "N\xE3o definida"],
-          ["Item atual", this.formatIdLabel(snapshot.currentItemId)],
-          ["Pr\xF3ximo item", this.formatIdLabel(snapshot.nextItemId)]
-        ]
-      )
+    const cycleSection = DomHelpers.createElement("div", "corvo-grid corvo-grid-2");
+    cycleSection.appendChild(
+      this.renderCycleCard("Mat\xE9ria atual", snapshot.currentSubject?.name ?? "N\xE3o definida", "Pr\xF3xima", snapshot.nextSubject?.name ?? "\u2014")
     );
-    container.appendChild(overview);
+    cycleSection.appendChild(
+      this.renderCycleCard("Item atual", this.formatIdLabel(snapshot.currentItemId), "Pr\xF3ximo", this.formatIdLabel(snapshot.nextItemId))
+    );
+    container.appendChild(cycleSection);
     const subjectSummaryCard = DomHelpers.createCard("Resumo por mat\xE9ria");
     subjectSummaryCard.appendChild(
       DomHelpers.createTable(
@@ -2492,6 +2486,23 @@ var DashboardTab = class {
       )
     );
     container.appendChild(subjectSummaryCard);
+  }
+  renderCycleCard(label, value, nextLabel, nextValue) {
+    const card = DomHelpers.createElement("div", "corvo-card corvo-cycle-card");
+    const main = DomHelpers.createElement("div", "corvo-cycle-main");
+    const mainLabel = DomHelpers.createElement("span", "corvo-cycle-label");
+    mainLabel.textContent = label;
+    const mainValue = DomHelpers.createElement("span", "corvo-cycle-value");
+    mainValue.textContent = value;
+    main.append(mainLabel, mainValue);
+    const next = DomHelpers.createElement("div", "corvo-cycle-next");
+    const nextLabelEl = DomHelpers.createElement("span", "corvo-cycle-next-label");
+    nextLabelEl.textContent = `${nextLabel}: `;
+    const nextValueEl = DomHelpers.createElement("span", "corvo-cycle-next-value");
+    nextValueEl.textContent = nextValue;
+    next.append(nextLabelEl, nextValueEl);
+    card.append(main, next);
+    return card;
   }
   /**
    * Formats an ID label for display.
@@ -3019,6 +3030,7 @@ var SessionsTab = class {
     this.updateStudySessionUseCase = new UpdateStudySessionUseCase(dataStore);
     this.exportToCsvUseCase = new ExportToCsvUseCase(dataStore);
     this.advanceCycleUseCase = new AdvanceCycleUseCase(dataStore);
+    this.getActiveCycleSnapshotUseCase = new GetActiveCycleSnapshotUseCase(dataStore);
   }
   async render(container, data) {
     const header = DomHelpers.createElement("div", "corvo-section-header");
@@ -3046,27 +3058,9 @@ var SessionsTab = class {
     header.appendChild(actions);
     container.appendChild(header);
     container.appendChild(
-      DomHelpers.createParagraph("Registre sess\xF5es manualmente e acompanhe o hist\xF3rico recente.")
+      DomHelpers.createParagraph("Registre sess\xF5es e gerencie o ciclo de estudos.")
     );
     const activeContest = data.contests.find((contest) => contest.id === data.activeContestId) ?? null;
-    if (activeContest) {
-      const cycleAction = DomHelpers.createElement("div", "corvo-cycle-action");
-      cycleAction.appendChild(
-        DomHelpers.createButton("Finalizar ciclo atual", {
-          className: "corvo-primary-button",
-          icon: "refresh-cw",
-          onClick: async () => {
-            try {
-              await this.advanceCycleUseCase.execute();
-              await this.onUpdate();
-            } catch (error) {
-              this.notifyError(error, "N\xE3o foi poss\xEDvel finalizar o ciclo.");
-            }
-          }
-        })
-      );
-      container.appendChild(cycleAction);
-    }
     if (!activeContest) {
       container.appendChild(
         DomHelpers.createEmptyState(
@@ -3076,6 +3070,40 @@ var SessionsTab = class {
       );
       return;
     }
+    const snapshot = await this.getActiveCycleSnapshotUseCase.execute();
+    const cycleContext = DomHelpers.createElement("div", "corvo-cycle-context");
+    const nowLabel = DomHelpers.createElement("span", "corvo-cycle-context-label");
+    nowLabel.textContent = "Estudando agora: ";
+    const nowValue = DomHelpers.createElement("span", "corvo-cycle-context-value");
+    nowValue.textContent = snapshot.currentSubject?.name ?? "\u2014";
+    cycleContext.appendChild(nowLabel);
+    cycleContext.appendChild(nowValue);
+    if (snapshot.currentItemId) {
+      const itemLabel = DomHelpers.createElement("span", "corvo-cycle-context-sublabel");
+      itemLabel.textContent = `Item: ${this.formatIdLabel(snapshot.currentItemId)}`;
+      cycleContext.appendChild(itemLabel);
+    }
+    const nextInfo = DomHelpers.createElement("span", "corvo-cycle-context-next");
+    nextInfo.textContent = `Pr\xF3xima: ${snapshot.nextSubject?.name ?? "\u2014"}`;
+    cycleContext.appendChild(nextInfo);
+    container.appendChild(cycleContext);
+    const cycleAction = DomHelpers.createElement("div", "corvo-cycle-action");
+    cycleAction.appendChild(
+      DomHelpers.createButton("Finalizar ciclo atual", {
+        className: "corvo-primary-button",
+        icon: "refresh-cw",
+        onClick: async () => {
+          try {
+            const result = await this.advanceCycleUseCase.execute();
+            new import_obsidian6.Notice(`Ciclo finalizado! Pr\xF3xima mat\xE9ria: ${result.nextSubject?.name ?? "\u2014"}`);
+            await this.onUpdate();
+          } catch (error) {
+            this.notifyError(error, "N\xE3o foi poss\xEDvel finalizar o ciclo.");
+          }
+        }
+      })
+    );
+    container.appendChild(cycleAction);
     const subjects = data.subjects.filter((subject) => subject.contestId === activeContest.id);
     if (this.isCreatingNew) {
       container.appendChild(this.renderSessionForm(activeContest.id, subjects, data));
@@ -3104,6 +3132,11 @@ var SessionsTab = class {
       recentSessions.appendChild(tableContainer);
     }
     container.appendChild(recentSessions);
+  }
+  formatIdLabel(id) {
+    if (!id) return "\u2014";
+    const parts = id.split("-");
+    return parts.length > 0 ? parts[parts.length - 1] : id;
   }
   renderDisplayRow(session, data) {
     const tr = DomHelpers.createElement("tr");

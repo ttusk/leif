@@ -4,6 +4,7 @@ import { AdvanceCycleUseCase } from "@/application/use-cases/AdvanceCycleUseCase
 import { DeleteStudySessionUseCase } from "@/application/use-cases/DeleteStudySessionUseCase";
 import { ExportToCsvUseCase } from "@/application/use-cases/ExportToCsvUseCase";
 import { GetActiveContestSummaryUseCase } from "@/application/use-cases/GetActiveContestSummaryUseCase";
+import { GetActiveCycleSnapshotUseCase } from "@/application/use-cases/GetActiveCycleSnapshotUseCase";
 import { ListSubjectsForActiveContestUseCase } from "@/application/use-cases/ListSubjectsForActiveContestUseCase";
 import { RegisterStudySessionUseCase } from "@/application/use-cases/RegisterStudySessionUseCase";
 import { UpdateStudySessionUseCase } from "@/application/use-cases/UpdateStudySessionUseCase";
@@ -22,6 +23,7 @@ export class SessionsTab {
   private readonly updateStudySessionUseCase: UpdateStudySessionUseCase;
   private readonly exportToCsvUseCase: ExportToCsvUseCase;
   private readonly advanceCycleUseCase: AdvanceCycleUseCase;
+  private readonly getActiveCycleSnapshotUseCase: GetActiveCycleSnapshotUseCase;
 
   private editingSessionId: string | null = null;
   private isCreatingNew = false;
@@ -37,6 +39,7 @@ export class SessionsTab {
     this.updateStudySessionUseCase = new UpdateStudySessionUseCase(dataStore);
     this.exportToCsvUseCase = new ExportToCsvUseCase(dataStore);
     this.advanceCycleUseCase = new AdvanceCycleUseCase(dataStore);
+    this.getActiveCycleSnapshotUseCase = new GetActiveCycleSnapshotUseCase(dataStore);
   }
 
   async render(container: HTMLElement, data: CorvoPluginData): Promise<void> {
@@ -65,30 +68,11 @@ export class SessionsTab {
     header.appendChild(actions);
     container.appendChild(header);
     container.appendChild(
-      DomHelpers.createParagraph("Registre sessões manualmente e acompanhe o histórico recente.")
+      DomHelpers.createParagraph("Registre sessões e gerencie o ciclo de estudos.")
     );
 
     const activeContest =
       data.contests.find((contest) => contest.id === data.activeContestId) ?? null;
-
-    if (activeContest) {
-      const cycleAction = DomHelpers.createElement("div", "corvo-cycle-action");
-      cycleAction.appendChild(
-        DomHelpers.createButton("Finalizar ciclo atual", {
-          className: "corvo-primary-button",
-          icon: "refresh-cw",
-          onClick: async () => {
-            try {
-              await this.advanceCycleUseCase.execute();
-              await this.onUpdate();
-            } catch (error) {
-              this.notifyError(error, "Não foi possível finalizar o ciclo.");
-            }
-          }
-        })
-      );
-      container.appendChild(cycleAction);
-    }
 
     if (!activeContest) {
       container.appendChild(
@@ -99,6 +83,44 @@ export class SessionsTab {
       );
       return;
     }
+
+    // Cycle context
+    const snapshot = await this.getActiveCycleSnapshotUseCase.execute();
+    const cycleContext = DomHelpers.createElement("div", "corvo-cycle-context");
+    const nowLabel = DomHelpers.createElement("span", "corvo-cycle-context-label");
+    nowLabel.textContent = "Estudando agora: ";
+    const nowValue = DomHelpers.createElement("span", "corvo-cycle-context-value");
+    nowValue.textContent = snapshot.currentSubject?.name ?? "—";
+    cycleContext.appendChild(nowLabel);
+    cycleContext.appendChild(nowValue);
+    if (snapshot.currentItemId) {
+      const itemLabel = DomHelpers.createElement("span", "corvo-cycle-context-sublabel");
+      itemLabel.textContent = `Item: ${this.formatIdLabel(snapshot.currentItemId)}`;
+      cycleContext.appendChild(itemLabel);
+    }
+    const nextInfo = DomHelpers.createElement("span", "corvo-cycle-context-next");
+    nextInfo.textContent = `Próxima: ${snapshot.nextSubject?.name ?? "—"}`;
+    cycleContext.appendChild(nextInfo);
+    container.appendChild(cycleContext);
+
+    // Cycle action button
+    const cycleAction = DomHelpers.createElement("div", "corvo-cycle-action");
+    cycleAction.appendChild(
+      DomHelpers.createButton("Finalizar ciclo atual", {
+        className: "corvo-primary-button",
+        icon: "refresh-cw",
+        onClick: async () => {
+          try {
+            const result = await this.advanceCycleUseCase.execute();
+            new Notice(`Ciclo finalizado! Próxima matéria: ${result.nextSubject?.name ?? "—"}`);
+            await this.onUpdate();
+          } catch (error) {
+            this.notifyError(error, "Não foi possível finalizar o ciclo.");
+          }
+        }
+      })
+    );
+    container.appendChild(cycleAction);
 
     const subjects = data.subjects.filter((subject) => subject.contestId === activeContest.id);
 
@@ -138,6 +160,12 @@ export class SessionsTab {
     }
 
     container.appendChild(recentSessions);
+  }
+
+  private formatIdLabel(id: string | null): string {
+    if (!id) return "—";
+    const parts = id.split("-");
+    return parts.length > 0 ? parts[parts.length - 1] : id;
   }
 
   private renderDisplayRow(session: StudySession, data: CorvoPluginData): HTMLElement {

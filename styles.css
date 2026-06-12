@@ -437,6 +437,94 @@
   justify-content: center;
 }
 
+/* Dashboard cycle cards */
+.corvo-cycle-card {
+  padding: 16px;
+  border: 1px solid var(--corvo-border);
+  border-radius: 8px;
+  background: var(--background-primary);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.corvo-cycle-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.corvo-cycle-label {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.corvo-cycle-value {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.corvo-cycle-next {
+  font-size: 13px;
+  color: var(--text-muted);
+  padding-top: 8px;
+  border-top: 1px solid var(--corvo-border);
+}
+
+.corvo-cycle-next-label {
+  color: var(--text-muted);
+}
+
+.corvo-cycle-next-value {
+  color: var(--text-normal);
+  font-weight: 500;
+}
+
+/* Sessions cycle context */
+.corvo-cycle-context {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--background-secondary);
+  border: 1px solid var(--corvo-border);
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.corvo-cycle-context-label {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+.corvo-cycle-context-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-normal);
+}
+
+.corvo-cycle-context-sublabel {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-left: 8px;
+  padding-left: 8px;
+  border-left: 1px solid var(--corvo-border);
+}
+
+.corvo-cycle-context-next {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.corvo-cycle-action {
+  margin-bottom: 12px;
+}
+
 .corvo-create-form {
   border: 1px solid var(--corvo-border);
   border-radius: 8px;

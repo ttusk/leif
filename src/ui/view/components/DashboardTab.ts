@@ -44,21 +44,15 @@ export class DashboardTab {
       DomHelpers.createParagraph("Visão geral do concurso ativo.")
     );
 
-    // Cycle control overview
-    const overview = DomHelpers.createCard("Controle do ciclo");
-    overview.appendChild(
-      DomHelpers.createTable(
-        ["Campo", "Valor"],
-        [
-          ["Concurso ativo", activeContest.name],
-          ["Matéria atual", snapshot.currentSubject?.name ?? "Não definida"],
-          ["Próxima matéria", snapshot.nextSubject?.name ?? "Não definida"],
-          ["Item atual", this.formatIdLabel(snapshot.currentItemId)],
-          ["Próximo item", this.formatIdLabel(snapshot.nextItemId)]
-        ]
-      )
+    // Cycle info cards
+    const cycleSection = DomHelpers.createElement("div", "corvo-grid corvo-grid-2");
+    cycleSection.appendChild(
+      this.renderCycleCard("Matéria atual", snapshot.currentSubject?.name ?? "Não definida", "Próxima", snapshot.nextSubject?.name ?? "—")
     );
-    container.appendChild(overview);
+    cycleSection.appendChild(
+      this.renderCycleCard("Item atual", this.formatIdLabel(snapshot.currentItemId), "Próximo", this.formatIdLabel(snapshot.nextItemId))
+    );
+    container.appendChild(cycleSection);
 
     // Subject summary card
     const subjectSummaryCard = DomHelpers.createCard("Resumo por matéria");
@@ -77,6 +71,31 @@ export class DashboardTab {
       )
     );
     container.appendChild(subjectSummaryCard);
+  }
+
+  private renderCycleCard(
+    label: string,
+    value: string,
+    nextLabel: string,
+    nextValue: string
+  ): HTMLElement {
+    const card = DomHelpers.createElement("div", "corvo-card corvo-cycle-card");
+    const main = DomHelpers.createElement("div", "corvo-cycle-main");
+    const mainLabel = DomHelpers.createElement("span", "corvo-cycle-label");
+    mainLabel.textContent = label;
+    const mainValue = DomHelpers.createElement("span", "corvo-cycle-value");
+    mainValue.textContent = value;
+    main.append(mainLabel, mainValue);
+
+    const next = DomHelpers.createElement("div", "corvo-cycle-next");
+    const nextLabelEl = DomHelpers.createElement("span", "corvo-cycle-next-label");
+    nextLabelEl.textContent = `${nextLabel}: `;
+    const nextValueEl = DomHelpers.createElement("span", "corvo-cycle-next-value");
+    nextValueEl.textContent = nextValue;
+    next.append(nextLabelEl, nextValueEl);
+
+    card.append(main, next);
+    return card;
   }
 
   /**
