@@ -1,4 +1,5 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import type { Subject } from "@/domain/entities/Subject";
 import type { Topic } from "@/domain/entities/Topic";
 import { EntityRepository } from "@/infrastructure/persistence/EntityRepository";
 
@@ -11,14 +12,20 @@ export interface DeleteTopicInput {
  */
 export class DeleteTopicUseCase {
   private readonly topicRepository: EntityRepository<Topic>;
+  private readonly subjectRepository: EntityRepository<Subject>;
 
   constructor(private readonly dataStore: PluginDataStore) {
     this.topicRepository = new EntityRepository<Topic>(dataStore, "topics");
+    this.subjectRepository = new EntityRepository<Subject>(dataStore, "subjects");
   }
 
   async execute(input: DeleteTopicInput): Promise<Topic> {
     const topic = await this.topicRepository.findById(input.topicId);
     await this.topicRepository.delete(input.topicId);
+    await this.subjectRepository.update(topic.subjectId, (subject) => ({
+      ...subject,
+      topicIds: subject.topicIds.filter((id) => id !== input.topicId)
+    }));
     return topic;
   }
 }
