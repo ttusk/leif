@@ -18,6 +18,7 @@ import { SetActiveContestUseCase } from "@/application/use-cases/SetActiveContes
 import { UpdateContestWallUseCase } from "@/application/use-cases/UpdateContestWallUseCase";
 import { UpdateSubjectConfigurationUseCase } from "@/application/use-cases/UpdateSubjectConfigurationUseCase";
 import { createDefaultLeifPluginData } from "@/domain/types/LeifPluginData";
+import { createId } from "@/application/Id";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 import { seedTceSpDemo } from "@/infrastructure/persistence/Seeder";
 
@@ -280,7 +281,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
       const topic = data.topics.find((candidate) => candidate.subjectId === activeSubject.id);
 
       await registerStudySession.execute({
-        id: `session-demo-${Date.now()}`,
+        id: createId("session-demo"),
         contestId: data.activeContestId,
         subjectId: activeSubject.id,
         topicId: topic?.id,
@@ -314,7 +315,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
       }
 
       await registerStudySession.execute({
-        id: `session-video-${Date.now()}`,
+        id: createId("session-video"),
         contestId: data.activeContestId,
         subjectId: activeSubject.id,
         type: "video",

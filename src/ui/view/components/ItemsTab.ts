@@ -10,6 +10,7 @@ import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 import { SubjectPicker } from "@/ui/view/shared/SubjectPicker";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
+import { createId } from "@/application/Id";
 
 /**
  * Items tab component with unified CRUD pattern.
@@ -298,7 +299,7 @@ export class ItemsTab {
         await this.addStudyItemResourceReferenceUseCase.execute({
           studyItemId: item.id,
           resourceReference: {
-            id: `${item.id}-resource-${Date.now()}`,
+            id: createId(`${item.id}-resource`),
             title: titleInput.value,
             type: typeSelect.value as "pdf" | "video" | "link",
             url: urlInput.value
@@ -337,7 +338,7 @@ export class ItemsTab {
       try {
         const rawPages = totalPagesInput.value.trim();
         await this.createStudyItemUseCase.execute({
-          id: `${subjectId}-item-${Date.now()}`,
+          id: createId(`${subjectId}-item`),
           subjectId,
           title: titleInput.value,
           weight: Number(weightInput.value),

@@ -8,6 +8,7 @@ import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 import { SubjectPicker } from "@/ui/view/shared/SubjectPicker";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
+import { createId } from "@/application/Id";
 
 /**
  * Topics tab component with unified CRUD pattern.
@@ -314,7 +315,7 @@ export class TopicsTab {
     const form = DomHelpers.createForm(async () => {
       try {
         await this.createTopicUseCase.execute({
-          id: `${subjectId}-topic-${Date.now()}`,
+          id: createId(`${subjectId}-topic`),
           subjectId,
           name: nameInput.value
         });

@@ -9,6 +9,7 @@ import { NoActiveContestError } from "@/domain/errors/DomainErrors";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
+import { createId } from "@/application/Id";
 
 /**
  * Cycle tab component - manages subjects, order, status, time and stage.
@@ -197,7 +198,7 @@ export class CycleTab {
           throw new NoActiveContestError();
         }
         await this.createSubjectUseCase.execute({
-          id: `${activeContestId}-subject-${Date.now()}`,
+          id: createId(`${activeContestId}-subject`),
           contestId: activeContestId,
           name: nameInput.value,
           plannedStudyMinutes: Number(minutesInput.value)

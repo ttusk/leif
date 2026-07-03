@@ -13,6 +13,7 @@ import { ValidationError } from "@/domain/errors/DomainErrors";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
+import { createId } from "@/application/Id";
 
 /**
  * Sessions tab component with unified CRUD pattern.
@@ -311,7 +312,7 @@ export class SessionsTab {
           sessionType === StudySessionType.QUESTIONS ? Math.min(rawCorrect, rawCount) : undefined;
 
         await this.registerStudySessionUseCase.execute({
-          id: `session-${Date.now()}`,
+          id: createId("session"),
           contestId: activeContest.id,
           subjectId: subjectSelect.value,
           studyItemId: itemSelect.value || undefined,
