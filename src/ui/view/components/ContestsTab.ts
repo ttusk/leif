@@ -7,7 +7,6 @@ import type { Contest } from "@/domain/entities/Contest";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
-import { Notice } from "obsidian";
 
 /**
  * Contests tab component with unified CRUD pattern.
@@ -90,7 +89,7 @@ export class ContestsTab {
               await this.setActiveContestUseCase.execute({ contestId: contest.id });
               await this.onUpdate();
             } catch (error) {
-              this.notifyError(error, "Não foi possível ativar o concurso.");
+              DomHelpers.notifyError(error, "Não foi possível ativar o concurso.");
             }
           }
         })
@@ -119,7 +118,7 @@ export class ContestsTab {
             await this.deleteContestUseCase.execute({ contestId: contest.id });
             await this.onUpdate();
           } catch (error) {
-            this.notifyError(error, "Não foi possível excluir o concurso.");
+            DomHelpers.notifyError(error, "Não foi possível excluir o concurso.");
           }
         }
       })
@@ -154,7 +153,7 @@ export class ContestsTab {
           this.editingContestId = null;
           await this.onUpdate();
         } catch (error) {
-          this.notifyError(error, "Não foi possível salvar.");
+          DomHelpers.notifyError(error, "Não foi possível salvar.");
         }
       }
     });
@@ -195,7 +194,7 @@ export class ContestsTab {
         modal.close();
         await this.onUpdate();
       } catch (error) {
-        this.notifyError(error, "Não foi possível criar o concurso.");
+        DomHelpers.notifyError(error, "Não foi possível criar o concurso.");
       }
     });
 
@@ -211,9 +210,5 @@ export class ContestsTab {
     });
 
     modal.open();
-  }
-
-  private notifyError(error: unknown, fallbackMessage: string): void {
-    new Notice(error instanceof Error ? error.message : fallbackMessage);
   }
 }

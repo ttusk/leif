@@ -1,5 +1,6 @@
 import { Notice, setIcon, setTooltip } from "obsidian";
 import { ICON_NAMES } from "@/ui/constants";
+import { NoActiveContestError } from "@/domain/errors/DomainErrors";
 
 /**
  * DOM Helper utilities for creating consistent UI elements.
@@ -482,9 +483,13 @@ export class DomHelpers {
 
   /**
    * Displays an error notification using Obsidian's Notice.
-   * Checks for specific error types to provide better messages.
+   * Surfaces a friendlier message for NoActiveContestError.
    */
   static notifyError(error: unknown, fallbackMessage: string): void {
+    if (error instanceof NoActiveContestError) {
+      new Notice("Nenhum concurso ativo. Selecione um concurso para continuar.");
+      return;
+    }
     new Notice(error instanceof Error ? error.message : fallbackMessage);
   }
 

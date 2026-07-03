@@ -11,30 +11,8 @@ import { TopicsTab } from "@/ui/view/components/TopicsTab";
 import { WallTab } from "@/ui/view/components/WallTab";
 import { LEIF_ICON, LEIF_VIEW_TYPE } from "@/ui/view/registerLeifView";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
-
-type LeifTabId =
-  | "dashboard"
-  | "contests"
-  | "cycle"
-  | "items"
-  | "topics"
-  | "sessions"
-  | "wall";
-
-interface LeifTabDefinition {
-  id: LeifTabId;
-  label: string;
-}
-
-const TABS: LeifTabDefinition[] = [
-  { id: "dashboard", label: "Dashboard" },
-  { id: "contests", label: "Concursos" },
-  { id: "cycle", label: "Ciclo e Matérias" },
-  { id: "items", label: "Itens e PDFs" },
-  { id: "topics", label: "Assuntos e Questões" },
-  { id: "sessions", label: "Sessões" },
-  { id: "wall", label: "Mural" }
-];
+import { SubjectPicker } from "@/ui/view/shared/SubjectPicker";
+import { TABS, type LeifTabId } from "@/ui/constants";
 
 /**
  * Main Leif view with incremental rendering optimization.
@@ -258,20 +236,8 @@ export class LeifView extends ItemView {
     }
   }
 
-  private getSelectedSubject(data: LeifPluginData): { id: string; name: string } | null {
-    const subjects = data.subjects
-      .filter((subject) => subject.contestId === data.activeContestId)
-      .sort((left, right) => left.order - right.order);
-
-    if (subjects.length === 0) {
-      return null;
-    }
-
-    return subjects.find((subject) => subject.id === this.selectedSubjectId) ?? subjects[0];
-  }
-
   private ensureSelectedSubject(data: LeifPluginData): void {
-    const selectedSubject = this.getSelectedSubject(data);
+    const selectedSubject = SubjectPicker.getSelectedSubject(data, this.selectedSubjectId);
     this.selectedSubjectId = selectedSubject?.id ?? null;
   }
 }

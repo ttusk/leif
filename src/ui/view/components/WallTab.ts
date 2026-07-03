@@ -1,10 +1,8 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import { UpdateContestWallUseCase } from "@/application/use-cases/UpdateContestWallUseCase";
-import { NoActiveContestError } from "@/domain/errors/DomainErrors";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
-import { Notice } from "obsidian";
 
 /**
  * Wall tab component with unified layout.
@@ -102,7 +100,7 @@ export class WallTab {
 
         await this.onUpdate();
       } catch (error) {
-        this.notifyError(error, "Não foi possível salvar o mural.");
+        DomHelpers.notifyError(error, "Não foi possível salvar o mural.");
       }
     });
 
@@ -148,13 +146,5 @@ export class WallTab {
       );
     }
     return card;
-  }
-
-  private notifyError(error: unknown, fallbackMessage: string): void {
-    if (error instanceof NoActiveContestError) {
-      new Notice("Nenhum concurso ativo. Selecione um concurso para continuar.");
-      return;
-    }
-    new Notice(error instanceof Error ? error.message : fallbackMessage);
   }
 }
