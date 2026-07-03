@@ -494,6 +494,23 @@ export class DomHelpers {
   }
 
   /**
+   * Error-boundary helper: runs an async action and surfaces any failure
+   * through notifyError so callers don't repeat try/catch + Notice boilerplate.
+   */
+  static runGuarded(
+    action: () => void | Promise<void>,
+    fallbackMessage: string
+  ): Promise<void> {
+    return (async () => {
+      try {
+        await action();
+      } catch (error) {
+        this.notifyError(error, fallbackMessage);
+      }
+    })();
+  }
+
+  /**
    * Creates a modal overlay with a centered card.
    * Implements role=dialog, aria-modal, a focus trap and Escape-to-close.
    * Returns { open, close } functions.

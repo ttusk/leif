@@ -159,7 +159,633 @@ var ObsidianStorageAdapter = class {
 };
 
 // src/ui/commands/registerCommands.ts
+var import_obsidian2 = require("obsidian");
+
+// src/ui/view/shared/DomHelpers.ts
 var import_obsidian = require("obsidian");
+
+// src/ui/constants/index.ts
+var ICON_NAMES = {
+  dashboard: "layout-dashboard",
+  contests: "trophy",
+  cycle: "refresh-cw",
+  items: "file-text",
+  topics: "book-open",
+  sessions: "clock",
+  wall: "layout-grid",
+  delete: "trash-2",
+  add: "plus",
+  edit: "pencil",
+  save: "check",
+  cancel: "x",
+  up: "arrow-up",
+  down: "arrow-down",
+  toggleOn: "toggle-right",
+  toggleOff: "toggle-left",
+  expand: "chevron-down",
+  collapse: "chevron-up",
+  download: "download"
+};
+var TABS = [
+  { id: "dashboard", label: "Dashboard", icon: ICON_NAMES.dashboard },
+  { id: "contests", label: "Concursos", icon: ICON_NAMES.contests },
+  { id: "cycle", label: "Ciclo e Mat\xE9rias", icon: ICON_NAMES.cycle },
+  { id: "items", label: "Itens e PDFs", icon: ICON_NAMES.items },
+  { id: "topics", label: "Assuntos e Quest\xF5es", icon: ICON_NAMES.topics },
+  { id: "sessions", label: "Sess\xF5es", icon: ICON_NAMES.sessions },
+  { id: "wall", label: "Mural", icon: ICON_NAMES.wall }
+];
+
+// src/domain/errors/DomainErrors.ts
+var NotFoundError = class extends Error {
+  constructor(entityType, id) {
+    super(`${entityType} "${id}" was not found.`);
+    this.name = "NotFoundError";
+  }
+};
+var AlreadyExistsError = class extends Error {
+  constructor(entityType, id) {
+    super(`${entityType} "${id}" already exists.`);
+    this.name = "AlreadyExistsError";
+  }
+};
+var NoActiveContestError = class extends Error {
+  constructor() {
+    super("There is no active contest.");
+    this.name = "NoActiveContestError";
+  }
+};
+var ValidationError = class extends Error {
+  constructor(message) {
+    super(message);
+    this.name = "ValidationError";
+  }
+};
+
+// src/ui/view/shared/DomHelpers.ts
+var DomHelpers = class {
+  /**
+   * Creates an HTML element with optional className.
+   */
+  static createElement(tagName, className) {
+    const element = document.createElement(tagName);
+    if (className) {
+      element.className = className;
+    }
+    return element;
+  }
+  /**
+   * Creates an icon element using Obsidian's built-in Lucide icons.
+   * @param iconKey - Key from ICON_NAMES constant
+   * @param className - CSS class for the icon container
+   * @returns HTMLElement containing the icon
+   */
+  static createIcon(iconKey, className = "leif-icon") {
+    const container = this.createElement("span", className);
+    const iconName = ICON_NAMES[iconKey] || iconKey;
+    if (typeof import_obsidian.setIcon === "function") {
+      (0, import_obsidian.setIcon)(container, iconName);
+    } else {
+      container.textContent = iconName;
+      container.setAttribute("data-icon", iconName);
+    }
+    return container;
+  }
+  /**
+   * Creates text with an optional icon.
+   */
+  static createTextWithIcon(text, icon) {
+    const wrapper = this.createElement("span", "leif-text-with-icon");
+    if (icon) {
+      wrapper.appendChild(this.createIcon(icon));
+    }
+    const label = this.createElement("span", "leif-text-label");
+    label.textContent = text;
+    wrapper.appendChild(label);
+    return wrapper;
+  }
+  /**
+   * Creates an H1 heading with optional icon.
+   */
+  static createHeading(text, icon) {
+    const heading = this.createElement("h1", "leif-title");
+    heading.appendChild(this.createTextWithIcon(text, icon));
+    return heading;
+  }
+  /**
+   * Creates an H2 section title with optional icon.
+   */
+  static createSectionTitle(text, icon) {
+    const heading = this.createElement("h2", "leif-section-title");
+    heading.appendChild(this.createTextWithIcon(text, icon));
+    return heading;
+  }
+  /**
+   * Creates an H3 section subtitle with optional icon.
+   */
+  static createSectionSubtitle(text, icon) {
+    const heading = this.createElement("h3", "leif-section-subtitle");
+    heading.appendChild(this.createTextWithIcon(text, icon));
+    return heading;
+  }
+  /**
+   * Creates a paragraph element.
+   */
+  static createParagraph(text) {
+    const paragraph = this.createElement("p", "leif-paragraph");
+    paragraph.textContent = text;
+    return paragraph;
+  }
+  /**
+   * Creates a strong (bold) text element.
+   */
+  static createStrong(text) {
+    const strong = document.createElement("strong");
+    strong.textContent = text;
+    return strong;
+  }
+  /**
+   * Creates a badge with optional icon.
+   */
+  static createBadge(text, icon) {
+    const badge = this.createElement("span", "leif-badge");
+    badge.appendChild(this.createTextWithIcon(text, icon));
+    return badge;
+  }
+  /**
+   * Creates a card section with title and optional icon.
+   */
+  static createCard(title, icon) {
+    const card = this.createElement("section", "leif-card");
+    card.appendChild(this.createSectionSubtitle(title, icon));
+    return card;
+  }
+  /**
+   * Creates an empty state message.
+   */
+  static createEmptyState(title, description) {
+    const wrapper = this.createElement("section", "leif-empty-state leif-card");
+    wrapper.append(this.createStrong(title), this.createParagraph(description));
+    return wrapper;
+  }
+  /**
+   * Creates an input element.
+   */
+  static createInput(type, placeholder, value = "") {
+    const input = document.createElement("input");
+    input.type = type;
+    input.placeholder = placeholder;
+    input.value = value;
+    input.className = "leif-input";
+    return input;
+  }
+  /**
+   * Creates a select dropdown with options.
+   * @param options - Array of [value, label] pairs
+   * @param selectedValue - Optional value to pre-select
+   */
+  static createSelect(options, selectedValue) {
+    const select = document.createElement("select");
+    select.className = "leif-select";
+    options.forEach(([value, label]) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      if (value === selectedValue) {
+        option.selected = true;
+      }
+      select.appendChild(option);
+    });
+    return select;
+  }
+  /**
+   * Creates a textarea element.
+   */
+  static createTextarea(placeholder, value = "") {
+    const textarea = document.createElement("textarea");
+    textarea.placeholder = placeholder;
+    textarea.value = value;
+    textarea.className = "leif-textarea";
+    return textarea;
+  }
+  /**
+   * Creates a label for a form control.
+   */
+  static createLabel(text, control) {
+    const label = this.createElement("label", "leif-label");
+    const span = this.createElement("span", "leif-label-text");
+    span.textContent = text;
+    label.append(span, control);
+    return label;
+  }
+  /**
+   * Creates a disclosure (details/summary) element.
+   */
+  static createDisclosure(title, content, icon) {
+    const details = this.createElement("details", "leif-disclosure");
+    const summary = this.createElement("summary", "leif-disclosure-summary");
+    summary.appendChild(this.createTextWithIcon(title, icon));
+    details.append(summary, content);
+    return details;
+  }
+  /**
+   * Creates a key-value row display.
+   */
+  static createKeyValueRow(label, value) {
+    const row = this.createElement("div", "leif-key-value");
+    const labelEl = this.createElement("span", "leif-key-label");
+    labelEl.textContent = label;
+    const valueEl = this.createElement("span", "leif-key-value-text");
+    valueEl.textContent = value;
+    row.append(labelEl, valueEl);
+    return row;
+  }
+  /**
+   * Creates a table with headers and rows.
+   * @param headers - Column headers
+   * @param rows - Array of row data (each row is an array of cell content)
+   */
+  static createTable(headers, rows) {
+    const wrapper = this.createElement("div", "leif-table-wrapper");
+    const table = this.createElement("table", "leif-table");
+    const thead = this.createElement("thead");
+    const headerRow = this.createElement("tr");
+    headers.forEach((header) => {
+      const th = this.createElement("th");
+      th.textContent = header;
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+    const tbody = this.createElement("tbody");
+    rows.forEach((rowData) => {
+      const tr = this.createElement("tr");
+      rowData.forEach((cellData) => {
+        const td = this.createElement("td");
+        if (typeof cellData === "string") {
+          td.textContent = cellData;
+        } else {
+          td.appendChild(cellData);
+        }
+        tr.appendChild(td);
+      });
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    wrapper.appendChild(table);
+    return wrapper;
+  }
+  /**
+   * Creates a button with various options.
+   */
+  static createButton(text, options = {}) {
+    const button = document.createElement("button");
+    button.type = options.type || "button";
+    button.className = options.className || "leif-button";
+    if (options.icon) {
+      button.appendChild(this.createTextWithIcon(text, options.icon));
+    } else {
+      button.textContent = text;
+    }
+    if (options.dataset) {
+      Object.entries(options.dataset).forEach(([key, value]) => {
+        button.dataset[key] = value;
+      });
+    }
+    if (options.onClick) {
+      button.addEventListener("click", options.onClick);
+    }
+    return button;
+  }
+  /**
+   * Creates an icon-only button with a tooltip title.
+   * @param icon - Icon key from ICON_NAMES
+   * @param title - Tooltip text (shown on hover)
+   * @param options - Additional options (className, dataset, onClick)
+   * @returns HTMLButtonElement
+   */
+  static createIconButton(icon, title, options = {}) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = options.className || "leif-icon-button";
+    button.setAttribute("aria-label", title);
+    button.appendChild(this.createIcon(icon, "leif-icon-button-icon"));
+    if (options.dataset) {
+      Object.entries(options.dataset).forEach(([key, value]) => {
+        button.dataset[key] = value;
+      });
+    }
+    if (options.onClick) {
+      button.addEventListener("click", options.onClick);
+    }
+    if (typeof import_obsidian.setTooltip === "function") {
+      (0, import_obsidian.setTooltip)(button, title, { delay: 300 });
+    } else {
+      button.title = title;
+    }
+    return button;
+  }
+  /**
+   * Creates a button group container.
+   */
+  static createButtonGroup() {
+    return this.createElement("div", "leif-button-group");
+  }
+  /**
+   * Creates a form element.
+   */
+  static createForm(onSubmit) {
+    const form = document.createElement("form");
+    form.className = "leif-form";
+    if (onSubmit) {
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        onSubmit(event);
+      });
+    }
+    return form;
+  }
+  /**
+   * Replaces all options in a select dropdown.
+   * @param select - The select element to update
+   * @param options - Array of [value, label] pairs
+   * @param selectedValue - Optional value to pre-select
+   */
+  static replaceSelectOptions(select, options, selectedValue) {
+    select.innerHTML = "";
+    options.forEach(([value, label]) => {
+      const option = document.createElement("option");
+      option.value = value;
+      option.textContent = label;
+      if (selectedValue !== void 0 && value === selectedValue) {
+        option.selected = true;
+      }
+      select.appendChild(option);
+    });
+  }
+  /**
+   * Creates a compact input for inline editing.
+   */
+  static createCompactInput(type, placeholder, value = "") {
+    const input = this.createInput(type, placeholder, value);
+    input.className = "leif-input leif-input-compact";
+    return input;
+  }
+  /**
+   * Creates a table with inline CRUD support.
+   * Returns a container with the table.
+   */
+  static createCrudTable(headers) {
+    const container = this.createElement("div", "leif-table-wrapper");
+    const table = this.createElement("table", "leif-table");
+    const thead = this.createElement("thead");
+    const headerRow = this.createElement("tr");
+    headers.forEach((header) => {
+      const th = this.createElement("th");
+      th.textContent = header;
+      headerRow.appendChild(th);
+    });
+    thead.appendChild(headerRow);
+    table.appendChild(thead);
+    const tbody = this.createElement("tbody");
+    table.appendChild(tbody);
+    container.appendChild(table);
+    return { container, tbody };
+  }
+  /**
+   * Creates a standard action cell with edit and delete buttons.
+   */
+  static createCrudActions(onEdit, onDelete) {
+    const actions = this.createElement("div", "leif-inline-actions leif-inline-actions-compact");
+    actions.appendChild(
+      this.createIconButton("edit", "Editar", { onClick: onEdit })
+    );
+    actions.appendChild(
+      this.createIconButton("delete", "Excluir", { onClick: onDelete })
+    );
+    return actions;
+  }
+  /**
+   * Creates a form row for organizing form elements.
+   */
+  static createFormRow() {
+    return this.createElement("div", "leif-form-row");
+  }
+  /**
+   * Creates a table cell with optional text or child element.
+   */
+  static createCell(text, element) {
+    const td = this.createElement("td");
+    if (text !== null) td.textContent = text;
+    if (element) td.appendChild(element);
+    return td;
+  }
+  /**
+   * Creates an inline creation form card with cancel and submit actions.
+   * @param title - Title for the form
+   * @param onSubmit - Handler for form submission
+   * @param onCancel - Handler for cancel action
+   * @returns Form element
+   */
+  static createInlineForm(title, onSubmit, onCancel) {
+    const card = this.createElement("section", "leif-card leif-create-form");
+    card.appendChild(this.createSectionSubtitle(title, "add"));
+    const form = this.createForm(onSubmit);
+    const actions = this.createElement("div", "leif-form-actions");
+    actions.appendChild(
+      this.createButton("Cancelar", {
+        className: "leif-button",
+        onClick: () => onCancel()
+      })
+    );
+    actions.appendChild(
+      this.createButton("Criar", {
+        type: "submit",
+        className: "leif-primary-button"
+      })
+    );
+    card.appendChild(form);
+    card.appendChild(actions);
+    return card;
+  }
+  /**
+   * Displays an error notification using Obsidian's Notice.
+   * Surfaces a friendlier message for NoActiveContestError.
+   */
+  static notifyError(error, fallbackMessage) {
+    if (error instanceof NoActiveContestError) {
+      new import_obsidian.Notice("Nenhum concurso ativo. Selecione um concurso para continuar.");
+      return;
+    }
+    new import_obsidian.Notice(error instanceof Error ? error.message : fallbackMessage);
+  }
+  /**
+   * Error-boundary helper: runs an async action and surfaces any failure
+   * through notifyError so callers don't repeat try/catch + Notice boilerplate.
+   */
+  static runGuarded(action, fallbackMessage) {
+    void (async () => {
+      try {
+        await action();
+      } catch (error) {
+        this.notifyError(error, fallbackMessage);
+      }
+    })();
+  }
+  /**
+   * Creates a modal overlay with a centered card.
+   * Implements role=dialog, aria-modal, a focus trap and Escape-to-close.
+   * Returns { open, close } functions.
+   */
+  static createModal(options) {
+    const overlay = this.createElement("div", "leif-modal-overlay");
+    const card = this.createElement("div", "leif-modal-card");
+    card.setAttribute("role", "dialog");
+    card.setAttribute("aria-modal", "true");
+    const titleId = `leif-modal-title-${Math.random().toString(36).slice(2, 9)}`;
+    card.setAttribute("aria-labelledby", titleId);
+    const header = this.createElement("div", "leif-modal-header");
+    const title = this.createElement("h3", "leif-modal-title");
+    title.id = titleId;
+    title.textContent = options.title;
+    const closeButton = this.createIconButton("x", "Fechar", {
+      onClick: () => close()
+    });
+    header.appendChild(title);
+    header.appendChild(closeButton);
+    const body = this.createElement("div", "leif-modal-body");
+    body.appendChild(options.content);
+    const footer = this.createElement("div", "leif-modal-footer");
+    const cancelButton = this.createButton("Cancelar", {
+      className: "leif-button",
+      dataset: { leifConfirm: "cancel" },
+      onClick: () => close()
+    });
+    const submitButton = this.createButton(options.submitLabel ?? "Criar", {
+      className: "leif-primary-button",
+      dataset: { leifConfirm: "submit" },
+      onClick: () => options.onSubmit()
+    });
+    footer.appendChild(cancelButton);
+    footer.appendChild(submitButton);
+    card.append(header, body, footer);
+    overlay.appendChild(card);
+    let previouslyFocused = null;
+    let focusTrapHandler = null;
+    let escapeHandler = null;
+    const focusable = () => {
+      const elements = card.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      return Array.from(elements).filter((element) => !element.hasAttribute("disabled"));
+    };
+    const open = () => {
+      previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+      document.body.appendChild(overlay);
+      const first = focusable()[0] ?? card;
+      first.focus();
+      focusTrapHandler = (event) => {
+        if (event.key !== "Tab") return;
+        const elements = focusable();
+        if (elements.length === 0) {
+          event.preventDefault();
+          return;
+        }
+        const firstEl = elements[0];
+        const lastEl = elements[elements.length - 1];
+        if (event.shiftKey && document.activeElement === firstEl) {
+          event.preventDefault();
+          lastEl.focus();
+        } else if (!event.shiftKey && document.activeElement === lastEl) {
+          event.preventDefault();
+          firstEl.focus();
+        }
+      };
+      escapeHandler = (event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          close();
+        }
+      };
+      card.addEventListener("keydown", focusTrapHandler);
+      overlay.addEventListener("keydown", escapeHandler);
+    };
+    const close = () => {
+      if (focusTrapHandler) card.removeEventListener("keydown", focusTrapHandler);
+      if (escapeHandler) overlay.removeEventListener("keydown", escapeHandler);
+      if (overlay.parentNode) {
+        overlay.parentNode.removeChild(overlay);
+      }
+      previouslyFocused?.focus();
+      options.onCancel?.();
+    };
+    overlay.addEventListener("click", (event) => {
+      if (event.target === overlay) {
+        close();
+      }
+    });
+    return { open, close };
+  }
+  /**
+   * Creates an accessible confirmation dialog (replaces native window.confirm).
+   * Resolves the returned promise with true when confirmed, false when cancelled.
+   */
+  static confirm(options) {
+    return new Promise((resolve) => {
+      let resolved = false;
+      const settle = (value) => {
+        if (resolved) return;
+        resolved = true;
+        resolve(value);
+      };
+      const message = this.createElement("p", "leif-modal-message");
+      message.textContent = options.message;
+      const modal = this.createModal({
+        title: options.title,
+        content: message,
+        submitLabel: options.confirmLabel ?? "Confirmar",
+        onSubmit: () => {
+          settle(true);
+          modal.close();
+        },
+        onCancel: () => settle(false)
+      });
+      modal.open();
+    });
+  }
+  /**
+   * Creates a visual progress bar with a fill and a label.
+   * @param readed - Pages readed
+   * @param total - Total pages (optional)
+   * @returns Progress container element
+   */
+  static createProgressBar(readed, total) {
+    const container = this.createElement("div", "leif-progress-bar-container");
+    const bar = this.createElement("div", "leif-progress-bar");
+    const fill = this.createElement("div", "leif-progress-fill");
+    if (total !== void 0 && total > 0) {
+      const percentage = Math.min(100, Math.round(readed / total * 100));
+      fill.style.width = `${percentage}%`;
+      if (readed >= total) {
+        fill.classList.add("is-complete");
+      }
+      const label = this.createElement("div", "leif-progress-label");
+      const text = this.createElement("span", "leif-progress-value");
+      text.textContent = `${readed}/${total} (${percentage}%)`;
+      label.appendChild(text);
+      container.appendChild(bar);
+      container.appendChild(label);
+    } else {
+      const label = this.createElement("div", "leif-progress-label");
+      const value = this.createElement("span", "leif-progress-value");
+      value.textContent = `${readed} lido${readed === 1 ? "" : "s"}`;
+      label.appendChild(value);
+      container.appendChild(label);
+    }
+    bar.appendChild(fill);
+    return container;
+  }
+};
 
 // src/domain/services/CycleService.ts
 var CycleService = class {
@@ -244,32 +870,6 @@ var CycleService = class {
       }
     }
     return null;
-  }
-};
-
-// src/domain/errors/DomainErrors.ts
-var NotFoundError = class extends Error {
-  constructor(entityType, id) {
-    super(`${entityType} "${id}" was not found.`);
-    this.name = "NotFoundError";
-  }
-};
-var AlreadyExistsError = class extends Error {
-  constructor(entityType, id) {
-    super(`${entityType} "${id}" already exists.`);
-    this.name = "AlreadyExistsError";
-  }
-};
-var NoActiveContestError = class extends Error {
-  constructor() {
-    super("There is no active contest.");
-    this.name = "NoActiveContestError";
-  }
-};
-var ValidationError = class extends Error {
-  constructor(message) {
-    super(message);
-    this.name = "ValidationError";
   }
 };
 
@@ -399,7 +999,7 @@ var AdvanceCycleUseCase = class {
       currentState.currentSubjectId ?? void 0
     );
     if (!nextSubject) {
-      throw new Error(`Contest "${activeContestId}" has no active subjects.`);
+      throw new ValidationError(`Contest "${activeContestId}" has no active subjects.`);
     }
     const subjectItems = data.studyItems.filter(
       (item) => item.subjectId === nextSubject.id
@@ -898,12 +1498,12 @@ var ReorderSubjectsUseCase = class {
     const contest = await this.contestRepository.findById(input.contestId);
     const contestSubjects = (await this.subjectRepository.findAll()).filter((subject) => subject.contestId === input.contestId);
     if (contestSubjects.length !== input.subjectIdsInOrder.length) {
-      throw new Error("The provided subject order does not match the contest subject list.");
+      throw new ValidationError("The provided subject order does not match the contest subject list.");
     }
     const subjectIdSet = new Set(contestSubjects.map((subject) => subject.id));
     for (const subjectId of input.subjectIdsInOrder) {
       if (!subjectIdSet.has(subjectId)) {
-        throw new Error(`Subject "${subjectId}" does not belong to contest "${input.contestId}".`);
+        throw new ValidationError(`Subject "${subjectId}" does not belong to contest "${input.contestId}".`);
       }
     }
     const updatedById = new Map(
@@ -1627,7 +2227,7 @@ function registerCommands(plugin, dataStore) {
     callback: async () => {
       const data = await dataStore.load();
       const activeContest = data.contests.find((contest) => contest.id === data.activeContestId);
-      new import_obsidian.Notice(activeContest ? `Active contest: ${activeContest.name}` : "No active contest configured.");
+      new import_obsidian2.Notice(activeContest ? `Active contest: ${activeContest.name}` : "No active contest configured.");
     }
   });
   plugin.addCommand({
@@ -1636,11 +2236,11 @@ function registerCommands(plugin, dataStore) {
     callback: async () => {
       const data = await dataStore.load();
       if (data.contests.length > 0) {
-        new import_obsidian.Notice("Leif already has data. Demo seed skipped.");
+        new import_obsidian2.Notice("Leif already has data. Demo seed skipped.");
         return;
       }
       await seedTceSpDemo(dataStore);
-      new import_obsidian.Notice("Leif demo data created.");
+      new import_obsidian2.Notice("Leif demo data created.");
     }
   });
   plugin.addCommand({
@@ -1649,7 +2249,7 @@ function registerCommands(plugin, dataStore) {
     callback: async () => {
       const data = await dataStore.load();
       if (data.contests.length === 0) {
-        new import_obsidian.Notice("At least two contests are required to switch the active contest.");
+        new import_obsidian2.Notice("At least two contests are required to switch the active contest.");
         return;
       }
       if (data.contests.length === 1 && data.activeContestId) {
@@ -1657,13 +2257,13 @@ function registerCommands(plugin, dataStore) {
           ...data,
           activeContestId: null
         });
-        new import_obsidian.Notice("Active contest switched to: none");
+        new import_obsidian2.Notice("Active contest switched to: none");
         return;
       }
       const currentIndex = data.contests.findIndex((contest) => contest.id === data.activeContestId);
       const nextContest = data.contests[(currentIndex + 1 + data.contests.length) % data.contests.length];
       await setActiveContest.execute({ contestId: nextContest.id });
-      new import_obsidian.Notice(`Active contest switched to: ${nextContest.name}`);
+      new import_obsidian2.Notice(`Active contest switched to: ${nextContest.name}`);
     }
   });
   plugin.addCommand({
@@ -1672,10 +2272,10 @@ function registerCommands(plugin, dataStore) {
     callback: async () => {
       const subjects = await listSubjectsForActiveContest.execute();
       if (subjects.length === 0) {
-        new import_obsidian.Notice("No subjects found for the active contest.");
+        new import_obsidian2.Notice("No subjects found for the active contest.");
         return;
       }
-      new import_obsidian.Notice(
+      new import_obsidian2.Notice(
         subjects.map((subject) => {
           const stage = subject.currentStage ?? "no stage";
           const state = subject.isActive ? "active" : "inactive";
@@ -1691,14 +2291,14 @@ function registerCommands(plugin, dataStore) {
       const data = await dataStore.load();
       const subjects = await listSubjectsForActiveContest.execute();
       if (!data.activeContestId || subjects.length < 2) {
-        new import_obsidian.Notice("At least two subjects are required to reorder the active contest.");
+        new import_obsidian2.Notice("At least two subjects are required to reorder the active contest.");
         return;
       }
       await reorderSubjects.execute({
         contestId: data.activeContestId,
         subjectIdsInOrder: subjects.map((subject) => subject.id).reverse()
       });
-      new import_obsidian.Notice("Active contest subjects reordered.");
+      new import_obsidian2.Notice("Active contest subjects reordered.");
     }
   });
   plugin.addCommand({
@@ -1708,14 +2308,14 @@ function registerCommands(plugin, dataStore) {
       const subjects = await listSubjectsForActiveContest.execute();
       const subject = subjects[0];
       if (!subject) {
-        new import_obsidian.Notice("No subject found for the active contest.");
+        new import_obsidian2.Notice("No subject found for the active contest.");
         return;
       }
       const updatedSubject = await setSubjectActiveState.execute({
         subjectId: subject.id,
         isActive: !subject.isActive
       });
-      new import_obsidian.Notice(`Subject ${updatedSubject.name} is now ${updatedSubject.isActive ? "active" : "inactive"}.`);
+      new import_obsidian2.Notice(`Subject ${updatedSubject.name} is now ${updatedSubject.isActive ? "active" : "inactive"}.`);
     }
   });
   plugin.addCommand({
@@ -1725,7 +2325,7 @@ function registerCommands(plugin, dataStore) {
       const subjects = await listSubjectsForActiveContest.execute();
       const subject = subjects[0];
       if (!subject) {
-        new import_obsidian.Notice("No subject found for the active contest.");
+        new import_obsidian2.Notice("No subject found for the active contest.");
         return;
       }
       const updatedSubject = await updateSubjectConfiguration.execute({
@@ -1733,7 +2333,7 @@ function registerCommands(plugin, dataStore) {
         plannedStudyMinutes: subject.plannedStudyMinutes + 15,
         currentStage: "Review"
       });
-      new import_obsidian.Notice(
+      new import_obsidian2.Notice(
         `Subject ${updatedSubject.name} updated to ${updatedSubject.plannedStudyMinutes} minutes and stage ${updatedSubject.currentStage}.`
       );
     }
@@ -1741,34 +2341,26 @@ function registerCommands(plugin, dataStore) {
   plugin.addCommand({
     id: "leif-advance-cycle",
     name: "Advance cycle",
-    callback: async () => {
-      try {
-        const state = await advanceCycle.execute();
-        new import_obsidian.Notice(`Current subject: ${state.currentSubjectId ?? "none"}`);
-      } catch (error) {
-        new import_obsidian.Notice(error instanceof Error ? error.message : "Could not advance cycle.");
-      }
-    }
+    callback: () => DomHelpers.runGuarded(async () => {
+      const state = await advanceCycle.execute();
+      new import_obsidian2.Notice(`Current subject: ${state.currentSubjectId ?? "none"}`);
+    }, "Could not advance cycle.")
   });
   plugin.addCommand({
     id: "leif-show-cycle-snapshot",
     name: "Show cycle snapshot",
-    callback: async () => {
-      try {
-        const snapshot = await getActiveCycleSnapshot.execute();
-        const data = await dataStore.load();
-        const itemMap = new Map(data.studyItems.map((item) => [item.id, item.title]));
-        const currentLabel = snapshot.currentSubject?.name ?? "none";
-        const nextLabel = snapshot.nextSubject?.name ?? "none";
-        const currentItemLabel = snapshot.currentItemId ? itemMap.get(snapshot.currentItemId) ?? snapshot.currentItemId : "none";
-        const nextItemLabel = snapshot.nextItemId ? itemMap.get(snapshot.nextItemId) ?? snapshot.nextItemId : "none";
-        new import_obsidian.Notice(
-          `Current: ${currentLabel} | Next: ${nextLabel} | Current item: ${currentItemLabel} | Next item: ${nextItemLabel}`
-        );
-      } catch (error) {
-        new import_obsidian.Notice(error instanceof Error ? error.message : "Could not read cycle snapshot.");
-      }
-    }
+    callback: () => DomHelpers.runGuarded(async () => {
+      const snapshot = await getActiveCycleSnapshot.execute();
+      const data = await dataStore.load();
+      const itemMap = new Map(data.studyItems.map((item) => [item.id, item.title]));
+      const currentLabel = snapshot.currentSubject?.name ?? "none";
+      const nextLabel = snapshot.nextSubject?.name ?? "none";
+      const currentItemLabel = snapshot.currentItemId ? itemMap.get(snapshot.currentItemId) ?? snapshot.currentItemId : "none";
+      const nextItemLabel = snapshot.nextItemId ? itemMap.get(snapshot.nextItemId) ?? snapshot.nextItemId : "none";
+      new import_obsidian2.Notice(
+        `Current: ${currentLabel} | Next: ${nextLabel} | Current item: ${currentItemLabel} | Next item: ${nextItemLabel}`
+      );
+    }, "Could not read cycle snapshot.")
   });
   plugin.addCommand({
     id: "leif-show-active-contest-wall",
@@ -1777,10 +2369,10 @@ function registerCommands(plugin, dataStore) {
       const data = await dataStore.load();
       const activeContest = data.contests.find((contest) => contest.id === data.activeContestId);
       if (!activeContest) {
-        new import_obsidian.Notice("No active contest configured.");
+        new import_obsidian2.Notice("No active contest configured.");
         return;
       }
-      new import_obsidian.Notice(
+      new import_obsidian2.Notice(
         `${activeContest.name}: notices ${activeContest.wall.noticeLinks.length}, exams ${activeContest.wall.examLinks.length}, notes ${activeContest.wall.notes ?? "none"}`
       );
     }
@@ -1788,22 +2380,18 @@ function registerCommands(plugin, dataStore) {
   plugin.addCommand({
     id: "leif-show-summary",
     name: "Show active contest summary",
-    callback: async () => {
-      try {
-        const summary = await getActiveContestSummary.execute();
-        if (summary.subjectSummaries.length === 0) {
-          new import_obsidian.Notice("No subject summary available for the active contest.");
-          return;
-        }
-        const message = summary.subjectSummaries.map((subjectSummary) => {
-          const accuracy = subjectSummary.questionAccuracy === null ? "n/a" : `${Math.round(subjectSummary.questionAccuracy * 100)}%`;
-          return `${subjectSummary.subjectName}: PDF ${subjectSummary.pdfProgressCount}, Questions ${subjectSummary.questionProgressCount}, Accuracy ${accuracy}`;
-        }).join(" | ");
-        new import_obsidian.Notice(message);
-      } catch (error) {
-        new import_obsidian.Notice(error instanceof Error ? error.message : "Could not load active contest summary.");
+    callback: () => DomHelpers.runGuarded(async () => {
+      const summary = await getActiveContestSummary.execute();
+      if (summary.subjectSummaries.length === 0) {
+        new import_obsidian2.Notice("No subject summary available for the active contest.");
+        return;
       }
-    }
+      const message = summary.subjectSummaries.map((subjectSummary) => {
+        const accuracy = subjectSummary.questionAccuracy === null ? "n/a" : `${Math.round(subjectSummary.questionAccuracy * 100)}%`;
+        return `${subjectSummary.subjectName}: PDF ${subjectSummary.pdfProgressCount}, Questions ${subjectSummary.questionProgressCount}, Accuracy ${accuracy}`;
+      }).join(" | ");
+      new import_obsidian2.Notice(message);
+    }, "Could not load active contest summary.")
   });
   plugin.addCommand({
     id: "leif-register-demo-question-session",
@@ -1811,13 +2399,13 @@ function registerCommands(plugin, dataStore) {
     callback: async () => {
       const data = await dataStore.load();
       if (!data.activeContestId) {
-        new import_obsidian.Notice("No active contest configured.");
+        new import_obsidian2.Notice("No active contest configured.");
         return;
       }
       const contestState = data.contestStates.find((state) => state.contestId === data.activeContestId);
       const activeSubject = data.subjects.find((subject) => subject.id === contestState?.currentSubjectId) ?? data.subjects.find((subject) => subject.contestId === data.activeContestId);
       if (!activeSubject) {
-        new import_obsidian.Notice("No subject available for the active contest.");
+        new import_obsidian2.Notice("No subject available for the active contest.");
         return;
       }
       const topic = data.topics.find((candidate) => candidate.subjectId === activeSubject.id);
@@ -1832,7 +2420,7 @@ function registerCommands(plugin, dataStore) {
         correctAnswers: 8,
         completed: true
       });
-      new import_obsidian.Notice(`Demo question session registered for: ${activeSubject.name}`);
+      new import_obsidian2.Notice(`Demo question session registered for: ${activeSubject.name}`);
     }
   });
   plugin.addCommand({
@@ -1841,12 +2429,12 @@ function registerCommands(plugin, dataStore) {
     callback: async () => {
       const data = await dataStore.load();
       if (!data.activeContestId) {
-        new import_obsidian.Notice("No active contest configured.");
+        new import_obsidian2.Notice("No active contest configured.");
         return;
       }
       const activeSubject = (await listSubjectsForActiveContest.execute())[0];
       if (!activeSubject) {
-        new import_obsidian.Notice("No subject available for the active contest.");
+        new import_obsidian2.Notice("No subject available for the active contest.");
         return;
       }
       await registerStudySession.execute({
@@ -1858,7 +2446,7 @@ function registerCommands(plugin, dataStore) {
         pagesOrCount: 1,
         completed: true
       });
-      new import_obsidian.Notice(`Demo video session registered for: ${activeSubject.name}`);
+      new import_obsidian2.Notice(`Demo video session registered for: ${activeSubject.name}`);
     }
   });
   plugin.addCommand({
@@ -1866,7 +2454,7 @@ function registerCommands(plugin, dataStore) {
     name: "Reset plugin data",
     callback: async () => {
       await dataStore.save(createDefaultLeifPluginData());
-      new import_obsidian.Notice("Leif data reset.");
+      new import_obsidian2.Notice("Leif data reset.");
     }
   });
 }
@@ -1913,593 +2501,6 @@ var UpdateContestUseCase = class {
         notes: input.notes ?? contest.wall.notes
       }
     }));
-  }
-};
-
-// src/ui/view/shared/DomHelpers.ts
-var import_obsidian2 = require("obsidian");
-
-// src/ui/constants/index.ts
-var ICON_NAMES = {
-  dashboard: "layout-dashboard",
-  contests: "trophy",
-  cycle: "refresh-cw",
-  items: "file-text",
-  topics: "book-open",
-  sessions: "clock",
-  wall: "layout-grid",
-  delete: "trash-2",
-  add: "plus",
-  edit: "pencil",
-  save: "check",
-  cancel: "x",
-  up: "arrow-up",
-  down: "arrow-down",
-  toggleOn: "toggle-right",
-  toggleOff: "toggle-left",
-  expand: "chevron-down",
-  collapse: "chevron-up",
-  download: "download"
-};
-var TABS = [
-  { id: "dashboard", label: "Dashboard", icon: ICON_NAMES.dashboard },
-  { id: "contests", label: "Concursos", icon: ICON_NAMES.contests },
-  { id: "cycle", label: "Ciclo e Mat\xE9rias", icon: ICON_NAMES.cycle },
-  { id: "items", label: "Itens e PDFs", icon: ICON_NAMES.items },
-  { id: "topics", label: "Assuntos e Quest\xF5es", icon: ICON_NAMES.topics },
-  { id: "sessions", label: "Sess\xF5es", icon: ICON_NAMES.sessions },
-  { id: "wall", label: "Mural", icon: ICON_NAMES.wall }
-];
-
-// src/ui/view/shared/DomHelpers.ts
-var DomHelpers = class {
-  /**
-   * Creates an HTML element with optional className.
-   */
-  static createElement(tagName, className) {
-    const element = document.createElement(tagName);
-    if (className) {
-      element.className = className;
-    }
-    return element;
-  }
-  /**
-   * Creates an icon element using Obsidian's built-in Lucide icons.
-   * @param iconKey - Key from ICON_NAMES constant
-   * @param className - CSS class for the icon container
-   * @returns HTMLElement containing the icon
-   */
-  static createIcon(iconKey, className = "leif-icon") {
-    const container = this.createElement("span", className);
-    const iconName = ICON_NAMES[iconKey] || iconKey;
-    if (typeof import_obsidian2.setIcon === "function") {
-      (0, import_obsidian2.setIcon)(container, iconName);
-    } else {
-      container.textContent = iconName;
-      container.setAttribute("data-icon", iconName);
-    }
-    return container;
-  }
-  /**
-   * Creates text with an optional icon.
-   */
-  static createTextWithIcon(text, icon) {
-    const wrapper = this.createElement("span", "leif-text-with-icon");
-    if (icon) {
-      wrapper.appendChild(this.createIcon(icon));
-    }
-    const label = this.createElement("span", "leif-text-label");
-    label.textContent = text;
-    wrapper.appendChild(label);
-    return wrapper;
-  }
-  /**
-   * Creates an H1 heading with optional icon.
-   */
-  static createHeading(text, icon) {
-    const heading = this.createElement("h1", "leif-title");
-    heading.appendChild(this.createTextWithIcon(text, icon));
-    return heading;
-  }
-  /**
-   * Creates an H2 section title with optional icon.
-   */
-  static createSectionTitle(text, icon) {
-    const heading = this.createElement("h2", "leif-section-title");
-    heading.appendChild(this.createTextWithIcon(text, icon));
-    return heading;
-  }
-  /**
-   * Creates an H3 section subtitle with optional icon.
-   */
-  static createSectionSubtitle(text, icon) {
-    const heading = this.createElement("h3", "leif-section-subtitle");
-    heading.appendChild(this.createTextWithIcon(text, icon));
-    return heading;
-  }
-  /**
-   * Creates a paragraph element.
-   */
-  static createParagraph(text) {
-    const paragraph = this.createElement("p", "leif-paragraph");
-    paragraph.textContent = text;
-    return paragraph;
-  }
-  /**
-   * Creates a strong (bold) text element.
-   */
-  static createStrong(text) {
-    const strong = document.createElement("strong");
-    strong.textContent = text;
-    return strong;
-  }
-  /**
-   * Creates a badge with optional icon.
-   */
-  static createBadge(text, icon) {
-    const badge = this.createElement("span", "leif-badge");
-    badge.appendChild(this.createTextWithIcon(text, icon));
-    return badge;
-  }
-  /**
-   * Creates a card section with title and optional icon.
-   */
-  static createCard(title, icon) {
-    const card = this.createElement("section", "leif-card");
-    card.appendChild(this.createSectionSubtitle(title, icon));
-    return card;
-  }
-  /**
-   * Creates an empty state message.
-   */
-  static createEmptyState(title, description) {
-    const wrapper = this.createElement("section", "leif-empty-state leif-card");
-    wrapper.append(this.createStrong(title), this.createParagraph(description));
-    return wrapper;
-  }
-  /**
-   * Creates an input element.
-   */
-  static createInput(type, placeholder, value = "") {
-    const input = document.createElement("input");
-    input.type = type;
-    input.placeholder = placeholder;
-    input.value = value;
-    input.className = "leif-input";
-    return input;
-  }
-  /**
-   * Creates a select dropdown with options.
-   * @param options - Array of [value, label] pairs
-   * @param selectedValue - Optional value to pre-select
-   */
-  static createSelect(options, selectedValue) {
-    const select = document.createElement("select");
-    select.className = "leif-select";
-    options.forEach(([value, label]) => {
-      const option = document.createElement("option");
-      option.value = value;
-      option.textContent = label;
-      if (value === selectedValue) {
-        option.selected = true;
-      }
-      select.appendChild(option);
-    });
-    return select;
-  }
-  /**
-   * Creates a textarea element.
-   */
-  static createTextarea(placeholder, value = "") {
-    const textarea = document.createElement("textarea");
-    textarea.placeholder = placeholder;
-    textarea.value = value;
-    textarea.className = "leif-textarea";
-    return textarea;
-  }
-  /**
-   * Creates a label for a form control.
-   */
-  static createLabel(text, control) {
-    const label = this.createElement("label", "leif-label");
-    const span = this.createElement("span", "leif-label-text");
-    span.textContent = text;
-    label.append(span, control);
-    return label;
-  }
-  /**
-   * Creates a disclosure (details/summary) element.
-   */
-  static createDisclosure(title, content, icon) {
-    const details = this.createElement("details", "leif-disclosure");
-    const summary = this.createElement("summary", "leif-disclosure-summary");
-    summary.appendChild(this.createTextWithIcon(title, icon));
-    details.append(summary, content);
-    return details;
-  }
-  /**
-   * Creates a key-value row display.
-   */
-  static createKeyValueRow(label, value) {
-    const row = this.createElement("div", "leif-key-value");
-    const labelEl = this.createElement("span", "leif-key-label");
-    labelEl.textContent = label;
-    const valueEl = this.createElement("span", "leif-key-value-text");
-    valueEl.textContent = value;
-    row.append(labelEl, valueEl);
-    return row;
-  }
-  /**
-   * Creates a table with headers and rows.
-   * @param headers - Column headers
-   * @param rows - Array of row data (each row is an array of cell content)
-   */
-  static createTable(headers, rows) {
-    const wrapper = this.createElement("div", "leif-table-wrapper");
-    const table = this.createElement("table", "leif-table");
-    const thead = this.createElement("thead");
-    const headerRow = this.createElement("tr");
-    headers.forEach((header) => {
-      const th = this.createElement("th");
-      th.textContent = header;
-      headerRow.appendChild(th);
-    });
-    thead.appendChild(headerRow);
-    table.appendChild(thead);
-    const tbody = this.createElement("tbody");
-    rows.forEach((rowData) => {
-      const tr = this.createElement("tr");
-      rowData.forEach((cellData) => {
-        const td = this.createElement("td");
-        if (typeof cellData === "string") {
-          td.textContent = cellData;
-        } else {
-          td.appendChild(cellData);
-        }
-        tr.appendChild(td);
-      });
-      tbody.appendChild(tr);
-    });
-    table.appendChild(tbody);
-    wrapper.appendChild(table);
-    return wrapper;
-  }
-  /**
-   * Creates a button with various options.
-   */
-  static createButton(text, options = {}) {
-    const button = document.createElement("button");
-    button.type = options.type || "button";
-    button.className = options.className || "leif-button";
-    if (options.icon) {
-      button.appendChild(this.createTextWithIcon(text, options.icon));
-    } else {
-      button.textContent = text;
-    }
-    if (options.dataset) {
-      Object.entries(options.dataset).forEach(([key, value]) => {
-        button.dataset[key] = value;
-      });
-    }
-    if (options.onClick) {
-      button.addEventListener("click", options.onClick);
-    }
-    return button;
-  }
-  /**
-   * Creates an icon-only button with a tooltip title.
-   * @param icon - Icon key from ICON_NAMES
-   * @param title - Tooltip text (shown on hover)
-   * @param options - Additional options (className, dataset, onClick)
-   * @returns HTMLButtonElement
-   */
-  static createIconButton(icon, title, options = {}) {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = options.className || "leif-icon-button";
-    button.setAttribute("aria-label", title);
-    button.appendChild(this.createIcon(icon, "leif-icon-button-icon"));
-    if (options.dataset) {
-      Object.entries(options.dataset).forEach(([key, value]) => {
-        button.dataset[key] = value;
-      });
-    }
-    if (options.onClick) {
-      button.addEventListener("click", options.onClick);
-    }
-    if (typeof import_obsidian2.setTooltip === "function") {
-      (0, import_obsidian2.setTooltip)(button, title, { delay: 300 });
-    } else {
-      button.title = title;
-    }
-    return button;
-  }
-  /**
-   * Creates a button group container.
-   */
-  static createButtonGroup() {
-    return this.createElement("div", "leif-button-group");
-  }
-  /**
-   * Creates a form element.
-   */
-  static createForm(onSubmit) {
-    const form = document.createElement("form");
-    form.className = "leif-form";
-    if (onSubmit) {
-      form.addEventListener("submit", (event) => {
-        event.preventDefault();
-        onSubmit(event);
-      });
-    }
-    return form;
-  }
-  /**
-   * Replaces all options in a select dropdown.
-   * @param select - The select element to update
-   * @param options - Array of [value, label] pairs
-   * @param selectedValue - Optional value to pre-select
-   */
-  static replaceSelectOptions(select, options, selectedValue) {
-    select.innerHTML = "";
-    options.forEach(([value, label]) => {
-      const option = document.createElement("option");
-      option.value = value;
-      option.textContent = label;
-      if (selectedValue !== void 0 && value === selectedValue) {
-        option.selected = true;
-      }
-      select.appendChild(option);
-    });
-  }
-  /**
-   * Creates a compact input for inline editing.
-   */
-  static createCompactInput(type, placeholder, value = "") {
-    const input = this.createInput(type, placeholder, value);
-    input.className = "leif-input leif-input-compact";
-    return input;
-  }
-  /**
-   * Creates a table with inline CRUD support.
-   * Returns a container with the table.
-   */
-  static createCrudTable(headers) {
-    const container = this.createElement("div", "leif-table-wrapper");
-    const table = this.createElement("table", "leif-table");
-    const thead = this.createElement("thead");
-    const headerRow = this.createElement("tr");
-    headers.forEach((header) => {
-      const th = this.createElement("th");
-      th.textContent = header;
-      headerRow.appendChild(th);
-    });
-    thead.appendChild(headerRow);
-    table.appendChild(thead);
-    const tbody = this.createElement("tbody");
-    table.appendChild(tbody);
-    container.appendChild(table);
-    return { container, tbody };
-  }
-  /**
-   * Creates a standard action cell with edit and delete buttons.
-   */
-  static createCrudActions(onEdit, onDelete) {
-    const actions = this.createElement("div", "leif-inline-actions leif-inline-actions-compact");
-    actions.appendChild(
-      this.createIconButton("edit", "Editar", { onClick: onEdit })
-    );
-    actions.appendChild(
-      this.createIconButton("delete", "Excluir", { onClick: onDelete })
-    );
-    return actions;
-  }
-  /**
-   * Creates a form row for organizing form elements.
-   */
-  static createFormRow() {
-    return this.createElement("div", "leif-form-row");
-  }
-  /**
-   * Creates a table cell with optional text or child element.
-   */
-  static createCell(text, element) {
-    const td = this.createElement("td");
-    if (text !== null) td.textContent = text;
-    if (element) td.appendChild(element);
-    return td;
-  }
-  /**
-   * Creates an inline creation form card with cancel and submit actions.
-   * @param title - Title for the form
-   * @param onSubmit - Handler for form submission
-   * @param onCancel - Handler for cancel action
-   * @returns Form element
-   */
-  static createInlineForm(title, onSubmit, onCancel) {
-    const card = this.createElement("section", "leif-card leif-create-form");
-    card.appendChild(this.createSectionSubtitle(title, "add"));
-    const form = this.createForm(onSubmit);
-    const actions = this.createElement("div", "leif-form-actions");
-    actions.appendChild(
-      this.createButton("Cancelar", {
-        className: "leif-button",
-        onClick: () => onCancel()
-      })
-    );
-    actions.appendChild(
-      this.createButton("Criar", {
-        type: "submit",
-        className: "leif-primary-button"
-      })
-    );
-    card.appendChild(form);
-    card.appendChild(actions);
-    return card;
-  }
-  /**
-   * Displays an error notification using Obsidian's Notice.
-   * Surfaces a friendlier message for NoActiveContestError.
-   */
-  static notifyError(error, fallbackMessage) {
-    if (error instanceof NoActiveContestError) {
-      new import_obsidian2.Notice("Nenhum concurso ativo. Selecione um concurso para continuar.");
-      return;
-    }
-    new import_obsidian2.Notice(error instanceof Error ? error.message : fallbackMessage);
-  }
-  /**
-   * Creates a modal overlay with a centered card.
-   * Implements role=dialog, aria-modal, a focus trap and Escape-to-close.
-   * Returns { open, close } functions.
-   */
-  static createModal(options) {
-    const overlay = this.createElement("div", "leif-modal-overlay");
-    const card = this.createElement("div", "leif-modal-card");
-    card.setAttribute("role", "dialog");
-    card.setAttribute("aria-modal", "true");
-    const titleId = `leif-modal-title-${Math.random().toString(36).slice(2, 9)}`;
-    card.setAttribute("aria-labelledby", titleId);
-    const header = this.createElement("div", "leif-modal-header");
-    const title = this.createElement("h3", "leif-modal-title");
-    title.id = titleId;
-    title.textContent = options.title;
-    const closeButton = this.createIconButton("x", "Fechar", {
-      onClick: () => close()
-    });
-    header.appendChild(title);
-    header.appendChild(closeButton);
-    const body = this.createElement("div", "leif-modal-body");
-    body.appendChild(options.content);
-    const footer = this.createElement("div", "leif-modal-footer");
-    const cancelButton = this.createButton("Cancelar", {
-      className: "leif-button",
-      dataset: { leifConfirm: "cancel" },
-      onClick: () => close()
-    });
-    const submitButton = this.createButton(options.submitLabel ?? "Criar", {
-      className: "leif-primary-button",
-      dataset: { leifConfirm: "submit" },
-      onClick: () => options.onSubmit()
-    });
-    footer.appendChild(cancelButton);
-    footer.appendChild(submitButton);
-    card.append(header, body, footer);
-    overlay.appendChild(card);
-    let previouslyFocused = null;
-    let focusTrapHandler = null;
-    let escapeHandler = null;
-    const focusable = () => {
-      const elements = card.querySelectorAll(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      return Array.from(elements).filter((element) => !element.hasAttribute("disabled"));
-    };
-    const open = () => {
-      previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-      document.body.appendChild(overlay);
-      const first = focusable()[0] ?? card;
-      first.focus();
-      focusTrapHandler = (event) => {
-        if (event.key !== "Tab") return;
-        const elements = focusable();
-        if (elements.length === 0) {
-          event.preventDefault();
-          return;
-        }
-        const firstEl = elements[0];
-        const lastEl = elements[elements.length - 1];
-        if (event.shiftKey && document.activeElement === firstEl) {
-          event.preventDefault();
-          lastEl.focus();
-        } else if (!event.shiftKey && document.activeElement === lastEl) {
-          event.preventDefault();
-          firstEl.focus();
-        }
-      };
-      escapeHandler = (event) => {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          close();
-        }
-      };
-      card.addEventListener("keydown", focusTrapHandler);
-      overlay.addEventListener("keydown", escapeHandler);
-    };
-    const close = () => {
-      if (focusTrapHandler) card.removeEventListener("keydown", focusTrapHandler);
-      if (escapeHandler) overlay.removeEventListener("keydown", escapeHandler);
-      if (overlay.parentNode) {
-        overlay.parentNode.removeChild(overlay);
-      }
-      previouslyFocused?.focus();
-      options.onCancel?.();
-    };
-    overlay.addEventListener("click", (event) => {
-      if (event.target === overlay) {
-        close();
-      }
-    });
-    return { open, close };
-  }
-  /**
-   * Creates an accessible confirmation dialog (replaces native window.confirm).
-   * Resolves the returned promise with true when confirmed, false when cancelled.
-   */
-  static confirm(options) {
-    return new Promise((resolve) => {
-      let resolved = false;
-      const settle = (value) => {
-        if (resolved) return;
-        resolved = true;
-        resolve(value);
-      };
-      const message = this.createElement("p", "leif-modal-message");
-      message.textContent = options.message;
-      const modal = this.createModal({
-        title: options.title,
-        content: message,
-        submitLabel: options.confirmLabel ?? "Confirmar",
-        onSubmit: () => {
-          settle(true);
-          modal.close();
-        },
-        onCancel: () => settle(false)
-      });
-      modal.open();
-    });
-  }
-  /**
-   * Creates a visual progress bar with a fill and a label.
-   * @param readed - Pages readed
-   * @param total - Total pages (optional)
-   * @returns Progress container element
-   */
-  static createProgressBar(readed, total) {
-    const container = this.createElement("div", "leif-progress-bar-container");
-    const bar = this.createElement("div", "leif-progress-bar");
-    const fill = this.createElement("div", "leif-progress-fill");
-    if (total !== void 0 && total > 0) {
-      const percentage = Math.min(100, Math.round(readed / total * 100));
-      fill.style.width = `${percentage}%`;
-      if (readed >= total) {
-        fill.classList.add("is-complete");
-      }
-      const label = this.createElement("div", "leif-progress-label");
-      const text = this.createElement("span", "leif-progress-value");
-      text.textContent = `${readed}/${total} (${percentage}%)`;
-      label.appendChild(text);
-      container.appendChild(bar);
-      container.appendChild(label);
-    } else {
-      const label = this.createElement("div", "leif-progress-label");
-      const value = this.createElement("span", "leif-progress-value");
-      value.textContent = `${readed} lido${readed === 1 ? "" : "s"}`;
-      label.appendChild(value);
-      container.appendChild(label);
-    }
-    bar.appendChild(fill);
-    return container;
   }
 };
 
