@@ -1,4 +1,3 @@
-import { Notice } from "obsidian";
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import { CreateTopicUseCase } from "@/application/use-cases/CreateTopicUseCase";
 import { DeleteTopicUseCase } from "@/application/use-cases/DeleteTopicUseCase";
@@ -7,6 +6,7 @@ import { UpdateTopicUseCase } from "@/application/use-cases/UpdateTopicUseCase";
 import type { Topic } from "@/domain/entities/Topic";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
+import { SubjectPicker } from "@/ui/view/shared/SubjectPicker";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 
 /**
@@ -39,12 +39,15 @@ export class TopicsTab {
     header.appendChild(DomHelpers.createSectionTitle("Assuntos e Questões"));
     header.appendChild(
       DomHelpers.createIconButton("add", "Novo assunto", {
-        onClick: () => this.openCreateTopicModal(this.getSelectedSubject(data)?.id ?? "")
+        onClick: () =>
+          this.openCreateTopicModal(
+            SubjectPicker.getSelectedSubject(data, this.selectedSubjectId)?.id ?? ""
+          )
       })
     );
     container.appendChild(header);
 
-    const subject = this.getSelectedSubject(data);
+    const subject = SubjectPicker.getSelectedSubject(data, this.selectedSubjectId);
     if (!subject) {
       container.appendChild(
         DomHelpers.createEmptyState(
@@ -55,7 +58,12 @@ export class TopicsTab {
       return;
     }
 
-    container.appendChild(this.renderSubjectPicker(data));
+    container.appendChild(
+      SubjectPicker.create(data, this.selectedSubjectId, async (subjectId) => {
+        this.selectedSubjectId = subjectId;
+        await this.onUpdate();
+      })
+    );
 
     const topics = data.topics
       .filter((topic) => topic.subjectId === subject.id);
@@ -140,7 +148,7 @@ export class TopicsTab {
             await this.deleteTopicUseCase.execute({ topicId: topic.id });
             await this.onUpdate();
           } catch (error) {
-            this.notifyError(error, "Não foi possível excluir o assunto.");
+            DomHelpers.notifyError(error, "Não foi possível excluir o assunto.");
           }
         }
       })
@@ -214,7 +222,7 @@ export class TopicsTab {
           this.editingTopicId = null;
           await this.onUpdate();
         } catch (error) {
-          this.notifyError(error, "Não foi possível salvar.");
+          DomHelpers.notifyError(error, "Não foi possível salvar.");
         }
       }
     });
@@ -278,7 +286,7 @@ export class TopicsTab {
         });
         await this.onUpdate();
       } catch (error) {
-        this.notifyError(error, "Não foi possível vincular caderno.");
+        DomHelpers.notifyError(error, "Não foi possível vincular caderno.");
       }
     });
 
@@ -313,7 +321,7 @@ export class TopicsTab {
         modal.close();
         await this.onUpdate();
       } catch (error) {
-        this.notifyError(error, "Não foi possível criar o assunto.");
+        DomHelpers.notifyError(error, "Não foi possível criar o assunto.");
       }
     });
 
@@ -326,37 +334,5 @@ export class TopicsTab {
     });
 
     modal.open();
-  }
-
-  private renderSubjectPicker(data: LeifPluginData): HTMLElement {
-    const subjects = data.subjects
-      .filter((subject) => subject.contestId === data.activeContestId)
-      .sort((left, right) => left.order - right.order);
-
-    const select = DomHelpers.createSelect(
-      subjects.map((subject) => [subject.id, subject.name]),
-      this.selectedSubjectId ?? undefined
-    );
-    select.addEventListener("change", async () => {
-      this.selectedSubjectId = select.value;
-      await this.onUpdate();
-    });
-
-    const wrapper = DomHelpers.createElement("div", "leif-toolbar");
-    wrapper.appendChild(DomHelpers.createLabel("Matéria", select));
-    return wrapper;
-  }
-
-  private getSelectedSubject(data: LeifPluginData): { id: string; name: string } | null {
-    const subjects = data.subjects
-      .filter((subject) => subject.contestId === data.activeContestId)
-      .sort((left, right) => left.order - right.order);
-
-    if (subjects.length === 0) return null;
-    return subjects.find((subject) => subject.id === this.selectedSubjectId) ?? subjects[0];
-  }
-
-  private notifyError(error: unknown, fallbackMessage: string): void {
-    new Notice(error instanceof Error ? error.message : fallbackMessage);
   }
 }

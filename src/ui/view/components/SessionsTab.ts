@@ -108,7 +108,7 @@ export class SessionsTab {
             new Notice(`Ciclo finalizado! Matéria recomendada: ${result.currentSubject?.name ?? "—"}`);
             await this.onUpdate();
           } catch (error) {
-            this.notifyError(error, "Não foi possível finalizar o ciclo.");
+            DomHelpers.notifyError(error, "Não foi possível finalizar o ciclo.");
           }
         }
       })
@@ -199,7 +199,7 @@ export class SessionsTab {
             await this.deleteStudySessionUseCase.execute({ sessionId: session.id });
             await this.onUpdate();
           } catch (error) {
-            this.notifyError(error, "Não foi possível excluir a sessão.");
+            DomHelpers.notifyError(error, "Não foi possível excluir a sessão.");
           }
         }
       })
@@ -250,7 +250,7 @@ export class SessionsTab {
           this.editingSessionId = null;
           await this.onUpdate();
         } catch (error) {
-          this.notifyError(error, "Não foi possível salvar.");
+          DomHelpers.notifyError(error, "Não foi possível salvar.");
         }
       }
     });
@@ -325,7 +325,7 @@ export class SessionsTab {
         modal.close();
         await this.onUpdate();
       } catch (error) {
-        this.notifyError(error, "Não foi possível registrar a sessão.");
+        DomHelpers.notifyError(error, "Não foi possível registrar a sessão.");
       }
     });
 
@@ -424,9 +424,5 @@ export class SessionsTab {
     const timezoneOffset = now.getTimezoneOffset() * 60000;
     const localDate = new Date(now.getTime() - timezoneOffset);
     return localDate.toISOString().split("T")[0];
-  }
-
-  private notifyError(error: unknown, fallbackMessage: string): void {
-    new Notice(error instanceof Error ? error.message : fallbackMessage);
   }
 }

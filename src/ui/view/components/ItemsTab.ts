@@ -1,4 +1,3 @@
-import { Notice } from "obsidian";
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import { AddStudyItemResourceReferenceUseCase } from "@/application/use-cases/AddStudyItemResourceReferenceUseCase";
 import { CreateStudyItemUseCase } from "@/application/use-cases/CreateStudyItemUseCase";
@@ -9,6 +8,7 @@ import type { PdfItemProgress } from "@/application/use-cases/GetActiveContestPr
 import type { StudyItem } from "@/domain/entities/StudyItem";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
+import { SubjectPicker } from "@/ui/view/shared/SubjectPicker";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 
 /**
@@ -43,12 +43,15 @@ export class ItemsTab {
     header.appendChild(DomHelpers.createSectionTitle("Itens e PDFs"));
     header.appendChild(
       DomHelpers.createIconButton("add", "Novo item", {
-        onClick: () => this.openCreateItemModal(this.getSelectedSubject(data)?.id ?? "")
+        onClick: () =>
+          this.openCreateItemModal(
+            SubjectPicker.getSelectedSubject(data, this.selectedSubjectId)?.id ?? ""
+          )
       })
     );
     container.appendChild(header);
 
-    const subject = this.getSelectedSubject(data);
+    const subject = SubjectPicker.getSelectedSubject(data, this.selectedSubjectId);
     if (!subject) {
       container.appendChild(
         DomHelpers.createEmptyState(
@@ -59,7 +62,12 @@ export class ItemsTab {
       return;
     }
 
-    container.appendChild(this.renderSubjectPicker(data));
+    container.appendChild(
+      SubjectPicker.create(data, this.selectedSubjectId, async (subjectId) => {
+        this.selectedSubjectId = subjectId;
+        await this.onUpdate();
+      })
+    );
 
     const progress = await this.getActiveContestProgressDashboardUseCase.execute();
     const subjectProgress = progress.pdfProgressBySubject.find(
@@ -160,7 +168,7 @@ export class ItemsTab {
             await this.deleteStudyItemUseCase.execute({ itemId: item.id });
             await this.onUpdate();
           } catch (error) {
-            this.notifyError(error, "Não foi possível excluir o item.");
+            DomHelpers.notifyError(error, "Não foi possível excluir o item.");
           }
         }
       })
@@ -201,7 +209,7 @@ export class ItemsTab {
           this.editingItemId = null;
           await this.onUpdate();
         } catch (error) {
-          this.notifyError(error, "Não foi possível salvar.");
+          DomHelpers.notifyError(error, "Não foi possível salvar.");
         }
       }
     });
@@ -300,7 +308,7 @@ export class ItemsTab {
         urlInput.value = "";
         await this.onUpdate();
       } catch (error) {
-        this.notifyError(error, "Não foi possível adicionar referência.");
+        DomHelpers.notifyError(error, "Não foi possível adicionar referência.");
       }
     });
 
@@ -339,7 +347,7 @@ export class ItemsTab {
         modal.close();
         await this.onUpdate();
       } catch (error) {
-        this.notifyError(error, "Não foi possível criar o item.");
+        DomHelpers.notifyError(error, "Não foi possível criar o item.");
       }
     });
 
@@ -359,41 +367,9 @@ export class ItemsTab {
     modal.open();
   }
 
-  private renderSubjectPicker(data: LeifPluginData): HTMLElement {
-    const subjects = data.subjects
-      .filter((subject) => subject.contestId === data.activeContestId)
-      .sort((left, right) => left.order - right.order);
-
-    const select = DomHelpers.createSelect(
-      subjects.map((subject) => [subject.id, subject.name]),
-      this.selectedSubjectId ?? undefined
-    );
-    select.addEventListener("change", async () => {
-      this.selectedSubjectId = select.value;
-      await this.onUpdate();
-    });
-
-    const wrapper = DomHelpers.createElement("div", "leif-toolbar");
-    wrapper.appendChild(DomHelpers.createLabel("Matéria", select));
-    return wrapper;
-  }
-
-  private getSelectedSubject(data: LeifPluginData): { id: string; name: string } | null {
-    const subjects = data.subjects
-      .filter((subject) => subject.contestId === data.activeContestId)
-      .sort((left, right) => left.order - right.order);
-
-    if (subjects.length === 0) return null;
-    return subjects.find((subject) => subject.id === this.selectedSubjectId) ?? subjects[0];
-  }
-
   private formatResourceType(type: "pdf" | "video" | "link"): string {
     if (type === "pdf") return "PDF";
     if (type === "video") return "Vídeo";
     return "Link";
-  }
-
-  private notifyError(error: unknown, fallbackMessage: string): void {
-    new Notice(error instanceof Error ? error.message : fallbackMessage);
   }
 }

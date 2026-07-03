@@ -23,7 +23,7 @@ __export(main_exports, {
   default: () => LeifPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian10 = require("obsidian");
+var import_obsidian5 = require("obsidian");
 
 // src/domain/types/LeifPluginData.ts
 function createDefaultLeifPluginData() {
@@ -1872,7 +1872,7 @@ function registerCommands(plugin, dataStore) {
 }
 
 // src/ui/view/LeifView.ts
-var import_obsidian9 = require("obsidian");
+var import_obsidian4 = require("obsidian");
 
 // src/application/use-cases/DeleteContestUseCase.ts
 var DeleteContestUseCase = class {
@@ -2339,9 +2339,13 @@ var DomHelpers = class {
   }
   /**
    * Displays an error notification using Obsidian's Notice.
-   * Checks for specific error types to provide better messages.
+   * Surfaces a friendlier message for NoActiveContestError.
    */
   static notifyError(error, fallbackMessage) {
+    if (error instanceof NoActiveContestError) {
+      new import_obsidian2.Notice("Nenhum concurso ativo. Selecione um concurso para continuar.");
+      return;
+    }
     new import_obsidian2.Notice(error instanceof Error ? error.message : fallbackMessage);
   }
   /**
@@ -2500,7 +2504,6 @@ var DomHelpers = class {
 };
 
 // src/ui/view/components/ContestsTab.ts
-var import_obsidian3 = require("obsidian");
 var ContestsTab = class {
   constructor(dataStore, onUpdate) {
     this.dataStore = dataStore;
@@ -2563,7 +2566,7 @@ var ContestsTab = class {
               await this.setActiveContestUseCase.execute({ contestId: contest.id });
               await this.onUpdate();
             } catch (error) {
-              this.notifyError(error, "N\xE3o foi poss\xEDvel ativar o concurso.");
+              DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel ativar o concurso.");
             }
           }
         })
@@ -2590,7 +2593,7 @@ var ContestsTab = class {
             await this.deleteContestUseCase.execute({ contestId: contest.id });
             await this.onUpdate();
           } catch (error) {
-            this.notifyError(error, "N\xE3o foi poss\xEDvel excluir o concurso.");
+            DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel excluir o concurso.");
           }
         }
       })
@@ -2620,7 +2623,7 @@ var ContestsTab = class {
           this.editingContestId = null;
           await this.onUpdate();
         } catch (error) {
-          this.notifyError(error, "N\xE3o foi poss\xEDvel salvar.");
+          DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel salvar.");
         }
       }
     });
@@ -2654,7 +2657,7 @@ var ContestsTab = class {
         modal.close();
         await this.onUpdate();
       } catch (error) {
-        this.notifyError(error, "N\xE3o foi poss\xEDvel criar o concurso.");
+        DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel criar o concurso.");
       }
     });
     form.append(
@@ -2668,13 +2671,9 @@ var ContestsTab = class {
     });
     modal.open();
   }
-  notifyError(error, fallbackMessage) {
-    new import_obsidian3.Notice(error instanceof Error ? error.message : fallbackMessage);
-  }
 };
 
 // src/ui/view/components/CycleTab.ts
-var import_obsidian4 = require("obsidian");
 var CycleTab = class {
   constructor(dataStore, onUpdate) {
     this.dataStore = dataStore;
@@ -2768,7 +2767,7 @@ var CycleTab = class {
           this.editingSubjectId = null;
           await this.onUpdate();
         } catch (error) {
-          this.notifyError(error, "N\xE3o foi poss\xEDvel salvar a configura\xE7\xE3o.");
+          DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel salvar a configura\xE7\xE3o.");
         }
       }
     });
@@ -2825,7 +2824,7 @@ var CycleTab = class {
         modal.close();
         await this.onUpdate();
       } catch (error) {
-        this.notifyError(error, "N\xE3o foi poss\xEDvel criar a mat\xE9ria.");
+        DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel criar a mat\xE9ria.");
       }
     });
     form.append(
@@ -2852,7 +2851,7 @@ var CycleTab = class {
         });
         await this.onUpdate();
       } catch (error) {
-        this.notifyError(error, "N\xE3o foi poss\xEDvel alterar o status da mat\xE9ria.");
+        DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel alterar o status da mat\xE9ria.");
       }
     });
     return td;
@@ -2883,15 +2882,8 @@ var CycleTab = class {
       });
       await this.onUpdate();
     } catch (error) {
-      this.notifyError(error, "N\xE3o foi poss\xEDvel reordenar as mat\xE9rias.");
+      DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel reordenar as mat\xE9rias.");
     }
-  }
-  notifyError(error, fallbackMessage) {
-    if (error instanceof NoActiveContestError) {
-      new import_obsidian4.Notice("Nenhum concurso ativo. Selecione um concurso para continuar.");
-      return;
-    }
-    new import_obsidian4.Notice(error instanceof Error ? error.message : fallbackMessage);
   }
 };
 
@@ -3053,9 +3045,6 @@ var DashboardTab = class {
   }
 };
 
-// src/ui/view/components/ItemsTab.ts
-var import_obsidian5 = require("obsidian");
-
 // src/application/use-cases/AddStudyItemResourceReferenceUseCase.ts
 var AddStudyItemResourceReferenceUseCase = class {
   constructor(dataStore, repositoryFactory) {
@@ -3124,6 +3113,28 @@ var UpdateStudyItemUseCase = class {
   }
 };
 
+// src/ui/view/shared/SubjectPicker.ts
+var SubjectPicker = class {
+  static getSelectedSubject(data, selectedSubjectId) {
+    const subjects = data.subjects.filter((subject) => subject.contestId === data.activeContestId).sort((left, right) => left.order - right.order);
+    if (subjects.length === 0) return null;
+    return subjects.find((subject) => subject.id === selectedSubjectId) ?? subjects[0];
+  }
+  static create(data, selectedSubjectId, onChange) {
+    const subjects = data.subjects.filter((subject) => subject.contestId === data.activeContestId).sort((left, right) => left.order - right.order);
+    const select = DomHelpers.createSelect(
+      subjects.map((subject) => [subject.id, subject.name]),
+      selectedSubjectId ?? void 0
+    );
+    select.addEventListener("change", () => {
+      void onChange(select.value);
+    });
+    const wrapper = DomHelpers.createElement("div", "leif-toolbar");
+    wrapper.appendChild(DomHelpers.createLabel("Mat\xE9ria", select));
+    return wrapper;
+  }
+};
+
 // src/ui/view/components/ItemsTab.ts
 var ItemsTab = class {
   constructor(dataStore, onUpdate) {
@@ -3144,11 +3155,13 @@ var ItemsTab = class {
     header.appendChild(DomHelpers.createSectionTitle("Itens e PDFs"));
     header.appendChild(
       DomHelpers.createIconButton("add", "Novo item", {
-        onClick: () => this.openCreateItemModal(this.getSelectedSubject(data)?.id ?? "")
+        onClick: () => this.openCreateItemModal(
+          SubjectPicker.getSelectedSubject(data, this.selectedSubjectId)?.id ?? ""
+        )
       })
     );
     container.appendChild(header);
-    const subject = this.getSelectedSubject(data);
+    const subject = SubjectPicker.getSelectedSubject(data, this.selectedSubjectId);
     if (!subject) {
       container.appendChild(
         DomHelpers.createEmptyState(
@@ -3158,7 +3171,12 @@ var ItemsTab = class {
       );
       return;
     }
-    container.appendChild(this.renderSubjectPicker(data));
+    container.appendChild(
+      SubjectPicker.create(data, this.selectedSubjectId, async (subjectId) => {
+        this.selectedSubjectId = subjectId;
+        await this.onUpdate();
+      })
+    );
     const progress = await this.getActiveContestProgressDashboardUseCase.execute();
     const subjectProgress = progress.pdfProgressBySubject.find(
       (entry) => entry.subjectId === subject.id
@@ -3241,7 +3259,7 @@ var ItemsTab = class {
             await this.deleteStudyItemUseCase.execute({ itemId: item.id });
             await this.onUpdate();
           } catch (error) {
-            this.notifyError(error, "N\xE3o foi poss\xEDvel excluir o item.");
+            DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel excluir o item.");
           }
         }
       })
@@ -3273,7 +3291,7 @@ var ItemsTab = class {
           this.editingItemId = null;
           await this.onUpdate();
         } catch (error) {
-          this.notifyError(error, "N\xE3o foi poss\xEDvel salvar.");
+          DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel salvar.");
         }
       }
     });
@@ -3355,7 +3373,7 @@ var ItemsTab = class {
         urlInput.value = "";
         await this.onUpdate();
       } catch (error) {
-        this.notifyError(error, "N\xE3o foi poss\xEDvel adicionar refer\xEAncia.");
+        DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel adicionar refer\xEAncia.");
       }
     });
     form.className = "leif-detail-form";
@@ -3389,7 +3407,7 @@ var ItemsTab = class {
         modal.close();
         await this.onUpdate();
       } catch (error) {
-        this.notifyError(error, "N\xE3o foi poss\xEDvel criar o item.");
+        DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel criar o item.");
       }
     });
     form.append(
@@ -3405,37 +3423,15 @@ var ItemsTab = class {
     });
     modal.open();
   }
-  renderSubjectPicker(data) {
-    const subjects = data.subjects.filter((subject) => subject.contestId === data.activeContestId).sort((left, right) => left.order - right.order);
-    const select = DomHelpers.createSelect(
-      subjects.map((subject) => [subject.id, subject.name]),
-      this.selectedSubjectId ?? void 0
-    );
-    select.addEventListener("change", async () => {
-      this.selectedSubjectId = select.value;
-      await this.onUpdate();
-    });
-    const wrapper = DomHelpers.createElement("div", "leif-toolbar");
-    wrapper.appendChild(DomHelpers.createLabel("Mat\xE9ria", select));
-    return wrapper;
-  }
-  getSelectedSubject(data) {
-    const subjects = data.subjects.filter((subject) => subject.contestId === data.activeContestId).sort((left, right) => left.order - right.order);
-    if (subjects.length === 0) return null;
-    return subjects.find((subject) => subject.id === this.selectedSubjectId) ?? subjects[0];
-  }
   formatResourceType(type) {
     if (type === "pdf") return "PDF";
     if (type === "video") return "V\xEDdeo";
     return "Link";
   }
-  notifyError(error, fallbackMessage) {
-    new import_obsidian5.Notice(error instanceof Error ? error.message : fallbackMessage);
-  }
 };
 
 // src/ui/view/components/SessionsTab.ts
-var import_obsidian6 = require("obsidian");
+var import_obsidian3 = require("obsidian");
 
 // src/application/use-cases/DeleteStudySessionUseCase.ts
 var DeleteStudySessionUseCase = class {
@@ -3573,10 +3569,10 @@ var SessionsTab = class {
         onClick: async () => {
           try {
             const result = await this.advanceCycleUseCase.execute();
-            new import_obsidian6.Notice(`Ciclo finalizado! Mat\xE9ria recomendada: ${result.currentSubject?.name ?? "\u2014"}`);
+            new import_obsidian3.Notice(`Ciclo finalizado! Mat\xE9ria recomendada: ${result.currentSubject?.name ?? "\u2014"}`);
             await this.onUpdate();
           } catch (error) {
-            this.notifyError(error, "N\xE3o foi poss\xEDvel finalizar o ciclo.");
+            DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel finalizar o ciclo.");
           }
         }
       })
@@ -3652,7 +3648,7 @@ var SessionsTab = class {
             await this.deleteStudySessionUseCase.execute({ sessionId: session.id });
             await this.onUpdate();
           } catch (error) {
-            this.notifyError(error, "N\xE3o foi poss\xEDvel excluir a sess\xE3o.");
+            DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel excluir a sess\xE3o.");
           }
         }
       })
@@ -3694,7 +3690,7 @@ var SessionsTab = class {
           this.editingSessionId = null;
           await this.onUpdate();
         } catch (error) {
-          this.notifyError(error, "N\xE3o foi poss\xEDvel salvar.");
+          DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel salvar.");
         }
       }
     });
@@ -3754,7 +3750,7 @@ var SessionsTab = class {
         modal.close();
         await this.onUpdate();
       } catch (error) {
-        this.notifyError(error, "N\xE3o foi poss\xEDvel registrar a sess\xE3o.");
+        DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel registrar a sess\xE3o.");
       }
     });
     const subjectSelect = DomHelpers.createSelect(
@@ -3835,13 +3831,7 @@ var SessionsTab = class {
     const localDate = new Date(now.getTime() - timezoneOffset);
     return localDate.toISOString().split("T")[0];
   }
-  notifyError(error, fallbackMessage) {
-    new import_obsidian6.Notice(error instanceof Error ? error.message : fallbackMessage);
-  }
 };
-
-// src/ui/view/components/TopicsTab.ts
-var import_obsidian7 = require("obsidian");
 
 // src/application/use-cases/DeleteTopicUseCase.ts
 var DeleteTopicUseCase = class {
@@ -3919,11 +3909,13 @@ var TopicsTab = class {
     header.appendChild(DomHelpers.createSectionTitle("Assuntos e Quest\xF5es"));
     header.appendChild(
       DomHelpers.createIconButton("add", "Novo assunto", {
-        onClick: () => this.openCreateTopicModal(this.getSelectedSubject(data)?.id ?? "")
+        onClick: () => this.openCreateTopicModal(
+          SubjectPicker.getSelectedSubject(data, this.selectedSubjectId)?.id ?? ""
+        )
       })
     );
     container.appendChild(header);
-    const subject = this.getSelectedSubject(data);
+    const subject = SubjectPicker.getSelectedSubject(data, this.selectedSubjectId);
     if (!subject) {
       container.appendChild(
         DomHelpers.createEmptyState(
@@ -3933,7 +3925,12 @@ var TopicsTab = class {
       );
       return;
     }
-    container.appendChild(this.renderSubjectPicker(data));
+    container.appendChild(
+      SubjectPicker.create(data, this.selectedSubjectId, async (subjectId) => {
+        this.selectedSubjectId = subjectId;
+        await this.onUpdate();
+      })
+    );
     const topics = data.topics.filter((topic) => topic.subjectId === subject.id);
     const card = DomHelpers.createCard(`Assuntos de ${subject.name}`);
     if (topics.length === 0) {
@@ -4006,7 +4003,7 @@ var TopicsTab = class {
             await this.deleteTopicUseCase.execute({ topicId: topic.id });
             await this.onUpdate();
           } catch (error) {
-            this.notifyError(error, "N\xE3o foi poss\xEDvel excluir o assunto.");
+            DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel excluir o assunto.");
           }
         }
       })
@@ -4068,7 +4065,7 @@ var TopicsTab = class {
           this.editingTopicId = null;
           await this.onUpdate();
         } catch (error) {
-          this.notifyError(error, "N\xE3o foi poss\xEDvel salvar.");
+          DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel salvar.");
         }
       }
     });
@@ -4122,7 +4119,7 @@ var TopicsTab = class {
         });
         await this.onUpdate();
       } catch (error) {
-        this.notifyError(error, "N\xE3o foi poss\xEDvel vincular caderno.");
+        DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel vincular caderno.");
       }
     });
     notebookForm.className = "leif-detail-form";
@@ -4151,7 +4148,7 @@ var TopicsTab = class {
         modal.close();
         await this.onUpdate();
       } catch (error) {
-        this.notifyError(error, "N\xE3o foi poss\xEDvel criar o assunto.");
+        DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel criar o assunto.");
       }
     });
     form.append(DomHelpers.createLabel("Nome", nameInput));
@@ -4162,32 +4159,9 @@ var TopicsTab = class {
     });
     modal.open();
   }
-  renderSubjectPicker(data) {
-    const subjects = data.subjects.filter((subject) => subject.contestId === data.activeContestId).sort((left, right) => left.order - right.order);
-    const select = DomHelpers.createSelect(
-      subjects.map((subject) => [subject.id, subject.name]),
-      this.selectedSubjectId ?? void 0
-    );
-    select.addEventListener("change", async () => {
-      this.selectedSubjectId = select.value;
-      await this.onUpdate();
-    });
-    const wrapper = DomHelpers.createElement("div", "leif-toolbar");
-    wrapper.appendChild(DomHelpers.createLabel("Mat\xE9ria", select));
-    return wrapper;
-  }
-  getSelectedSubject(data) {
-    const subjects = data.subjects.filter((subject) => subject.contestId === data.activeContestId).sort((left, right) => left.order - right.order);
-    if (subjects.length === 0) return null;
-    return subjects.find((subject) => subject.id === this.selectedSubjectId) ?? subjects[0];
-  }
-  notifyError(error, fallbackMessage) {
-    new import_obsidian7.Notice(error instanceof Error ? error.message : fallbackMessage);
-  }
 };
 
 // src/ui/view/components/WallTab.ts
-var import_obsidian8 = require("obsidian");
 var WallTab = class {
   constructor(dataStore, onUpdate) {
     this.dataStore = dataStore;
@@ -4264,7 +4238,7 @@ var WallTab = class {
         });
         await this.onUpdate();
       } catch (error) {
-        this.notifyError(error, "N\xE3o foi poss\xEDvel salvar o mural.");
+        DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel salvar o mural.");
       }
     });
     form.classList.add("leif-card");
@@ -4304,26 +4278,10 @@ var WallTab = class {
     }
     return card;
   }
-  notifyError(error, fallbackMessage) {
-    if (error instanceof NoActiveContestError) {
-      new import_obsidian8.Notice("Nenhum concurso ativo. Selecione um concurso para continuar.");
-      return;
-    }
-    new import_obsidian8.Notice(error instanceof Error ? error.message : fallbackMessage);
-  }
 };
 
 // src/ui/view/LeifView.ts
-var TABS2 = [
-  { id: "dashboard", label: "Dashboard" },
-  { id: "contests", label: "Concursos" },
-  { id: "cycle", label: "Ciclo e Mat\xE9rias" },
-  { id: "items", label: "Itens e PDFs" },
-  { id: "topics", label: "Assuntos e Quest\xF5es" },
-  { id: "sessions", label: "Sess\xF5es" },
-  { id: "wall", label: "Mural" }
-];
-var LeifView = class extends import_obsidian9.ItemView {
+var LeifView = class extends import_obsidian4.ItemView {
   constructor(leaf, dataStore) {
     super(leaf);
     this.dataStore = dataStore;
@@ -4389,7 +4347,7 @@ var LeifView = class extends import_obsidian9.ItemView {
     this.tabBar = DomHelpers.createElement("nav", "leif-tab-bar");
     this.tabBar.setAttribute("role", "tablist");
     this.tabBar.setAttribute("aria-label", "Se\xE7\xF5es do Leif");
-    TABS2.forEach((tab, index) => {
+    TABS.forEach((tab, index) => {
       const button = DomHelpers.createButton(tab.label, {
         dataset: { tab: tab.id },
         className: "leif-tab-button",
@@ -4448,7 +4406,7 @@ var LeifView = class extends import_obsidian9.ItemView {
    * Moves focus between tabs with Arrow keys and activates on Enter/Space.
    */
   handleTabKeyDown(event, index) {
-    const tabIds = TABS2.map((tab) => tab.id);
+    const tabIds = TABS.map((tab) => tab.id);
     if (event.key === "ArrowRight") {
       event.preventDefault();
       const next = tabIds[(index + 1) % tabIds.length];
@@ -4501,15 +4459,8 @@ var LeifView = class extends import_obsidian9.ItemView {
         break;
     }
   }
-  getSelectedSubject(data) {
-    const subjects = data.subjects.filter((subject) => subject.contestId === data.activeContestId).sort((left, right) => left.order - right.order);
-    if (subjects.length === 0) {
-      return null;
-    }
-    return subjects.find((subject) => subject.id === this.selectedSubjectId) ?? subjects[0];
-  }
   ensureSelectedSubject(data) {
-    const selectedSubject = this.getSelectedSubject(data);
+    const selectedSubject = SubjectPicker.getSelectedSubject(data, this.selectedSubjectId);
     this.selectedSubjectId = selectedSubject?.id ?? null;
   }
 };
@@ -4539,7 +4490,7 @@ async function openLeifView(plugin) {
 }
 
 // src/main.ts
-var LeifPlugin = class extends import_obsidian10.Plugin {
+var LeifPlugin = class extends import_obsidian5.Plugin {
   async onload() {
     this.dataStore = new PluginDataStore(new ObsidianStorageAdapter(this));
     await this.dataStore.load();

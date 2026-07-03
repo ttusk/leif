@@ -9,7 +9,6 @@ import { NoActiveContestError } from "@/domain/errors/DomainErrors";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
-import { Notice } from "obsidian";
 
 /**
  * Cycle tab component - manages subjects, order, status, time and stage.
@@ -142,7 +141,7 @@ export class CycleTab {
           this.editingSubjectId = null;
           await this.onUpdate();
         } catch (error) {
-          this.notifyError(error, "Não foi possível salvar a configuração.");
+          DomHelpers.notifyError(error, "Não foi possível salvar a configuração.");
         }
       }
     });
@@ -206,7 +205,7 @@ export class CycleTab {
         modal.close();
         await this.onUpdate();
       } catch (error) {
-        this.notifyError(error, "Não foi possível criar a matéria.");
+        DomHelpers.notifyError(error, "Não foi possível criar a matéria.");
       }
     });
 
@@ -241,7 +240,7 @@ export class CycleTab {
         });
         await this.onUpdate();
       } catch (error) {
-        this.notifyError(error, "Não foi possível alterar o status da matéria.");
+        DomHelpers.notifyError(error, "Não foi possível alterar o status da matéria.");
       }
     });
 
@@ -282,15 +281,7 @@ export class CycleTab {
       });
       await this.onUpdate();
     } catch (error) {
-      this.notifyError(error, "Não foi possível reordenar as matérias.");
+      DomHelpers.notifyError(error, "Não foi possível reordenar as matérias.");
     }
-  }
-
-  private notifyError(error: unknown, fallbackMessage: string): void {
-    if (error instanceof NoActiveContestError) {
-      new Notice("Nenhum concurso ativo. Selecione um concurso para continuar.");
-      return;
-    }
-    new Notice(error instanceof Error ? error.message : fallbackMessage);
   }
 }
