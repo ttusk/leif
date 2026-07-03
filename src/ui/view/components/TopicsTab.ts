@@ -130,13 +130,17 @@ export class TopicsTab {
     actions.appendChild(
       DomHelpers.createIconButton("delete", "Excluir", {
         onClick: async () => {
-          if (confirm(`Excluir "${topic.name}"?`)) {
-            try {
-              await this.deleteTopicUseCase.execute({ topicId: topic.id });
-              await this.onUpdate();
-            } catch (error) {
-              this.notifyError(error, "Não foi possível excluir o assunto.");
-            }
+          const confirmed = await DomHelpers.confirm({
+            title: "Excluir assunto",
+            message: `Excluir "${topic.name}"?`,
+            confirmLabel: "Excluir"
+          });
+          if (!confirmed) return;
+          try {
+            await this.deleteTopicUseCase.execute({ topicId: topic.id });
+            await this.onUpdate();
+          } catch (error) {
+            this.notifyError(error, "Não foi possível excluir o assunto.");
           }
         }
       })

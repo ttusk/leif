@@ -307,6 +307,7 @@ export class DomHelpers {
     const button = document.createElement("button");
     button.type = "button";
     button.className = options.className || "leif-icon-button";
+    button.setAttribute("aria-label", title);
     button.appendChild(this.createIcon(icon, "leif-icon-button-icon"));
 
     if (options.dataset) {
@@ -489,6 +490,7 @@ export class DomHelpers {
 
   /**
    * Creates a modal overlay with a centered card.
+   * Implements role=dialog, aria-modal, a focus trap and Escape-to-close.
    * Returns { open, close } functions.
    */
   static createModal(options: {
@@ -500,9 +502,15 @@ export class DomHelpers {
   }): { open: () => void; close: () => void } {
     const overlay = this.createElement("div", "leif-modal-overlay");
     const card = this.createElement("div", "leif-modal-card");
+    card.setAttribute("role", "dialog");
+    card.setAttribute("aria-modal", "true");
+
+    const titleId = `leif-modal-title-${Math.random().toString(36).slice(2, 9)}`;
+    card.setAttribute("aria-labelledby", titleId);
 
     const header = this.createElement("div", "leif-modal-header");
     const title = this.createElement("h3", "leif-modal-title");
+    title.id = titleId;
     title.textContent = options.title;
     const closeButton = this.createIconButton("x", "Fechar", {
       onClick: () => close()
@@ -516,10 +524,12 @@ export class DomHelpers {
     const footer = this.createElement("div", "leif-modal-footer");
     const cancelButton = this.createButton("Cancelar", {
       className: "leif-button",
+      dataset: { leifConfirm: "cancel" },
       onClick: () => close()
     });
     const submitButton = this.createButton(options.submitLabel ?? "Criar", {
       className: "leif-primary-button",
+      dataset: { leifConfirm: "submit" },
       onClick: () => options.onSubmit()
     });
     footer.appendChild(cancelButton);
@@ -528,14 +538,59 @@ export class DomHelpers {
     card.append(header, body, footer);
     overlay.appendChild(card);
 
+    let previouslyFocused: HTMLElement | null = null;
+    let focusTrapHandler: ((event: KeyboardEvent) => void) | null = null;
+    let escapeHandler: ((event: KeyboardEvent) => void) | null = null;
+
+    const focusable = (): HTMLElement[] => {
+      const elements = card.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      return Array.from(elements).filter((element) => !element.hasAttribute("disabled"));
+    };
+
     const open = (): void => {
+      previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       document.body.appendChild(overlay);
+      const first = focusable()[0] ?? card;
+      first.focus();
+
+      focusTrapHandler = (event: KeyboardEvent): void => {
+        if (event.key !== "Tab") return;
+        const elements = focusable();
+        if (elements.length === 0) {
+          event.preventDefault();
+          return;
+        }
+        const firstEl = elements[0];
+        const lastEl = elements[elements.length - 1];
+        if (event.shiftKey && document.activeElement === firstEl) {
+          event.preventDefault();
+          lastEl.focus();
+        } else if (!event.shiftKey && document.activeElement === lastEl) {
+          event.preventDefault();
+          firstEl.focus();
+        }
+      };
+
+      escapeHandler = (event: KeyboardEvent): void => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          close();
+        }
+      };
+
+      card.addEventListener("keydown", focusTrapHandler);
+      overlay.addEventListener("keydown", escapeHandler);
     };
 
     const close = (): void => {
+      if (focusTrapHandler) card.removeEventListener("keydown", focusTrapHandler);
+      if (escapeHandler) overlay.removeEventListener("keydown", escapeHandler);
       if (overlay.parentNode) {
         overlay.parentNode.removeChild(overlay);
       }
+      previouslyFocused?.focus();
       options.onCancel?.();
     };
 
@@ -546,6 +601,42 @@ export class DomHelpers {
     });
 
     return { open, close };
+  }
+
+  /**
+   * Creates an accessible confirmation dialog (replaces native window.confirm).
+   * Resolves the returned promise with true when confirmed, false when cancelled.
+   */
+  static confirm(options: {
+    title: string;
+    message: string;
+    confirmLabel?: string;
+    cancelLabel?: string;
+  }): Promise<boolean> {
+    return new Promise<boolean>((resolve) => {
+      let resolved = false;
+      const settle = (value: boolean): void => {
+        if (resolved) return;
+        resolved = true;
+        resolve(value);
+      };
+
+      const message = this.createElement("p", "leif-modal-message");
+      message.textContent = options.message;
+
+      const modal = this.createModal({
+        title: options.title,
+        content: message,
+        submitLabel: options.confirmLabel ?? "Confirmar",
+        onSubmit: () => {
+          settle(true);
+          modal.close();
+        },
+        onCancel: () => settle(false)
+      });
+
+      modal.open();
+    });
   }
 
   /**

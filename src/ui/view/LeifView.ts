@@ -133,21 +133,33 @@ export class LeifView extends ItemView {
     header.append(titleGroup, this.headerActions);
 
     this.tabBar = DomHelpers.createElement("nav", "leif-tab-bar");
-    TABS.forEach((tab) => {
+    this.tabBar.setAttribute("role", "tablist");
+    this.tabBar.setAttribute("aria-label", "Seções do Leif");
+    TABS.forEach((tab, index) => {
       const button = DomHelpers.createButton(tab.label, {
         dataset: { tab: tab.id },
         className: "leif-tab-button",
         onClick: async () => {
-          this.activeTab = tab.id;
-          this.updateTabButtonStyles();
-          await this.refresh();
+          await this.selectTab(tab.id);
         }
+      });
+      button.setAttribute("role", "tab");
+      button.id = `leif-tab-${tab.id}`;
+      button.tabIndex = tab.id === this.activeTab ? 0 : -1;
+      button.setAttribute("aria-selected", String(tab.id === this.activeTab));
+      button.setAttribute("aria-controls", "leif-tabpanel");
+      button.addEventListener("keydown", (event: KeyboardEvent) => {
+        this.handleTabKeyDown(event, index);
       });
       this.tabButtons.set(tab.id, button);
       this.tabBar!.appendChild(button);
     });
 
     this.activeTabContainer = DomHelpers.createElement("section", "leif-body");
+    this.activeTabContainer.id = "leif-tabpanel";
+    this.activeTabContainer.setAttribute("role", "tabpanel");
+    this.activeTabContainer.setAttribute("tabindex", "0");
+    this.activeTabContainer.setAttribute("aria-labelledby", `leif-tab-${this.activeTab}`);
 
     this.shell.append(header, this.tabBar, this.activeTabContainer);
     this.contentEl.appendChild(this.shell);
@@ -178,14 +190,46 @@ export class LeifView extends ItemView {
   }
 
   /**
+   * Selects a tab, updating aria state and re-rendering.
+   */
+  private async selectTab(tabId: LeifTabId): Promise<void> {
+    this.activeTab = tabId;
+    this.updateTabButtonStyles();
+    await this.refresh();
+  }
+
+  /**
+   * Moves focus between tabs with Arrow keys and activates on Enter/Space.
+   */
+  private handleTabKeyDown(event: KeyboardEvent, index: number): void {
+    const tabIds = TABS.map((tab) => tab.id);
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      const next = tabIds[(index + 1) % tabIds.length];
+      void this.selectTab(next);
+      this.tabButtons.get(next)?.focus();
+    } else if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      const prev = tabIds[(index - 1 + tabIds.length) % tabIds.length];
+      void this.selectTab(prev);
+      this.tabButtons.get(prev)?.focus();
+    } else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      void this.selectTab(tabIds[index]);
+    }
+  }
+
+  /**
    * Updates the active class on tab buttons.
    */
   private updateTabButtonStyles(): void {
     this.tabButtons.forEach((button, tabId) => {
-      button.className = this.activeTab === tabId
-        ? "leif-tab-button is-active"
-        : "leif-tab-button";
+      const isActive = this.activeTab === tabId;
+      button.className = isActive ? "leif-tab-button is-active" : "leif-tab-button";
+      button.tabIndex = isActive ? 0 : -1;
+      button.setAttribute("aria-selected", String(isActive));
     });
+    this.activeTabContainer?.setAttribute("aria-labelledby", `leif-tab-${this.activeTab}`);
   }
 
   private async renderActiveTab(container: HTMLElement, data: LeifPluginData): Promise<void> {

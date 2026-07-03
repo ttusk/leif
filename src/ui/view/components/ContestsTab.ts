@@ -109,13 +109,17 @@ export class ContestsTab {
     actions.appendChild(
       DomHelpers.createIconButton("delete", "Excluir", {
         onClick: async () => {
-          if (confirm(`Excluir "${contest.name}"?`)) {
-            try {
-              await this.deleteContestUseCase.execute({ contestId: contest.id });
-              await this.onUpdate();
-            } catch (error) {
-              this.notifyError(error, "Não foi possível excluir o concurso.");
-            }
+          const confirmed = await DomHelpers.confirm({
+            title: "Excluir concurso",
+            message: `Excluir "${contest.name}"?`,
+            confirmLabel: "Excluir"
+          });
+          if (!confirmed) return;
+          try {
+            await this.deleteContestUseCase.execute({ contestId: contest.id });
+            await this.onUpdate();
+          } catch (error) {
+            this.notifyError(error, "Não foi possível excluir o concurso.");
           }
         }
       })

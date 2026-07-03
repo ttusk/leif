@@ -150,13 +150,17 @@ export class ItemsTab {
     actions.appendChild(
       DomHelpers.createIconButton("delete", "Excluir", {
         onClick: async () => {
-          if (confirm(`Excluir "${item.title}"?`)) {
-            try {
-              await this.deleteStudyItemUseCase.execute({ itemId: item.id });
-              await this.onUpdate();
-            } catch (error) {
-              this.notifyError(error, "Não foi possível excluir o item.");
-            }
+          const confirmed = await DomHelpers.confirm({
+            title: "Excluir item",
+            message: `Excluir "${item.title}"?`,
+            confirmLabel: "Excluir"
+          });
+          if (!confirmed) return;
+          try {
+            await this.deleteStudyItemUseCase.execute({ itemId: item.id });
+            await this.onUpdate();
+          } catch (error) {
+            this.notifyError(error, "Não foi possível excluir o item.");
           }
         }
       })
