@@ -1,7 +1,7 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
 import type { StudySession } from "@/domain/entities/StudySession";
 import { ValidationError } from "@/domain/errors/DomainErrors";
-import { EntityRepository } from "@/infrastructure/persistence/EntityRepository";
 
 export interface UpdateStudySessionInput {
   sessionId: string;
@@ -13,10 +13,13 @@ export interface UpdateStudySessionInput {
  * Use case for updating a study session's progress.
  */
 export class UpdateStudySessionUseCase {
-  private readonly sessionRepository: EntityRepository<StudySession>;
+  private readonly sessionRepository: EntityRepositoryPort<StudySession>;
 
-  constructor(private readonly dataStore: PluginDataStore) {
-    this.sessionRepository = new EntityRepository<StudySession>(dataStore, "studySessions");
+  constructor(
+    private readonly dataStore: PluginDataStore,
+    repositoryFactory: RepositoryFactory
+  ) {
+    this.sessionRepository = repositoryFactory.for<StudySession>("studySessions");
   }
 
   async execute(input: UpdateStudySessionInput): Promise<StudySession> {

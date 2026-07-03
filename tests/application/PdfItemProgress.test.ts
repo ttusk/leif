@@ -7,6 +7,7 @@ import { RegisterStudySessionUseCase } from "@/application/use-cases/RegisterStu
 import { UpdateStudyItemUseCase } from "@/application/use-cases/UpdateStudyItemUseCase";
 import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
 import { PluginDataStore } from "@/infrastructure/persistence/PluginDataStore";
+import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 import { seedMinimalContest } from "@/infrastructure/persistence/Seeder";
 
 class InMemoryStorageAdapter implements PersistentStorageAdapter<LeifPluginData> {
@@ -32,9 +33,10 @@ function createStore(): PluginDataStore {
 describe("GetActiveContestProgressDashboardUseCase - PDF completion", () => {
   it("updates a study item title", async () => {
     const store = createStore();
+    const factory = new EntityRepositoryFactory(store);
     const { subjectId } = await seedMinimalContest(store);
-    const createItem = new CreateStudyItemUseCase(store);
-    const updateItem = new UpdateStudyItemUseCase(store);
+    const createItem = new CreateStudyItemUseCase(store, factory);
+    const updateItem = new UpdateStudyItemUseCase(store, factory);
 
     const item = await createItem.execute({ subjectId, title: "Sintaxe" });
 
@@ -46,9 +48,10 @@ describe("GetActiveContestProgressDashboardUseCase - PDF completion", () => {
 
   it("reports pagesReaded, totalPages and completed flag per item", async () => {
     const store = createStore();
+    const factory = new EntityRepositoryFactory(store);
     const { subjectId } = await seedMinimalContest(store);
-    const createItem = new CreateStudyItemUseCase(store);
-    const updateItem = new UpdateStudyItemUseCase(store);
+    const createItem = new CreateStudyItemUseCase(store, factory);
+    const updateItem = new UpdateStudyItemUseCase(store, factory);
     const dashboard = new GetActiveContestProgressDashboardUseCase(store);
 
     const item1 = await createItem.execute({ subjectId, title: "Sintaxe" });
@@ -77,10 +80,11 @@ describe("GetActiveContestProgressDashboardUseCase - PDF completion", () => {
 
   it("marks an item as completed once pagesReaded meets totalPages", async () => {
     const store = createStore();
+    const factory = new EntityRepositoryFactory(store);
     const { contestId, subjectId } = await seedMinimalContest(store);
-    const createItem = new CreateStudyItemUseCase(store);
-    const updateItem = new UpdateStudyItemUseCase(store);
-    const registerSession = new RegisterStudySessionUseCase(store);
+    const createItem = new CreateStudyItemUseCase(store, factory);
+    const updateItem = new UpdateStudyItemUseCase(store, factory);
+    const registerSession = new RegisterStudySessionUseCase(store, factory);
     const dashboard = new GetActiveContestProgressDashboardUseCase(store);
 
     const item1 = await createItem.execute({ subjectId, title: "Sintaxe" });
@@ -111,9 +115,10 @@ describe("GetActiveContestProgressDashboardUseCase - PDF completion", () => {
 
   it("leaves completed false when an item has no totalPages", async () => {
     const store = createStore();
+    const factory = new EntityRepositoryFactory(store);
     const { contestId, subjectId } = await seedMinimalContest(store);
-    const createItem = new CreateStudyItemUseCase(store);
-    const registerSession = new RegisterStudySessionUseCase(store);
+    const createItem = new CreateStudyItemUseCase(store, factory);
+    const registerSession = new RegisterStudySessionUseCase(store, factory);
     const dashboard = new GetActiveContestProgressDashboardUseCase(store);
 
     const item1 = await createItem.execute({ subjectId, title: "Sintaxe" });

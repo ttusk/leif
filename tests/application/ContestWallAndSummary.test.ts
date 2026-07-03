@@ -10,6 +10,7 @@ import { RegisterStudySessionUseCase } from "@/application/use-cases/RegisterStu
 import { UpdateContestWallUseCase } from "@/application/use-cases/UpdateContestWallUseCase";
 import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
 import { PluginDataStore } from "@/infrastructure/persistence/PluginDataStore";
+import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 
 class InMemoryStorageAdapter implements PersistentStorageAdapter<LeifPluginData> {
   private data: LeifPluginData | null;
@@ -34,8 +35,9 @@ function createStore(): PluginDataStore {
 describe("Contest wall and summary", () => {
   it("updates the wall for a contest", async () => {
     const store = createStore();
-    const createContest = new CreateContestUseCase(store);
-    const updateContestWall = new UpdateContestWallUseCase(store);
+    const factory = new EntityRepositoryFactory(store);
+    const createContest = new CreateContestUseCase(store, factory);
+    const updateContestWall = new UpdateContestWallUseCase(store, factory);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });
 
@@ -65,8 +67,9 @@ describe("Contest wall and summary", () => {
 
   it("caps accuracy at 100% even when raw ratio exceeds 1", async () => {
     const store = createStore();
-    const createContest = new CreateContestUseCase(store);
-    const createSubject = new CreateSubjectUseCase(store);
+    const factory = new EntityRepositoryFactory(store);
+    const createContest = new CreateContestUseCase(store, factory);
+    const createSubject = new CreateSubjectUseCase(store, factory);
     const getSummary = new GetActiveContestSummaryUseCase(store);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });
@@ -92,9 +95,10 @@ describe("Contest wall and summary", () => {
 
   it("ignores pdf and video sessions when calculating question accuracy", async () => {
     const store = createStore();
-    const createContest = new CreateContestUseCase(store);
-    const createSubject = new CreateSubjectUseCase(store);
-    const registerStudySession = new RegisterStudySessionUseCase(store);
+    const factory = new EntityRepositoryFactory(store);
+    const createContest = new CreateContestUseCase(store, factory);
+    const createSubject = new CreateSubjectUseCase(store, factory);
+    const registerStudySession = new RegisterStudySessionUseCase(store, factory);
     const getSummary = new GetActiveContestSummaryUseCase(store);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });
@@ -141,10 +145,11 @@ describe("Contest wall and summary", () => {
 
   it("consolidates summary and progress by subject for the active contest", async () => {
     const store = createStore();
-    const createContest = new CreateContestUseCase(store);
-    const createStudyItem = new CreateStudyItemUseCase(store);
-    const createSubject = new CreateSubjectUseCase(store);
-    const registerStudySession = new RegisterStudySessionUseCase(store);
+    const factory = new EntityRepositoryFactory(store);
+    const createContest = new CreateContestUseCase(store, factory);
+    const createStudyItem = new CreateStudyItemUseCase(store, factory);
+    const createSubject = new CreateSubjectUseCase(store, factory);
+    const registerStudySession = new RegisterStudySessionUseCase(store, factory);
     const getSummary = new GetActiveContestSummaryUseCase(store);
     const getProgressDashboard = new GetActiveContestProgressDashboardUseCase(store);
 

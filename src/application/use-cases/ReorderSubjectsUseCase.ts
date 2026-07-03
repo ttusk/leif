@@ -1,7 +1,7 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
 import type { Subject } from "@/domain/entities/Subject";
 import type { Contest } from "@/domain/entities/Contest";
-import { EntityRepository } from "@/infrastructure/persistence/EntityRepository";
 import { ValidationError } from "@/domain/errors/DomainErrors";
 import { ReorderSubjectsValidator } from "@/application/validation/InputValidators";
 
@@ -14,12 +14,15 @@ export interface ReorderSubjectsInput {
  * Use case for reordering subjects within a contest.
  */
 export class ReorderSubjectsUseCase {
-  private readonly contestRepository: EntityRepository<Contest>;
-  private readonly subjectRepository: EntityRepository<Subject>;
+  private readonly contestRepository: EntityRepositoryPort<Contest>;
+  private readonly subjectRepository: EntityRepositoryPort<Subject>;
 
-  constructor(private readonly dataStore: PluginDataStore) {
-    this.contestRepository = new EntityRepository<Contest>(dataStore, "contests");
-    this.subjectRepository = new EntityRepository<Subject>(dataStore, "subjects");
+  constructor(
+    private readonly dataStore: PluginDataStore,
+    repositoryFactory: RepositoryFactory
+  ) {
+    this.contestRepository = repositoryFactory.for<Contest>("contests");
+    this.subjectRepository = repositoryFactory.for<Subject>("subjects");
   }
 
   async execute(input: ReorderSubjectsInput): Promise<Subject[]> {

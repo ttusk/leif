@@ -1,7 +1,7 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
 import type { ResourceReference } from "@/domain/entities/ResourceReference";
 import type { StudyItem } from "@/domain/entities/StudyItem";
-import { EntityRepository } from "@/infrastructure/persistence/EntityRepository";
 import { ValidationError } from "@/domain/errors/DomainErrors";
 import { AddStudyItemResourceReferenceValidator } from "@/application/validation/InputValidators";
 
@@ -14,10 +14,13 @@ export interface AddStudyItemResourceReferenceInput {
  * Use case for adding a resource reference to a study item.
  */
 export class AddStudyItemResourceReferenceUseCase {
-  private readonly studyItemRepository: EntityRepository<StudyItem>;
+  private readonly studyItemRepository: EntityRepositoryPort<StudyItem>;
 
-  constructor(private readonly dataStore: PluginDataStore) {
-    this.studyItemRepository = new EntityRepository<StudyItem>(dataStore, "studyItems");
+  constructor(
+    private readonly dataStore: PluginDataStore,
+    repositoryFactory: RepositoryFactory
+  ) {
+    this.studyItemRepository = repositoryFactory.for<StudyItem>("studyItems");
   }
 
   async execute(input: AddStudyItemResourceReferenceInput): Promise<StudyItem> {

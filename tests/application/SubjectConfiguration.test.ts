@@ -8,6 +8,7 @@ import { ReorderSubjectsUseCase } from "@/application/use-cases/ReorderSubjectsU
 import { UpdateSubjectConfigurationUseCase } from "@/application/use-cases/UpdateSubjectConfigurationUseCase";
 import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
 import { PluginDataStore } from "@/infrastructure/persistence/PluginDataStore";
+import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 
 class InMemoryStorageAdapter implements PersistentStorageAdapter<LeifPluginData> {
   private data: LeifPluginData | null;
@@ -32,10 +33,11 @@ function createStore(): PluginDataStore {
 describe("Subject configuration", () => {
   it("reorders subjects and updates planned study time and stage", async () => {
     const store = createStore();
-    const createContest = new CreateContestUseCase(store);
-    const createSubject = new CreateSubjectUseCase(store);
-    const reorderSubjects = new ReorderSubjectsUseCase(store);
-    const updateSubjectConfiguration = new UpdateSubjectConfigurationUseCase(store);
+    const factory = new EntityRepositoryFactory(store);
+    const createContest = new CreateContestUseCase(store, factory);
+    const createSubject = new CreateSubjectUseCase(store, factory);
+    const reorderSubjects = new ReorderSubjectsUseCase(store, factory);
+    const updateSubjectConfiguration = new UpdateSubjectConfigurationUseCase(store, factory);
     const listSubjects = new ListSubjectsForActiveContestUseCase(store);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });

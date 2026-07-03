@@ -9,6 +9,7 @@ import { RegisterStudySessionUseCase } from "@/application/use-cases/RegisterStu
 import { SetSubjectActiveStateUseCase } from "@/application/use-cases/SetSubjectActiveStateUseCase";
 import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
 import { PluginDataStore } from "@/infrastructure/persistence/PluginDataStore";
+import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 
 class InMemoryStorageAdapter implements PersistentStorageAdapter<LeifPluginData> {
   private data: LeifPluginData | null;
@@ -33,9 +34,10 @@ function createStore(): PluginDataStore {
 describe("AdvanceCycleUseCase", () => {
   it("persists the next active subject for the active contest and skips inactive subjects", async () => {
     const store = createStore();
-    const createContest = new CreateContestUseCase(store);
-    const createSubject = new CreateSubjectUseCase(store);
-    const setSubjectActiveState = new SetSubjectActiveStateUseCase(store);
+    const factory = new EntityRepositoryFactory(store);
+    const createContest = new CreateContestUseCase(store, factory);
+    const createSubject = new CreateSubjectUseCase(store, factory);
+    const setSubjectActiveState = new SetSubjectActiveStateUseCase(store, factory);
     const advanceCycle = new AdvanceCycleUseCase(store);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });
@@ -67,8 +69,9 @@ describe("AdvanceCycleUseCase", () => {
 
   it("returns the new current subject and the next upcoming subject", async () => {
     const store = createStore();
-    const createContest = new CreateContestUseCase(store);
-    const createSubject = new CreateSubjectUseCase(store);
+    const factory = new EntityRepositoryFactory(store);
+    const createContest = new CreateContestUseCase(store, factory);
+    const createSubject = new CreateSubjectUseCase(store, factory);
     const advanceCycle = new AdvanceCycleUseCase(store);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });
@@ -96,10 +99,11 @@ describe("AdvanceCycleUseCase", () => {
 
   it("calculates the upcoming subject item from that subject progress", async () => {
     const store = createStore();
-    const createContest = new CreateContestUseCase(store);
-    const createSubject = new CreateSubjectUseCase(store);
-    const createStudyItem = new CreateStudyItemUseCase(store);
-    const registerStudySession = new RegisterStudySessionUseCase(store);
+    const factory = new EntityRepositoryFactory(store);
+    const createContest = new CreateContestUseCase(store, factory);
+    const createSubject = new CreateSubjectUseCase(store, factory);
+    const createStudyItem = new CreateStudyItemUseCase(store, factory);
+    const registerStudySession = new RegisterStudySessionUseCase(store, factory);
     const advanceCycle = new AdvanceCycleUseCase(store);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });

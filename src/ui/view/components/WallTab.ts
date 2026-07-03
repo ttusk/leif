@@ -3,6 +3,7 @@ import { UpdateContestWallUseCase } from "@/application/use-cases/UpdateContestW
 import { NoActiveContestError } from "@/domain/errors/DomainErrors";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
+import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 import { Notice } from "obsidian";
 
 /**
@@ -15,7 +16,7 @@ export class WallTab {
     private readonly dataStore: PluginDataStore,
     private readonly onUpdate: () => Promise<void>
   ) {
-    this.updateContestWallUseCase = new UpdateContestWallUseCase(dataStore);
+    this.updateContestWallUseCase = new UpdateContestWallUseCase(dataStore, new EntityRepositoryFactory(dataStore));
   }
 
   async render(container: HTMLElement, data: LeifPluginData): Promise<void> {

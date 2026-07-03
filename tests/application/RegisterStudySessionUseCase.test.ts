@@ -9,6 +9,7 @@ import { LinkQuestionNotebookUseCase } from "@/application/use-cases/LinkQuestio
 import { ValidationError } from "@/domain/errors/DomainErrors";
 import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
 import { PluginDataStore } from "@/infrastructure/persistence/PluginDataStore";
+import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 
 class InMemoryStorageAdapter implements PersistentStorageAdapter<LeifPluginData> {
   private data: LeifPluginData | null;
@@ -31,10 +32,11 @@ function createStore(): PluginDataStore {
 }
 
 async function seedContestSubjectTopic(store: PluginDataStore): Promise<void> {
-  const createContest = new CreateContestUseCase(store);
-  const createSubject = new CreateSubjectUseCase(store);
-  const createTopic = new CreateTopicUseCase(store);
-  const linkNotebook = new LinkQuestionNotebookUseCase(store);
+  const factory = new EntityRepositoryFactory(store);
+  const createContest = new CreateContestUseCase(store, factory);
+  const createSubject = new CreateSubjectUseCase(store, factory);
+  const createTopic = new CreateTopicUseCase(store, factory);
+  const linkNotebook = new LinkQuestionNotebookUseCase(store, factory);
 
   await createContest.execute({ id: "contest-1", name: "TRT" });
   await createSubject.execute({
@@ -63,8 +65,9 @@ async function seedContestSubjectTopic(store: PluginDataStore): Promise<void> {
 describe("RegisterStudySessionUseCase", () => {
   it("creates a pdf session without question fields", async () => {
     const store = createStore();
+    const factory = new EntityRepositoryFactory(store);
     await seedContestSubjectTopic(store);
-    const useCase = new RegisterStudySessionUseCase(store);
+    const useCase = new RegisterStudySessionUseCase(store, factory);
 
     const session = await useCase.execute({
       id: "session-pdf-1",
@@ -86,8 +89,9 @@ describe("RegisterStudySessionUseCase", () => {
 
   it("rejects a session whose correctAnswers exceed pagesOrCount", async () => {
     const store = createStore();
+    const factory = new EntityRepositoryFactory(store);
     await seedContestSubjectTopic(store);
-    const useCase = new RegisterStudySessionUseCase(store);
+    const useCase = new RegisterStudySessionUseCase(store, factory);
 
     await expect(
       useCase.execute({
@@ -106,8 +110,9 @@ describe("RegisterStudySessionUseCase", () => {
 
   it("creates a questions session and increments the topic's question-notebook stats", async () => {
     const store = createStore();
+    const factory = new EntityRepositoryFactory(store);
     await seedContestSubjectTopic(store);
-    const useCase = new RegisterStudySessionUseCase(store);
+    const useCase = new RegisterStudySessionUseCase(store, factory);
 
     await useCase.execute({
       id: "session-q-1",

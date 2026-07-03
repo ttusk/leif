@@ -12,6 +12,7 @@ import type { StudySession } from "@/domain/entities/StudySession";
 import { ValidationError } from "@/domain/errors/DomainErrors";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
+import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 
 /**
  * Sessions tab component with unified CRUD pattern.
@@ -31,11 +32,12 @@ export class SessionsTab {
     private readonly dataStore: PluginDataStore,
     private readonly onUpdate: () => Promise<void>
   ) {
-    this.registerStudySessionUseCase = new RegisterStudySessionUseCase(dataStore);
-    this.deleteStudySessionUseCase = new DeleteStudySessionUseCase(dataStore);
+    const repositoryFactory = new EntityRepositoryFactory(dataStore);
+    this.registerStudySessionUseCase = new RegisterStudySessionUseCase(dataStore, repositoryFactory);
+    this.deleteStudySessionUseCase = new DeleteStudySessionUseCase(dataStore, repositoryFactory);
     this.getActiveContestSummaryUseCase = new GetActiveContestSummaryUseCase(dataStore);
     this.listSubjectsForActiveContestUseCase = new ListSubjectsForActiveContestUseCase(dataStore);
-    this.updateStudySessionUseCase = new UpdateStudySessionUseCase(dataStore);
+    this.updateStudySessionUseCase = new UpdateStudySessionUseCase(dataStore, repositoryFactory);
     this.advanceCycleUseCase = new AdvanceCycleUseCase(dataStore);
     this.getActiveCycleSnapshotUseCase = new GetActiveCycleSnapshotUseCase(dataStore);
   }

@@ -1,7 +1,7 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
 import { Topic } from "@/domain/entities/Topic";
 import { Subject } from "@/domain/entities/Subject";
-import { EntityRepository } from "@/infrastructure/persistence/EntityRepository";
 import { ValidationError } from "@/domain/errors/DomainErrors";
 import { CreateTopicValidator } from "@/application/validation/InputValidators";
 
@@ -15,12 +15,15 @@ export interface CreateTopicInput {
  * Use case for creating a new topic under a subject.
  */
 export class CreateTopicUseCase {
-  private readonly topicRepository: EntityRepository<Topic>;
-  private readonly subjectRepository: EntityRepository<Subject>;
+  private readonly topicRepository: EntityRepositoryPort<Topic>;
+  private readonly subjectRepository: EntityRepositoryPort<Subject>;
 
-  constructor(private readonly dataStore: PluginDataStore) {
-    this.topicRepository = new EntityRepository<Topic>(dataStore, "topics");
-    this.subjectRepository = new EntityRepository<Subject>(dataStore, "subjects");
+  constructor(
+    private readonly dataStore: PluginDataStore,
+    repositoryFactory: RepositoryFactory
+  ) {
+    this.topicRepository = repositoryFactory.for<Topic>("topics");
+    this.subjectRepository = repositoryFactory.for<Subject>("subjects");
   }
 
   async execute(input: CreateTopicInput): Promise<Topic> {

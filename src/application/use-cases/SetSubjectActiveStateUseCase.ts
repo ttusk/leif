@@ -1,6 +1,6 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
 import type { Subject } from "@/domain/entities/Subject";
-import { EntityRepository } from "@/infrastructure/persistence/EntityRepository";
 import { ValidationError } from "@/domain/errors/DomainErrors";
 import { SetSubjectActiveStateValidator } from "@/application/validation/InputValidators";
 
@@ -13,10 +13,13 @@ export interface SetSubjectActiveStateInput {
  * Use case for setting a subject's active state.
  */
 export class SetSubjectActiveStateUseCase {
-  private readonly subjectRepository: EntityRepository<Subject>;
+  private readonly subjectRepository: EntityRepositoryPort<Subject>;
 
-  constructor(private readonly dataStore: PluginDataStore) {
-    this.subjectRepository = new EntityRepository<Subject>(dataStore, "subjects");
+  constructor(
+    private readonly dataStore: PluginDataStore,
+    repositoryFactory: RepositoryFactory
+  ) {
+    this.subjectRepository = repositoryFactory.for<Subject>("subjects");
   }
 
   async execute(input: SetSubjectActiveStateInput): Promise<Subject> {
