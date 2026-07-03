@@ -98,6 +98,17 @@
   white-space: nowrap;
 }
 
+.leif-tab-button:focus-visible,
+.leif-button:focus-visible,
+.leif-primary-button:focus-visible,
+.leif-icon-button:focus-visible,
+.leif-input:focus-visible,
+.leif-select:focus-visible,
+.leif-textarea:focus-visible {
+  outline: 2px solid var(--text-accent, #7c3aed);
+  outline-offset: 2px;
+}
+
 .leif-icon-button {
   display: inline-flex;
   align-items: center;
@@ -713,4 +724,18 @@
   .leif-form-grid {
     grid-template-columns: 1fr;
   }
+}
+
+.leif-modal-message {
+  margin: 0;
+  color: var(--text-normal);
+  line-height: 1.5;
+}
+
+.leif-modal-card:focus-visible {
+  outline: none;
+}
+
+.leif-modal-card [role="dialog"]:focus-visible {
+  outline: none;
 }

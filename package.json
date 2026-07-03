@@ -7,13 +7,23 @@
     "build": "node esbuild.config.mjs production",
     "dev": "node esbuild.config.mjs",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/node": "^24.0.1",
+    "@typescript-eslint/eslint-plugin": "^7.18.0",
+    "@typescript-eslint/parser": "^7.18.0",
     "esbuild": "^0.25.5",
+    "eslint": "^8.57.1",
+    "eslint-config-prettier": "^9.1.2",
     "jsdom": "^29.1.1",
     "obsidian": "^1.8.10",
+    "prettier": "^3.9.4",
     "typescript": "^5.8.3",
     "vitest": "^3.2.4"
   }
