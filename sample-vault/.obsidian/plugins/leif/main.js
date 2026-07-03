@@ -463,113 +463,6 @@ var ContestState = class {
   }
 };
 
-// src/infrastructure/persistence/EntityRepository.ts
-var EntityRepository = class {
-  constructor(dataStore, entityKey) {
-    this.dataStore = dataStore;
-    this.entityKey = entityKey;
-  }
-  /**
-   * Finds an entity by ID.
-   * 
-   * @param id - The entity ID
-   * @returns The found entity
-   * @throws {NotFoundError} If the entity is not found
-   */
-  async findById(id) {
-    const data = await this.dataStore.load();
-    const entities = data[this.entityKey];
-    const entity = entities.find((e) => e.id === id);
-    if (!entity) {
-      throw new NotFoundError(String(this.entityKey), id);
-    }
-    return entity;
-  }
-  /**
-   * Finds all entities.
-   * 
-   * @returns Array of all entities
-   */
-  async findAll() {
-    const data = await this.dataStore.load();
-    return data[this.entityKey];
-  }
-  /**
-   * Checks if an entity exists by ID.
-   * 
-   * @param id - The entity ID
-   * @returns True if the entity exists, false otherwise
-   */
-  async exists(id) {
-    const data = await this.dataStore.load();
-    const entities = data[this.entityKey];
-    return entities.some((e) => e.id === id);
-  }
-  /**
-   * Creates a new entity.
-   * 
-   * @param entity - The entity to create
-   * @returns The created entity
-   * @throws {AlreadyExistsError} If an entity with the same ID already exists
-   */
-  async create(entity) {
-    const data = await this.dataStore.load();
-    const entities = data[this.entityKey];
-    if (entities.some((e) => e.id === entity.id)) {
-      throw new AlreadyExistsError(String(this.entityKey), entity.id);
-    }
-    entities.push(entity);
-    await this.dataStore.save(data);
-    return entity;
-  }
-  /**
-   * Updates an existing entity using an updater function.
-   * 
-   * @param id - The entity ID
-   * @param updater - Function that takes the entity and returns the updated version
-   * @returns The updated entity
-   * @throws {NotFoundError} If the entity is not found
-   */
-  async update(id, updater) {
-    const data = await this.dataStore.load();
-    const entities = data[this.entityKey];
-    const index = entities.findIndex((e) => e.id === id);
-    if (index === -1) {
-      throw new NotFoundError(String(this.entityKey), id);
-    }
-    const updated = updater(entities[index]);
-    entities[index] = updated;
-    await this.dataStore.save(data);
-    return updated;
-  }
-  /**
-   * Deletes an entity by ID.
-   * 
-   * @param id - The entity ID
-   * @throws {NotFoundError} If the entity is not found
-   */
-  async delete(id) {
-    const data = await this.dataStore.load();
-    const entities = data[this.entityKey];
-    const index = entities.findIndex((e) => e.id === id);
-    if (index === -1) {
-      throw new NotFoundError(String(this.entityKey), id);
-    }
-    entities.splice(index, 1);
-    await this.dataStore.save(data);
-  }
-  /**
-   * Replaces all entities in the collection.
-   * 
-   * @param entities - The new entities to store
-   */
-  async replaceAll(entities) {
-    const data = await this.dataStore.load();
-    data[this.entityKey] = entities;
-    await this.dataStore.save(data);
-  }
-};
-
 // src/application/validation/InputValidators.ts
 var ValidationResult = {
   ok() {
@@ -722,9 +615,9 @@ var UpdateContestWallValidator = class {
 
 // src/application/use-cases/CreateContestUseCase.ts
 var CreateContestUseCase = class {
-  constructor(dataStore) {
+  constructor(dataStore, repositoryFactory) {
     this.dataStore = dataStore;
-    this.contestRepository = new EntityRepository(dataStore, "contests");
+    this.contestRepository = repositoryFactory.for("contests");
   }
   async execute(input) {
     const validation = new CreateContestValidator().validate(input);
@@ -767,10 +660,10 @@ var StudyItem = class {
 
 // src/application/use-cases/CreateStudyItemUseCase.ts
 var CreateStudyItemUseCase = class {
-  constructor(dataStore) {
+  constructor(dataStore, repositoryFactory) {
     this.dataStore = dataStore;
-    this.subjectRepository = new EntityRepository(dataStore, "subjects");
-    this.studyItemRepository = new EntityRepository(dataStore, "studyItems");
+    this.subjectRepository = repositoryFactory.for("subjects");
+    this.studyItemRepository = repositoryFactory.for("studyItems");
   }
   async execute(input) {
     const validation = new CreateStudyItemValidator().validate(input);
@@ -820,10 +713,10 @@ var Subject = class {
 
 // src/application/use-cases/CreateSubjectUseCase.ts
 var CreateSubjectUseCase = class {
-  constructor(dataStore) {
+  constructor(dataStore, repositoryFactory) {
     this.dataStore = dataStore;
-    this.contestRepository = new EntityRepository(dataStore, "contests");
-    this.subjectRepository = new EntityRepository(dataStore, "subjects");
+    this.contestRepository = repositoryFactory.for("contests");
+    this.subjectRepository = repositoryFactory.for("subjects");
   }
   async execute(input) {
     const validation = new CreateSubjectValidator().validate(input);
@@ -869,10 +762,10 @@ var Topic = class {
 
 // src/application/use-cases/CreateTopicUseCase.ts
 var CreateTopicUseCase = class {
-  constructor(dataStore) {
+  constructor(dataStore, repositoryFactory) {
     this.dataStore = dataStore;
-    this.topicRepository = new EntityRepository(dataStore, "topics");
-    this.subjectRepository = new EntityRepository(dataStore, "subjects");
+    this.topicRepository = repositoryFactory.for("topics");
+    this.subjectRepository = repositoryFactory.for("subjects");
   }
   async execute(input) {
     const validation = new CreateTopicValidator().validate(input);
@@ -992,10 +885,10 @@ var ListSubjectsForActiveContestUseCase = class {
 
 // src/application/use-cases/ReorderSubjectsUseCase.ts
 var ReorderSubjectsUseCase = class {
-  constructor(dataStore) {
+  constructor(dataStore, repositoryFactory) {
     this.dataStore = dataStore;
-    this.contestRepository = new EntityRepository(dataStore, "contests");
-    this.subjectRepository = new EntityRepository(dataStore, "subjects");
+    this.contestRepository = repositoryFactory.for("contests");
+    this.subjectRepository = repositoryFactory.for("subjects");
   }
   async execute(input) {
     const validation = new ReorderSubjectsValidator().validate(input);
@@ -1032,12 +925,12 @@ var ReorderSubjectsUseCase = class {
 
 // src/application/use-cases/RegisterStudySessionUseCase.ts
 var RegisterStudySessionUseCase = class {
-  constructor(dataStore) {
+  constructor(dataStore, repositoryFactory) {
     this.dataStore = dataStore;
-    this.contestRepository = new EntityRepository(dataStore, "contests");
-    this.subjectRepository = new EntityRepository(dataStore, "subjects");
-    this.topicRepository = new EntityRepository(dataStore, "topics");
-    this.sessionRepository = new EntityRepository(dataStore, "studySessions");
+    this.contestRepository = repositoryFactory.for("contests");
+    this.subjectRepository = repositoryFactory.for("subjects");
+    this.topicRepository = repositoryFactory.for("topics");
+    this.sessionRepository = repositoryFactory.for("studySessions");
   }
   async execute(input) {
     const validation = new RegisterStudySessionValidator().validate(input);
@@ -1095,9 +988,9 @@ var RegisterStudySessionUseCase = class {
 
 // src/application/use-cases/SetSubjectActiveStateUseCase.ts
 var SetSubjectActiveStateUseCase = class {
-  constructor(dataStore) {
+  constructor(dataStore, repositoryFactory) {
     this.dataStore = dataStore;
-    this.subjectRepository = new EntityRepository(dataStore, "subjects");
+    this.subjectRepository = repositoryFactory.for("subjects");
   }
   async execute(input) {
     const validation = new SetSubjectActiveStateValidator().validate(input);
@@ -1113,9 +1006,9 @@ var SetSubjectActiveStateUseCase = class {
 
 // src/application/use-cases/SetActiveContestUseCase.ts
 var SetActiveContestUseCase = class {
-  constructor(dataStore) {
+  constructor(dataStore, repositoryFactory) {
     this.dataStore = dataStore;
-    this.contestRepository = new EntityRepository(dataStore, "contests");
+    this.contestRepository = repositoryFactory.for("contests");
   }
   async execute(input) {
     const validation = new SetActiveContestValidator().validate(input);
@@ -1133,9 +1026,9 @@ var SetActiveContestUseCase = class {
 
 // src/application/use-cases/UpdateContestWallUseCase.ts
 var UpdateContestWallUseCase = class {
-  constructor(dataStore) {
+  constructor(dataStore, repositoryFactory) {
     this.dataStore = dataStore;
-    this.contestRepository = new EntityRepository(dataStore, "contests");
+    this.contestRepository = repositoryFactory.for("contests");
   }
   async execute(input) {
     const validation = new UpdateContestWallValidator().validate(input);
@@ -1151,9 +1044,9 @@ var UpdateContestWallUseCase = class {
 
 // src/application/use-cases/UpdateSubjectConfigurationUseCase.ts
 var UpdateSubjectConfigurationUseCase = class {
-  constructor(dataStore) {
+  constructor(dataStore, repositoryFactory) {
     this.dataStore = dataStore;
-    this.subjectRepository = new EntityRepository(dataStore, "subjects");
+    this.subjectRepository = repositoryFactory.for("subjects");
   }
   async execute(input) {
     const validation = new UpdateSubjectConfigurationValidator().validate(input);
@@ -1168,11 +1061,128 @@ var UpdateSubjectConfigurationUseCase = class {
   }
 };
 
-// src/application/use-cases/LinkQuestionNotebookUseCase.ts
-var LinkQuestionNotebookUseCase = class {
+// src/infrastructure/persistence/EntityRepository.ts
+var EntityRepository = class {
+  constructor(dataStore, entityKey) {
+    this.dataStore = dataStore;
+    this.entityKey = entityKey;
+  }
+  /**
+   * Finds an entity by ID.
+   * 
+   * @param id - The entity ID
+   * @returns The found entity
+   * @throws {NotFoundError} If the entity is not found
+   */
+  async findById(id) {
+    const data = await this.dataStore.load();
+    const entities = data[this.entityKey];
+    const entity = entities.find((e) => e.id === id);
+    if (!entity) {
+      throw new NotFoundError(String(this.entityKey), id);
+    }
+    return entity;
+  }
+  /**
+   * Finds all entities.
+   * 
+   * @returns Array of all entities
+   */
+  async findAll() {
+    const data = await this.dataStore.load();
+    return data[this.entityKey];
+  }
+  /**
+   * Checks if an entity exists by ID.
+   * 
+   * @param id - The entity ID
+   * @returns True if the entity exists, false otherwise
+   */
+  async exists(id) {
+    const data = await this.dataStore.load();
+    const entities = data[this.entityKey];
+    return entities.some((e) => e.id === id);
+  }
+  /**
+   * Creates a new entity.
+   * 
+   * @param entity - The entity to create
+   * @returns The created entity
+   * @throws {AlreadyExistsError} If an entity with the same ID already exists
+   */
+  async create(entity) {
+    const data = await this.dataStore.load();
+    const entities = data[this.entityKey];
+    if (entities.some((e) => e.id === entity.id)) {
+      throw new AlreadyExistsError(String(this.entityKey), entity.id);
+    }
+    entities.push(entity);
+    await this.dataStore.save(data);
+    return entity;
+  }
+  /**
+   * Updates an existing entity using an updater function.
+   * 
+   * @param id - The entity ID
+   * @param updater - Function that takes the entity and returns the updated version
+   * @returns The updated entity
+   * @throws {NotFoundError} If the entity is not found
+   */
+  async update(id, updater) {
+    const data = await this.dataStore.load();
+    const entities = data[this.entityKey];
+    const index = entities.findIndex((e) => e.id === id);
+    if (index === -1) {
+      throw new NotFoundError(String(this.entityKey), id);
+    }
+    const updated = updater(entities[index]);
+    entities[index] = updated;
+    await this.dataStore.save(data);
+    return updated;
+  }
+  /**
+   * Deletes an entity by ID.
+   * 
+   * @param id - The entity ID
+   * @throws {NotFoundError} If the entity is not found
+   */
+  async delete(id) {
+    const data = await this.dataStore.load();
+    const entities = data[this.entityKey];
+    const index = entities.findIndex((e) => e.id === id);
+    if (index === -1) {
+      throw new NotFoundError(String(this.entityKey), id);
+    }
+    entities.splice(index, 1);
+    await this.dataStore.save(data);
+  }
+  /**
+   * Replaces all entities in the collection.
+   * 
+   * @param entities - The new entities to store
+   */
+  async replaceAll(entities) {
+    const data = await this.dataStore.load();
+    data[this.entityKey] = entities;
+    await this.dataStore.save(data);
+  }
+};
+
+// src/infrastructure/persistence/EntityRepositoryFactory.ts
+var EntityRepositoryFactory = class {
   constructor(dataStore) {
     this.dataStore = dataStore;
-    this.topicRepository = new EntityRepository(dataStore, "topics");
+  }
+  for(key) {
+    return new EntityRepository(this.dataStore, key);
+  }
+};
+
+// src/application/use-cases/LinkQuestionNotebookUseCase.ts
+var LinkQuestionNotebookUseCase = class {
+  constructor(dataStore, repositoryFactory) {
+    this.dataStore = dataStore;
+    this.topicRepository = repositoryFactory.for("topics");
   }
   async execute(input) {
     const validation = new LinkQuestionNotebookValidator().validate(input);
@@ -1490,14 +1500,15 @@ var DEMO_CONTESTS = [
   }
 ];
 async function seedTceSpDemo(dataStore) {
-  const createContest = new CreateContestUseCase(dataStore);
-  const createSubject = new CreateSubjectUseCase(dataStore);
-  const createItem = new CreateStudyItemUseCase(dataStore);
-  const createTopic = new CreateTopicUseCase(dataStore);
-  const linkNotebook = new LinkQuestionNotebookUseCase(dataStore);
-  const updateWall = new UpdateContestWallUseCase(dataStore);
-  const registerSession = new RegisterStudySessionUseCase(dataStore);
-  const setActive = new SetActiveContestUseCase(dataStore);
+  const repositoryFactory = new EntityRepositoryFactory(dataStore);
+  const createContest = new CreateContestUseCase(dataStore, repositoryFactory);
+  const createSubject = new CreateSubjectUseCase(dataStore, repositoryFactory);
+  const createItem = new CreateStudyItemUseCase(dataStore, repositoryFactory);
+  const createTopic = new CreateTopicUseCase(dataStore, repositoryFactory);
+  const linkNotebook = new LinkQuestionNotebookUseCase(dataStore, repositoryFactory);
+  const updateWall = new UpdateContestWallUseCase(dataStore, repositoryFactory);
+  const registerSession = new RegisterStudySessionUseCase(dataStore, repositoryFactory);
+  const setActive = new SetActiveContestUseCase(dataStore, repositoryFactory);
   const seededContests = [];
   for (const contestSpec of DEMO_CONTESTS) {
     const contest = await createContest.execute({ id: contestSpec.id, name: contestSpec.name });
@@ -1595,20 +1606,21 @@ async function seedTceSpDemo(dataStore) {
 
 // src/ui/commands/registerCommands.ts
 function registerCommands(plugin, dataStore) {
-  const createContest = new CreateContestUseCase(dataStore);
-  const createSubject = new CreateSubjectUseCase(dataStore);
-  const createStudyItem = new CreateStudyItemUseCase(dataStore);
-  const createTopic = new CreateTopicUseCase(dataStore);
-  const updateContestWall = new UpdateContestWallUseCase(dataStore);
-  const registerStudySession = new RegisterStudySessionUseCase(dataStore);
-  const setActiveContest = new SetActiveContestUseCase(dataStore);
+  const repositoryFactory = new EntityRepositoryFactory(dataStore);
+  const createContest = new CreateContestUseCase(dataStore, repositoryFactory);
+  const createSubject = new CreateSubjectUseCase(dataStore, repositoryFactory);
+  const createStudyItem = new CreateStudyItemUseCase(dataStore, repositoryFactory);
+  const createTopic = new CreateTopicUseCase(dataStore, repositoryFactory);
+  const updateContestWall = new UpdateContestWallUseCase(dataStore, repositoryFactory);
+  const registerStudySession = new RegisterStudySessionUseCase(dataStore, repositoryFactory);
+  const setActiveContest = new SetActiveContestUseCase(dataStore, repositoryFactory);
   const advanceCycle = new AdvanceCycleUseCase(dataStore);
   const getActiveCycleSnapshot = new GetActiveCycleSnapshotUseCase(dataStore);
   const getActiveContestSummary = new GetActiveContestSummaryUseCase(dataStore);
   const listSubjectsForActiveContest = new ListSubjectsForActiveContestUseCase(dataStore);
-  const reorderSubjects = new ReorderSubjectsUseCase(dataStore);
-  const setSubjectActiveState = new SetSubjectActiveStateUseCase(dataStore);
-  const updateSubjectConfiguration = new UpdateSubjectConfigurationUseCase(dataStore);
+  const reorderSubjects = new ReorderSubjectsUseCase(dataStore, repositoryFactory);
+  const setSubjectActiveState = new SetSubjectActiveStateUseCase(dataStore, repositoryFactory);
+  const updateSubjectConfiguration = new UpdateSubjectConfigurationUseCase(dataStore, repositoryFactory);
   plugin.addCommand({
     id: "leif-show-active-contest",
     name: "Show active contest",
@@ -1864,22 +1876,33 @@ var import_obsidian9 = require("obsidian");
 
 // src/application/use-cases/DeleteContestUseCase.ts
 var DeleteContestUseCase = class {
-  constructor(dataStore) {
+  constructor(dataStore, repositoryFactory) {
     this.dataStore = dataStore;
-    this.contestRepository = new EntityRepository(dataStore, "contests");
+    this.contestRepository = repositoryFactory.for("contests");
   }
   async execute(input) {
     const contest = await this.contestRepository.findById(input.contestId);
-    await this.contestRepository.delete(input.contestId);
+    const data = await this.dataStore.load();
+    const subjectIds = new Set(contest.subjectIds);
+    data.contests = data.contests.filter((c) => c.id !== input.contestId);
+    data.contestStates = data.contestStates.filter((s) => s.contestId !== input.contestId);
+    data.subjects = data.subjects.filter((s) => s.contestId !== input.contestId);
+    data.studyItems = data.studyItems.filter((i) => !subjectIds.has(i.subjectId));
+    data.topics = data.topics.filter((t) => !subjectIds.has(t.subjectId));
+    data.studySessions = data.studySessions.filter((s) => s.contestId !== input.contestId);
+    if (data.activeContestId === input.contestId) {
+      data.activeContestId = null;
+    }
+    await this.dataStore.save(data);
     return contest;
   }
 };
 
 // src/application/use-cases/UpdateContestUseCase.ts
 var UpdateContestUseCase = class {
-  constructor(dataStore) {
+  constructor(dataStore, repositoryFactory) {
     this.dataStore = dataStore;
-    this.contestRepository = new EntityRepository(dataStore, "contests");
+    this.contestRepository = repositoryFactory.for("contests");
   }
   async execute(input) {
     return await this.contestRepository.update(input.contestId, (contest) => ({
@@ -2174,6 +2197,7 @@ var DomHelpers = class {
     const button = document.createElement("button");
     button.type = "button";
     button.className = options.className || "leif-icon-button";
+    button.setAttribute("aria-label", title);
     button.appendChild(this.createIcon(icon, "leif-icon-button-icon"));
     if (options.dataset) {
       Object.entries(options.dataset).forEach(([key, value]) => {
@@ -2322,13 +2346,19 @@ var DomHelpers = class {
   }
   /**
    * Creates a modal overlay with a centered card.
+   * Implements role=dialog, aria-modal, a focus trap and Escape-to-close.
    * Returns { open, close } functions.
    */
   static createModal(options) {
     const overlay = this.createElement("div", "leif-modal-overlay");
     const card = this.createElement("div", "leif-modal-card");
+    card.setAttribute("role", "dialog");
+    card.setAttribute("aria-modal", "true");
+    const titleId = `leif-modal-title-${Math.random().toString(36).slice(2, 9)}`;
+    card.setAttribute("aria-labelledby", titleId);
     const header = this.createElement("div", "leif-modal-header");
     const title = this.createElement("h3", "leif-modal-title");
+    title.id = titleId;
     title.textContent = options.title;
     const closeButton = this.createIconButton("x", "Fechar", {
       onClick: () => close()
@@ -2340,23 +2370,65 @@ var DomHelpers = class {
     const footer = this.createElement("div", "leif-modal-footer");
     const cancelButton = this.createButton("Cancelar", {
       className: "leif-button",
+      dataset: { leifConfirm: "cancel" },
       onClick: () => close()
     });
     const submitButton = this.createButton(options.submitLabel ?? "Criar", {
       className: "leif-primary-button",
+      dataset: { leifConfirm: "submit" },
       onClick: () => options.onSubmit()
     });
     footer.appendChild(cancelButton);
     footer.appendChild(submitButton);
     card.append(header, body, footer);
     overlay.appendChild(card);
+    let previouslyFocused = null;
+    let focusTrapHandler = null;
+    let escapeHandler = null;
+    const focusable = () => {
+      const elements = card.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      return Array.from(elements).filter((element) => !element.hasAttribute("disabled"));
+    };
     const open = () => {
+      previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
       document.body.appendChild(overlay);
+      const first = focusable()[0] ?? card;
+      first.focus();
+      focusTrapHandler = (event) => {
+        if (event.key !== "Tab") return;
+        const elements = focusable();
+        if (elements.length === 0) {
+          event.preventDefault();
+          return;
+        }
+        const firstEl = elements[0];
+        const lastEl = elements[elements.length - 1];
+        if (event.shiftKey && document.activeElement === firstEl) {
+          event.preventDefault();
+          lastEl.focus();
+        } else if (!event.shiftKey && document.activeElement === lastEl) {
+          event.preventDefault();
+          firstEl.focus();
+        }
+      };
+      escapeHandler = (event) => {
+        if (event.key === "Escape") {
+          event.preventDefault();
+          close();
+        }
+      };
+      card.addEventListener("keydown", focusTrapHandler);
+      overlay.addEventListener("keydown", escapeHandler);
     };
     const close = () => {
+      if (focusTrapHandler) card.removeEventListener("keydown", focusTrapHandler);
+      if (escapeHandler) overlay.removeEventListener("keydown", escapeHandler);
       if (overlay.parentNode) {
         overlay.parentNode.removeChild(overlay);
       }
+      previouslyFocused?.focus();
       options.onCancel?.();
     };
     overlay.addEventListener("click", (event) => {
@@ -2365,6 +2437,33 @@ var DomHelpers = class {
       }
     });
     return { open, close };
+  }
+  /**
+   * Creates an accessible confirmation dialog (replaces native window.confirm).
+   * Resolves the returned promise with true when confirmed, false when cancelled.
+   */
+  static confirm(options) {
+    return new Promise((resolve) => {
+      let resolved = false;
+      const settle = (value) => {
+        if (resolved) return;
+        resolved = true;
+        resolve(value);
+      };
+      const message = this.createElement("p", "leif-modal-message");
+      message.textContent = options.message;
+      const modal = this.createModal({
+        title: options.title,
+        content: message,
+        submitLabel: options.confirmLabel ?? "Confirmar",
+        onSubmit: () => {
+          settle(true);
+          modal.close();
+        },
+        onCancel: () => settle(false)
+      });
+      modal.open();
+    });
   }
   /**
    * Creates a visual progress bar with a fill and a label.
@@ -2407,10 +2506,11 @@ var ContestsTab = class {
     this.dataStore = dataStore;
     this.onUpdate = onUpdate;
     this.editingContestId = null;
-    this.createContestUseCase = new CreateContestUseCase(dataStore);
-    this.setActiveContestUseCase = new SetActiveContestUseCase(dataStore);
-    this.updateContestUseCase = new UpdateContestUseCase(dataStore);
-    this.deleteContestUseCase = new DeleteContestUseCase(dataStore);
+    const repositoryFactory = new EntityRepositoryFactory(dataStore);
+    this.createContestUseCase = new CreateContestUseCase(dataStore, repositoryFactory);
+    this.setActiveContestUseCase = new SetActiveContestUseCase(dataStore, repositoryFactory);
+    this.updateContestUseCase = new UpdateContestUseCase(dataStore, repositoryFactory);
+    this.deleteContestUseCase = new DeleteContestUseCase(dataStore, repositoryFactory);
   }
   async render(container, data) {
     const header = DomHelpers.createElement("div", "leif-section-header");
@@ -2480,13 +2580,17 @@ var ContestsTab = class {
     actions.appendChild(
       DomHelpers.createIconButton("delete", "Excluir", {
         onClick: async () => {
-          if (confirm(`Excluir "${contest.name}"?`)) {
-            try {
-              await this.deleteContestUseCase.execute({ contestId: contest.id });
-              await this.onUpdate();
-            } catch (error) {
-              this.notifyError(error, "N\xE3o foi poss\xEDvel excluir o concurso.");
-            }
+          const confirmed = await DomHelpers.confirm({
+            title: "Excluir concurso",
+            message: `Excluir "${contest.name}"?`,
+            confirmLabel: "Excluir"
+          });
+          if (!confirmed) return;
+          try {
+            await this.deleteContestUseCase.execute({ contestId: contest.id });
+            await this.onUpdate();
+          } catch (error) {
+            this.notifyError(error, "N\xE3o foi poss\xEDvel excluir o concurso.");
           }
         }
       })
@@ -2576,11 +2680,12 @@ var CycleTab = class {
     this.dataStore = dataStore;
     this.onUpdate = onUpdate;
     this.editingSubjectId = null;
-    this.createSubjectUseCase = new CreateSubjectUseCase(dataStore);
+    const repositoryFactory = new EntityRepositoryFactory(dataStore);
+    this.createSubjectUseCase = new CreateSubjectUseCase(dataStore, repositoryFactory);
     this.listSubjectsForActiveContestUseCase = new ListSubjectsForActiveContestUseCase(dataStore);
-    this.reorderSubjectsUseCase = new ReorderSubjectsUseCase(dataStore);
-    this.setSubjectActiveStateUseCase = new SetSubjectActiveStateUseCase(dataStore);
-    this.updateSubjectConfigurationUseCase = new UpdateSubjectConfigurationUseCase(dataStore);
+    this.reorderSubjectsUseCase = new ReorderSubjectsUseCase(dataStore, repositoryFactory);
+    this.setSubjectActiveStateUseCase = new SetSubjectActiveStateUseCase(dataStore, repositoryFactory);
+    this.updateSubjectConfigurationUseCase = new UpdateSubjectConfigurationUseCase(dataStore, repositoryFactory);
   }
   /**
    * Renders the cycle tab content.
@@ -2953,9 +3058,9 @@ var import_obsidian5 = require("obsidian");
 
 // src/application/use-cases/AddStudyItemResourceReferenceUseCase.ts
 var AddStudyItemResourceReferenceUseCase = class {
-  constructor(dataStore) {
+  constructor(dataStore, repositoryFactory) {
     this.dataStore = dataStore;
-    this.studyItemRepository = new EntityRepository(dataStore, "studyItems");
+    this.studyItemRepository = repositoryFactory.for("studyItems");
   }
   async execute(input) {
     const validation = new AddStudyItemResourceReferenceValidator().validate(input);
@@ -2971,22 +3076,27 @@ var AddStudyItemResourceReferenceUseCase = class {
 
 // src/application/use-cases/DeleteStudyItemUseCase.ts
 var DeleteStudyItemUseCase = class {
-  constructor(dataStore) {
+  constructor(dataStore, repositoryFactory) {
     this.dataStore = dataStore;
-    this.itemRepository = new EntityRepository(dataStore, "studyItems");
+    this.itemRepository = repositoryFactory.for("studyItems");
+    this.subjectRepository = repositoryFactory.for("subjects");
   }
   async execute(input) {
     const item = await this.itemRepository.findById(input.itemId);
     await this.itemRepository.delete(input.itemId);
+    await this.subjectRepository.update(item.subjectId, (subject) => ({
+      ...subject,
+      itemIds: subject.itemIds.filter((id) => id !== input.itemId)
+    }));
     return item;
   }
 };
 
 // src/application/use-cases/UpdateStudyItemUseCase.ts
 var UpdateStudyItemUseCase = class {
-  constructor(dataStore) {
+  constructor(dataStore, repositoryFactory) {
     this.dataStore = dataStore;
-    this.itemRepository = new EntityRepository(dataStore, "studyItems");
+    this.itemRepository = repositoryFactory.for("studyItems");
   }
   async execute(input) {
     if (!input.itemId?.trim()) {
@@ -3022,11 +3132,12 @@ var ItemsTab = class {
     this.selectedSubjectId = null;
     this.editingItemId = null;
     this.expandedItemId = null;
-    this.createStudyItemUseCase = new CreateStudyItemUseCase(dataStore);
-    this.addStudyItemResourceReferenceUseCase = new AddStudyItemResourceReferenceUseCase(dataStore);
+    const repositoryFactory = new EntityRepositoryFactory(dataStore);
+    this.createStudyItemUseCase = new CreateStudyItemUseCase(dataStore, repositoryFactory);
+    this.addStudyItemResourceReferenceUseCase = new AddStudyItemResourceReferenceUseCase(dataStore, repositoryFactory);
     this.getActiveContestProgressDashboardUseCase = new GetActiveContestProgressDashboardUseCase(dataStore);
-    this.deleteStudyItemUseCase = new DeleteStudyItemUseCase(dataStore);
-    this.updateStudyItemUseCase = new UpdateStudyItemUseCase(dataStore);
+    this.deleteStudyItemUseCase = new DeleteStudyItemUseCase(dataStore, repositoryFactory);
+    this.updateStudyItemUseCase = new UpdateStudyItemUseCase(dataStore, repositoryFactory);
   }
   async render(container, data) {
     const header = DomHelpers.createElement("div", "leif-section-header");
@@ -3120,13 +3231,17 @@ var ItemsTab = class {
     actions.appendChild(
       DomHelpers.createIconButton("delete", "Excluir", {
         onClick: async () => {
-          if (confirm(`Excluir "${item.title}"?`)) {
-            try {
-              await this.deleteStudyItemUseCase.execute({ itemId: item.id });
-              await this.onUpdate();
-            } catch (error) {
-              this.notifyError(error, "N\xE3o foi poss\xEDvel excluir o item.");
-            }
+          const confirmed = await DomHelpers.confirm({
+            title: "Excluir item",
+            message: `Excluir "${item.title}"?`,
+            confirmLabel: "Excluir"
+          });
+          if (!confirmed) return;
+          try {
+            await this.deleteStudyItemUseCase.execute({ itemId: item.id });
+            await this.onUpdate();
+          } catch (error) {
+            this.notifyError(error, "N\xE3o foi poss\xEDvel excluir o item.");
           }
         }
       })
@@ -3324,10 +3439,10 @@ var import_obsidian6 = require("obsidian");
 
 // src/application/use-cases/DeleteStudySessionUseCase.ts
 var DeleteStudySessionUseCase = class {
-  constructor(dataStore) {
+  constructor(dataStore, repositoryFactory) {
     this.dataStore = dataStore;
-    this.sessionRepository = new EntityRepository(dataStore, "studySessions");
-    this.topicRepository = new EntityRepository(dataStore, "topics");
+    this.sessionRepository = repositoryFactory.for("studySessions");
+    this.topicRepository = repositoryFactory.for("topics");
   }
   async execute(input) {
     const validation = new DeleteStudySessionValidator().validate(input);
@@ -3361,9 +3476,9 @@ var DeleteStudySessionUseCase = class {
 
 // src/application/use-cases/UpdateStudySessionUseCase.ts
 var UpdateStudySessionUseCase = class {
-  constructor(dataStore) {
+  constructor(dataStore, repositoryFactory) {
     this.dataStore = dataStore;
-    this.sessionRepository = new EntityRepository(dataStore, "studySessions");
+    this.sessionRepository = repositoryFactory.for("studySessions");
   }
   async execute(input) {
     if (!input.sessionId?.trim()) {
@@ -3396,11 +3511,12 @@ var SessionsTab = class {
     this.dataStore = dataStore;
     this.onUpdate = onUpdate;
     this.editingSessionId = null;
-    this.registerStudySessionUseCase = new RegisterStudySessionUseCase(dataStore);
-    this.deleteStudySessionUseCase = new DeleteStudySessionUseCase(dataStore);
+    const repositoryFactory = new EntityRepositoryFactory(dataStore);
+    this.registerStudySessionUseCase = new RegisterStudySessionUseCase(dataStore, repositoryFactory);
+    this.deleteStudySessionUseCase = new DeleteStudySessionUseCase(dataStore, repositoryFactory);
     this.getActiveContestSummaryUseCase = new GetActiveContestSummaryUseCase(dataStore);
     this.listSubjectsForActiveContestUseCase = new ListSubjectsForActiveContestUseCase(dataStore);
-    this.updateStudySessionUseCase = new UpdateStudySessionUseCase(dataStore);
+    this.updateStudySessionUseCase = new UpdateStudySessionUseCase(dataStore, repositoryFactory);
     this.advanceCycleUseCase = new AdvanceCycleUseCase(dataStore);
     this.getActiveCycleSnapshotUseCase = new GetActiveCycleSnapshotUseCase(dataStore);
   }
@@ -3526,13 +3642,17 @@ var SessionsTab = class {
       DomHelpers.createIconButton("delete", "Excluir", {
         dataset: { sessionDeleteId: session.id },
         onClick: async () => {
-          if (confirm("Excluir esta sess\xE3o?")) {
-            try {
-              await this.deleteStudySessionUseCase.execute({ sessionId: session.id });
-              await this.onUpdate();
-            } catch (error) {
-              this.notifyError(error, "N\xE3o foi poss\xEDvel excluir a sess\xE3o.");
-            }
+          const confirmed = await DomHelpers.confirm({
+            title: "Excluir sess\xE3o",
+            message: "Excluir esta sess\xE3o?",
+            confirmLabel: "Excluir"
+          });
+          if (!confirmed) return;
+          try {
+            await this.deleteStudySessionUseCase.execute({ sessionId: session.id });
+            await this.onUpdate();
+          } catch (error) {
+            this.notifyError(error, "N\xE3o foi poss\xEDvel excluir a sess\xE3o.");
           }
         }
       })
@@ -3725,22 +3845,27 @@ var import_obsidian7 = require("obsidian");
 
 // src/application/use-cases/DeleteTopicUseCase.ts
 var DeleteTopicUseCase = class {
-  constructor(dataStore) {
+  constructor(dataStore, repositoryFactory) {
     this.dataStore = dataStore;
-    this.topicRepository = new EntityRepository(dataStore, "topics");
+    this.topicRepository = repositoryFactory.for("topics");
+    this.subjectRepository = repositoryFactory.for("subjects");
   }
   async execute(input) {
     const topic = await this.topicRepository.findById(input.topicId);
     await this.topicRepository.delete(input.topicId);
+    await this.subjectRepository.update(topic.subjectId, (subject) => ({
+      ...subject,
+      topicIds: subject.topicIds.filter((id) => id !== input.topicId)
+    }));
     return topic;
   }
 };
 
 // src/application/use-cases/UpdateTopicUseCase.ts
 var UpdateTopicUseCase = class {
-  constructor(dataStore) {
+  constructor(dataStore, repositoryFactory) {
     this.dataStore = dataStore;
-    this.topicRepository = new EntityRepository(dataStore, "topics");
+    this.topicRepository = repositoryFactory.for("topics");
   }
   async execute(input) {
     if (!input.topicId?.trim()) {
@@ -3783,10 +3908,11 @@ var TopicsTab = class {
     this.selectedSubjectId = null;
     this.editingTopicId = null;
     this.expandedTopicId = null;
-    this.createTopicUseCase = new CreateTopicUseCase(dataStore);
-    this.deleteTopicUseCase = new DeleteTopicUseCase(dataStore);
-    this.linkQuestionNotebookUseCase = new LinkQuestionNotebookUseCase(dataStore);
-    this.updateTopicUseCase = new UpdateTopicUseCase(dataStore);
+    const repositoryFactory = new EntityRepositoryFactory(dataStore);
+    this.createTopicUseCase = new CreateTopicUseCase(dataStore, repositoryFactory);
+    this.deleteTopicUseCase = new DeleteTopicUseCase(dataStore, repositoryFactory);
+    this.linkQuestionNotebookUseCase = new LinkQuestionNotebookUseCase(dataStore, repositoryFactory);
+    this.updateTopicUseCase = new UpdateTopicUseCase(dataStore, repositoryFactory);
   }
   async render(container, data) {
     const header = DomHelpers.createElement("div", "leif-section-header");
@@ -3870,13 +3996,17 @@ var TopicsTab = class {
     actions.appendChild(
       DomHelpers.createIconButton("delete", "Excluir", {
         onClick: async () => {
-          if (confirm(`Excluir "${topic.name}"?`)) {
-            try {
-              await this.deleteTopicUseCase.execute({ topicId: topic.id });
-              await this.onUpdate();
-            } catch (error) {
-              this.notifyError(error, "N\xE3o foi poss\xEDvel excluir o assunto.");
-            }
+          const confirmed = await DomHelpers.confirm({
+            title: "Excluir assunto",
+            message: `Excluir "${topic.name}"?`,
+            confirmLabel: "Excluir"
+          });
+          if (!confirmed) return;
+          try {
+            await this.deleteTopicUseCase.execute({ topicId: topic.id });
+            await this.onUpdate();
+          } catch (error) {
+            this.notifyError(error, "N\xE3o foi poss\xEDvel excluir o assunto.");
           }
         }
       })
@@ -4062,7 +4192,7 @@ var WallTab = class {
   constructor(dataStore, onUpdate) {
     this.dataStore = dataStore;
     this.onUpdate = onUpdate;
-    this.updateContestWallUseCase = new UpdateContestWallUseCase(dataStore);
+    this.updateContestWallUseCase = new UpdateContestWallUseCase(dataStore, new EntityRepositoryFactory(dataStore));
   }
   async render(container, data) {
     container.appendChild(DomHelpers.createSectionTitle("Mural"));
@@ -4257,20 +4387,32 @@ var LeifView = class extends import_obsidian9.ItemView {
     this.headerActions = DomHelpers.createElement("div", "leif-header-actions");
     header.append(titleGroup, this.headerActions);
     this.tabBar = DomHelpers.createElement("nav", "leif-tab-bar");
-    TABS2.forEach((tab) => {
+    this.tabBar.setAttribute("role", "tablist");
+    this.tabBar.setAttribute("aria-label", "Se\xE7\xF5es do Leif");
+    TABS2.forEach((tab, index) => {
       const button = DomHelpers.createButton(tab.label, {
         dataset: { tab: tab.id },
         className: "leif-tab-button",
         onClick: async () => {
-          this.activeTab = tab.id;
-          this.updateTabButtonStyles();
-          await this.refresh();
+          await this.selectTab(tab.id);
         }
+      });
+      button.setAttribute("role", "tab");
+      button.id = `leif-tab-${tab.id}`;
+      button.tabIndex = tab.id === this.activeTab ? 0 : -1;
+      button.setAttribute("aria-selected", String(tab.id === this.activeTab));
+      button.setAttribute("aria-controls", "leif-tabpanel");
+      button.addEventListener("keydown", (event) => {
+        this.handleTabKeyDown(event, index);
       });
       this.tabButtons.set(tab.id, button);
       this.tabBar.appendChild(button);
     });
     this.activeTabContainer = DomHelpers.createElement("section", "leif-body");
+    this.activeTabContainer.id = "leif-tabpanel";
+    this.activeTabContainer.setAttribute("role", "tabpanel");
+    this.activeTabContainer.setAttribute("tabindex", "0");
+    this.activeTabContainer.setAttribute("aria-labelledby", `leif-tab-${this.activeTab}`);
     this.shell.append(header, this.tabBar, this.activeTabContainer);
     this.contentEl.appendChild(this.shell);
   }
@@ -4295,12 +4437,44 @@ var LeifView = class extends import_obsidian9.ItemView {
     await this.renderActiveTab(this.activeTabContainer, data);
   }
   /**
+   * Selects a tab, updating aria state and re-rendering.
+   */
+  async selectTab(tabId) {
+    this.activeTab = tabId;
+    this.updateTabButtonStyles();
+    await this.refresh();
+  }
+  /**
+   * Moves focus between tabs with Arrow keys and activates on Enter/Space.
+   */
+  handleTabKeyDown(event, index) {
+    const tabIds = TABS2.map((tab) => tab.id);
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      const next = tabIds[(index + 1) % tabIds.length];
+      void this.selectTab(next);
+      this.tabButtons.get(next)?.focus();
+    } else if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      const prev = tabIds[(index - 1 + tabIds.length) % tabIds.length];
+      void this.selectTab(prev);
+      this.tabButtons.get(prev)?.focus();
+    } else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      void this.selectTab(tabIds[index]);
+    }
+  }
+  /**
    * Updates the active class on tab buttons.
    */
   updateTabButtonStyles() {
     this.tabButtons.forEach((button, tabId) => {
-      button.className = this.activeTab === tabId ? "leif-tab-button is-active" : "leif-tab-button";
+      const isActive = this.activeTab === tabId;
+      button.className = isActive ? "leif-tab-button is-active" : "leif-tab-button";
+      button.tabIndex = isActive ? 0 : -1;
+      button.setAttribute("aria-selected", String(isActive));
     });
+    this.activeTabContainer?.setAttribute("aria-labelledby", `leif-tab-${this.activeTab}`);
   }
   async renderActiveTab(container, data) {
     switch (this.activeTab) {

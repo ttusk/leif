@@ -1,0 +1,6 @@
+node_modules/
+dist/
+coverage/
+sample-vault/
+main.js
+*.md
