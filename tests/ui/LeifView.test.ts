@@ -278,9 +278,6 @@ describe("LeifView", () => {
     const dataStore = new InMemoryPluginDataStore();
     const factory = await seedUiData(dataStore);
 
-    const originalConfirm = window.confirm;
-    window.confirm = () => true;
-
     const { leaf } = await openLeifView(dataStore);
     const sessionsTabButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='sessions']");
 
@@ -300,7 +297,13 @@ describe("LeifView", () => {
     deleteButton.click();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    window.confirm = originalConfirm;
+    const confirmButton = document.body.querySelector<HTMLButtonElement>('[data-leif-confirm="submit"]');
+    if (!confirmButton) {
+      throw new Error("Confirm button was not rendered.");
+    }
+    confirmButton.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(leaf.containerEl.textContent).not.toContain("11/06/2026");
     expect(leaf.containerEl.querySelector("[data-session-delete-id='session-1']")).toBeNull();

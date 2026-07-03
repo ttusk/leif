@@ -189,13 +189,17 @@ export class SessionsTab {
       DomHelpers.createIconButton("delete", "Excluir", {
         dataset: { sessionDeleteId: session.id },
         onClick: async () => {
-          if (confirm("Excluir esta sessão?")) {
-            try {
-              await this.deleteStudySessionUseCase.execute({ sessionId: session.id });
-              await this.onUpdate();
-            } catch (error) {
-              this.notifyError(error, "Não foi possível excluir a sessão.");
-            }
+          const confirmed = await DomHelpers.confirm({
+            title: "Excluir sessão",
+            message: "Excluir esta sessão?",
+            confirmLabel: "Excluir"
+          });
+          if (!confirmed) return;
+          try {
+            await this.deleteStudySessionUseCase.execute({ sessionId: session.id });
+            await this.onUpdate();
+          } catch (error) {
+            this.notifyError(error, "Não foi possível excluir a sessão.");
           }
         }
       })
