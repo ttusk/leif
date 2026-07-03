@@ -2,6 +2,7 @@ import type { Plugin } from "obsidian";
 import { Notice } from "obsidian";
 
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 import { AdvanceCycleUseCase } from "@/application/use-cases/AdvanceCycleUseCase";
 import { CreateContestUseCase } from "@/application/use-cases/CreateContestUseCase";
 import { CreateStudyItemUseCase } from "@/application/use-cases/CreateStudyItemUseCase";
@@ -184,21 +185,18 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
   plugin.addCommand({
     id: "leif-advance-cycle",
     name: "Advance cycle",
-    callback: async () => {
-      try {
+    callback: () =>
+      DomHelpers.runGuarded(async () => {
         const state = await advanceCycle.execute();
         new Notice(`Current subject: ${state.currentSubjectId ?? "none"}`);
-      } catch (error) {
-        new Notice(error instanceof Error ? error.message : "Could not advance cycle.");
-      }
-    }
+      }, "Could not advance cycle.")
   });
 
   plugin.addCommand({
     id: "leif-show-cycle-snapshot",
     name: "Show cycle snapshot",
-    callback: async () => {
-      try {
+    callback: () =>
+      DomHelpers.runGuarded(async () => {
         const snapshot = await getActiveCycleSnapshot.execute();
         const data = await dataStore.load();
         const itemMap = new Map(data.studyItems.map((item) => [item.id, item.title]));
@@ -210,10 +208,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
         new Notice(
           `Current: ${currentLabel} | Next: ${nextLabel} | Current item: ${currentItemLabel} | Next item: ${nextItemLabel}`
         );
-      } catch (error) {
-        new Notice(error instanceof Error ? error.message : "Could not read cycle snapshot.");
-      }
-    }
+      }, "Could not read cycle snapshot.")
   });
 
   plugin.addCommand({
@@ -237,8 +232,8 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
   plugin.addCommand({
     id: "leif-show-summary",
     name: "Show active contest summary",
-    callback: async () => {
-      try {
+    callback: () =>
+      DomHelpers.runGuarded(async () => {
         const summary = await getActiveContestSummary.execute();
 
         if (summary.subjectSummaries.length === 0) {
@@ -258,10 +253,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
           .join(" | ");
 
         new Notice(message);
-      } catch (error) {
-        new Notice(error instanceof Error ? error.message : "Could not load active contest summary.");
-      }
-    }
+      }, "Could not load active contest summary.")
   });
 
   plugin.addCommand({

@@ -37,14 +37,14 @@ export class ReorderSubjectsUseCase {
       .filter((subject) => subject.contestId === input.contestId);
 
     if (contestSubjects.length !== input.subjectIdsInOrder.length) {
-      throw new Error("The provided subject order does not match the contest subject list.");
+      throw new ValidationError("The provided subject order does not match the contest subject list.");
     }
 
     const subjectIdSet = new Set(contestSubjects.map((subject) => subject.id));
 
     for (const subjectId of input.subjectIdsInOrder) {
       if (!subjectIdSet.has(subjectId)) {
-        throw new Error(`Subject "${subjectId}" does not belong to contest "${input.contestId}".`);
+        throw new ValidationError(`Subject "${subjectId}" does not belong to contest "${input.contestId}".`);
       }
     }
 

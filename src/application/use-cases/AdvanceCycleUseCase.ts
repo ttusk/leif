@@ -4,7 +4,7 @@ import { ActiveCycleSnapshot } from "@/application/use-cases/GetActiveCycleSnaps
 import { CycleService } from "@/domain/services/CycleService";
 import { ItemProgressService } from "@/domain/services/ItemProgressService";
 import { ActiveContestGuard } from "@/application/guards/ActiveContestGuard";
-import { NotFoundError } from "@/domain/errors/DomainErrors";
+import { NotFoundError, ValidationError } from "@/domain/errors/DomainErrors";
 
 /**
  * Use case for advancing the study cycle to the next subject.
@@ -38,7 +38,7 @@ export class AdvanceCycleUseCase {
     );
 
     if (!nextSubject) {
-      throw new Error(`Contest "${activeContestId}" has no active subjects.`);
+      throw new ValidationError(`Contest "${activeContestId}" has no active subjects.`);
     }
 
     const subjectItems = data.studyItems.filter(
