@@ -1,6 +1,7 @@
 import { Notice, setIcon, setTooltip } from "obsidian";
 import { ICON_NAMES } from "@/ui/constants";
 import { NoActiveContestError } from "@/domain/errors/DomainErrors";
+import { t } from "@/ui/i18n";
 
 /**
  * DOM Helper utilities for creating consistent UI elements.
@@ -421,10 +422,10 @@ export class DomHelpers {
   ): HTMLElement {
     const actions = this.createElement("div", "leif-inline-actions leif-inline-actions-compact");
     actions.appendChild(
-      this.createIconButton("edit", "Editar", { onClick: onEdit })
+      this.createIconButton("edit", t("action.edit"), { onClick: onEdit })
     );
     actions.appendChild(
-      this.createIconButton("delete", "Excluir", { onClick: onDelete })
+      this.createIconButton("delete", t("action.delete"), { onClick: onDelete })
     );
     return actions;
   }
@@ -464,13 +465,13 @@ export class DomHelpers {
     const form = this.createForm(onSubmit);
     const actions = this.createElement("div", "leif-form-actions");
     actions.appendChild(
-      this.createButton("Cancelar", {
+      this.createButton(t("action.cancel"), {
         className: "leif-button",
         onClick: () => onCancel()
       })
     );
     actions.appendChild(
-      this.createButton("Criar", {
+      this.createButton(t("action.create"), {
         type: "submit",
         className: "leif-primary-button"
       })
@@ -534,7 +535,7 @@ export class DomHelpers {
     const title = this.createElement("h3", "leif-modal-title");
     title.id = titleId;
     title.textContent = options.title;
-    const closeButton = this.createIconButton("x", "Fechar", {
+    const closeButton = this.createIconButton("x", t("action.close"), {
       onClick: () => close()
     });
     header.appendChild(title);
@@ -544,12 +545,12 @@ export class DomHelpers {
     body.appendChild(options.content);
 
     const footer = this.createElement("div", "leif-modal-footer");
-    const cancelButton = this.createButton("Cancelar", {
+    const cancelButton = this.createButton(t("action.cancel"), {
       className: "leif-button",
       dataset: { leifConfirm: "cancel" },
       onClick: () => close()
     });
-    const submitButton = this.createButton(options.submitLabel ?? "Criar", {
+    const submitButton = this.createButton(options.submitLabel ?? t("action.create"), {
       className: "leif-primary-button",
       dataset: { leifConfirm: "submit" },
       onClick: () => options.onSubmit()
