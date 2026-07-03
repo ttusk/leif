@@ -406,7 +406,7 @@ describe("LeifView", () => {
     });
   });
 
-  it("rejects a questions session form submission when count is 0", async () => {
+  it("creates a questions session when the count is greater than zero", async () => {
     const dataStore = new InMemoryPluginDataStore();
     const factory = await seedUiData(dataStore);
 
