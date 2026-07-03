@@ -5,6 +5,7 @@ import { StudyItem } from "@/domain/entities/StudyItem";
 import { Subject } from "@/domain/entities/Subject";
 import { ValidationError } from "@/domain/errors/DomainErrors";
 import { CreateStudyItemValidator } from "@/application/validation/InputValidators";
+import { createId } from "@/application/Id";
 
 export interface CreateStudyItemInput {
   id?: string;
@@ -43,7 +44,7 @@ export class CreateStudyItemUseCase {
       .filter((item) => item.subjectId === input.subjectId);
 
     const nextItem = new StudyItem(
-      input.id ?? `item-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      input.id ?? createId("item"),
       input.subjectId,
       input.title,
       subjectItems.length + 1,
