@@ -21,6 +21,7 @@ import { createDefaultLeifPluginData } from "@/domain/types/LeifPluginData";
 import { createId } from "@/application/Id";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 import { seedTceSpDemo } from "@/infrastructure/persistence/Seeder";
+import { t } from "@/ui/i18n";
 
 export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): void {
   const repositoryFactory = new EntityRepositoryFactory(dataStore);
@@ -41,7 +42,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
 
   plugin.addCommand({
     id: "leif-show-active-contest",
-    name: "Show active contest",
+    name: t("command.showActiveContest"),
     callback: async () => {
       const data = await dataStore.load();
       const activeContest = data.contests.find((contest) => contest.id === data.activeContestId);
@@ -52,7 +53,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
 
   plugin.addCommand({
     id: "leif-seed-demo-data",
-    name: "Seed demo data",
+    name: t("command.seedDemoData"),
     callback: async () => {
       const data = await dataStore.load();
 
@@ -68,7 +69,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
 
   plugin.addCommand({
     id: "leif-switch-active-contest",
-    name: "Switch active contest",
+    name: t("command.switchActiveContest"),
     callback: async () => {
       const data = await dataStore.load();
 
@@ -96,7 +97,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
 
   plugin.addCommand({
     id: "leif-show-active-subjects",
-    name: "Show active contest subjects",
+    name: t("command.showActiveContestSubjects"),
     callback: async () => {
       const subjects = await listSubjectsForActiveContest.execute();
 
@@ -119,7 +120,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
 
   plugin.addCommand({
     id: "leif-reorder-active-subjects",
-    name: "Reorder active contest subjects",
+    name: t("command.reorderActiveContestSubjects"),
     callback: async () => {
       const data = await dataStore.load();
       const subjects = await listSubjectsForActiveContest.execute();
@@ -140,7 +141,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
 
   plugin.addCommand({
     id: "leif-toggle-first-subject-active",
-    name: "Toggle first subject active state",
+    name: t("command.toggleFirstSubjectActive"),
     callback: async () => {
       const subjects = await listSubjectsForActiveContest.execute();
       const subject = subjects[0];
@@ -161,7 +162,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
 
   plugin.addCommand({
     id: "leif-update-first-subject-config",
-    name: "Update first subject configuration",
+    name: t("command.updateFirstSubjectConfig"),
     callback: async () => {
       const subjects = await listSubjectsForActiveContest.execute();
       const subject = subjects[0];
@@ -185,7 +186,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
 
   plugin.addCommand({
     id: "leif-advance-cycle",
-    name: "Advance cycle",
+    name: t("command.advanceCycle"),
     callback: () =>
       DomHelpers.runGuarded(async () => {
         const state = await advanceCycle.execute();
@@ -195,7 +196,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
 
   plugin.addCommand({
     id: "leif-show-cycle-snapshot",
-    name: "Show cycle snapshot",
+    name: t("command.showCycleSnapshot"),
     callback: () =>
       DomHelpers.runGuarded(async () => {
         const snapshot = await getActiveCycleSnapshot.execute();
@@ -214,7 +215,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
 
   plugin.addCommand({
     id: "leif-show-active-contest-wall",
-    name: "Show active contest wall",
+    name: t("command.showActiveContestWall"),
     callback: async () => {
       const data = await dataStore.load();
       const activeContest = data.contests.find((contest) => contest.id === data.activeContestId);
@@ -232,7 +233,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
 
   plugin.addCommand({
     id: "leif-show-summary",
-    name: "Show active contest summary",
+    name: t("command.showActiveContestSummary"),
     callback: () =>
       DomHelpers.runGuarded(async () => {
         const summary = await getActiveContestSummary.execute();
@@ -259,7 +260,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
 
   plugin.addCommand({
     id: "leif-register-demo-question-session",
-    name: "Register demo question session",
+    name: t("command.registerDemoQuestionSession"),
     callback: async () => {
       const data = await dataStore.load();
 
@@ -298,7 +299,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
 
   plugin.addCommand({
     id: "leif-register-demo-video-session",
-    name: "Register demo video session",
+    name: t("command.registerDemoVideoSession"),
     callback: async () => {
       const data = await dataStore.load();
 
@@ -330,7 +331,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
 
   plugin.addCommand({
     id: "leif-reset-demo-data",
-    name: "Reset plugin data",
+    name: t("command.resetPluginData"),
     callback: async () => {
       await dataStore.save(createDefaultLeifPluginData());
       new Notice("Leif data reset.");
