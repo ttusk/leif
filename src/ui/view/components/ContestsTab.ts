@@ -6,6 +6,7 @@ import { UpdateContestUseCase } from "@/application/use-cases/UpdateContestUseCa
 import type { Contest } from "@/domain/entities/Contest";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
+import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 import { Notice } from "obsidian";
 
 /**
@@ -23,10 +24,11 @@ export class ContestsTab {
     private readonly dataStore: PluginDataStore,
     private readonly onUpdate: () => Promise<void>
   ) {
-    this.createContestUseCase = new CreateContestUseCase(dataStore);
-    this.setActiveContestUseCase = new SetActiveContestUseCase(dataStore);
-    this.updateContestUseCase = new UpdateContestUseCase(dataStore);
-    this.deleteContestUseCase = new DeleteContestUseCase(dataStore);
+    const repositoryFactory = new EntityRepositoryFactory(dataStore);
+    this.createContestUseCase = new CreateContestUseCase(dataStore, repositoryFactory);
+    this.setActiveContestUseCase = new SetActiveContestUseCase(dataStore, repositoryFactory);
+    this.updateContestUseCase = new UpdateContestUseCase(dataStore, repositoryFactory);
+    this.deleteContestUseCase = new DeleteContestUseCase(dataStore, repositoryFactory);
   }
 
   async render(container: HTMLElement, data: LeifPluginData): Promise<void> {

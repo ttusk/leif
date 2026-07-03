@@ -1,7 +1,7 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
 import type { StudySession } from "@/domain/entities/StudySession";
 import type { Topic } from "@/domain/entities/Topic";
-import { EntityRepository } from "@/infrastructure/persistence/EntityRepository";
 import { ValidationError } from "@/domain/errors/DomainErrors";
 import { DeleteStudySessionValidator } from "@/application/validation/InputValidators";
 
@@ -13,12 +13,15 @@ export interface DeleteStudySessionInput {
  * Use case for deleting a study session.
  */
 export class DeleteStudySessionUseCase {
-  private readonly sessionRepository: EntityRepository<StudySession>;
-  private readonly topicRepository: EntityRepository<Topic>;
+  private readonly sessionRepository: EntityRepositoryPort<StudySession>;
+  private readonly topicRepository: EntityRepositoryPort<Topic>;
 
-  constructor(private readonly dataStore: PluginDataStore) {
-    this.sessionRepository = new EntityRepository<StudySession>(dataStore, "studySessions");
-    this.topicRepository = new EntityRepository<Topic>(dataStore, "topics");
+  constructor(
+    private readonly dataStore: PluginDataStore,
+    repositoryFactory: RepositoryFactory
+  ) {
+    this.sessionRepository = repositoryFactory.for<StudySession>("studySessions");
+    this.topicRepository = repositoryFactory.for<Topic>("topics");
   }
 
   async execute(input: DeleteStudySessionInput): Promise<StudySession> {

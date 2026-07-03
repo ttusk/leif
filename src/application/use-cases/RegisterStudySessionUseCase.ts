@@ -1,9 +1,9 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
 import { StudySession } from "@/domain/entities/StudySession";
 import type { Topic } from "@/domain/entities/Topic";
 import type { Contest } from "@/domain/entities/Contest";
 import type { Subject } from "@/domain/entities/Subject";
-import { EntityRepository } from "@/infrastructure/persistence/EntityRepository";
 import { ValidationError } from "@/domain/errors/DomainErrors";
 import { RegisterStudySessionValidator } from "@/application/validation/InputValidators";
 
@@ -13,16 +13,19 @@ export type RegisterStudySessionInput = StudySession;
  * Use case for registering a new study session.
  */
 export class RegisterStudySessionUseCase {
-  private readonly contestRepository: EntityRepository<Contest>;
-  private readonly subjectRepository: EntityRepository<Subject>;
-  private readonly topicRepository: EntityRepository<Topic>;
-  private readonly sessionRepository: EntityRepository<StudySession>;
+  private readonly contestRepository: EntityRepositoryPort<Contest>;
+  private readonly subjectRepository: EntityRepositoryPort<Subject>;
+  private readonly topicRepository: EntityRepositoryPort<Topic>;
+  private readonly sessionRepository: EntityRepositoryPort<StudySession>;
 
-  constructor(private readonly dataStore: PluginDataStore) {
-    this.contestRepository = new EntityRepository<Contest>(dataStore, "contests");
-    this.subjectRepository = new EntityRepository<Subject>(dataStore, "subjects");
-    this.topicRepository = new EntityRepository<Topic>(dataStore, "topics");
-    this.sessionRepository = new EntityRepository<StudySession>(dataStore, "studySessions");
+  constructor(
+    private readonly dataStore: PluginDataStore,
+    repositoryFactory: RepositoryFactory
+  ) {
+    this.contestRepository = repositoryFactory.for<Contest>("contests");
+    this.subjectRepository = repositoryFactory.for<Subject>("subjects");
+    this.topicRepository = repositoryFactory.for<Topic>("topics");
+    this.sessionRepository = repositoryFactory.for<StudySession>("studySessions");
   }
 
   async execute(input: RegisterStudySessionInput): Promise<StudySession> {

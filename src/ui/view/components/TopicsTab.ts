@@ -7,6 +7,7 @@ import { UpdateTopicUseCase } from "@/application/use-cases/UpdateTopicUseCase";
 import type { Topic } from "@/domain/entities/Topic";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
+import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 
 /**
  * Topics tab component with unified CRUD pattern.
@@ -26,10 +27,11 @@ export class TopicsTab {
     private readonly dataStore: PluginDataStore,
     private readonly onUpdate: () => Promise<void>
   ) {
-    this.createTopicUseCase = new CreateTopicUseCase(dataStore);
-    this.deleteTopicUseCase = new DeleteTopicUseCase(dataStore);
-    this.linkQuestionNotebookUseCase = new LinkQuestionNotebookUseCase(dataStore);
-    this.updateTopicUseCase = new UpdateTopicUseCase(dataStore);
+    const repositoryFactory = new EntityRepositoryFactory(dataStore);
+    this.createTopicUseCase = new CreateTopicUseCase(dataStore, repositoryFactory);
+    this.deleteTopicUseCase = new DeleteTopicUseCase(dataStore, repositoryFactory);
+    this.linkQuestionNotebookUseCase = new LinkQuestionNotebookUseCase(dataStore, repositoryFactory);
+    this.updateTopicUseCase = new UpdateTopicUseCase(dataStore, repositoryFactory);
   }
 
   async render(container: HTMLElement, data: LeifPluginData): Promise<void> {

@@ -9,6 +9,7 @@ import type { PdfItemProgress } from "@/application/use-cases/GetActiveContestPr
 import type { StudyItem } from "@/domain/entities/StudyItem";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
+import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 
 /**
  * Items tab component with unified CRUD pattern.
@@ -29,11 +30,12 @@ export class ItemsTab {
     private readonly dataStore: PluginDataStore,
     private readonly onUpdate: () => Promise<void>
   ) {
-    this.createStudyItemUseCase = new CreateStudyItemUseCase(dataStore);
-    this.addStudyItemResourceReferenceUseCase = new AddStudyItemResourceReferenceUseCase(dataStore);
+    const repositoryFactory = new EntityRepositoryFactory(dataStore);
+    this.createStudyItemUseCase = new CreateStudyItemUseCase(dataStore, repositoryFactory);
+    this.addStudyItemResourceReferenceUseCase = new AddStudyItemResourceReferenceUseCase(dataStore, repositoryFactory);
     this.getActiveContestProgressDashboardUseCase = new GetActiveContestProgressDashboardUseCase(dataStore);
-    this.deleteStudyItemUseCase = new DeleteStudyItemUseCase(dataStore);
-    this.updateStudyItemUseCase = new UpdateStudyItemUseCase(dataStore);
+    this.deleteStudyItemUseCase = new DeleteStudyItemUseCase(dataStore, repositoryFactory);
+    this.updateStudyItemUseCase = new UpdateStudyItemUseCase(dataStore, repositoryFactory);
   }
 
   async render(container: HTMLElement, data: LeifPluginData): Promise<void> {

@@ -1,14 +1,15 @@
 import { NotFoundError, AlreadyExistsError } from "@/domain/errors/DomainErrors";
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import type { EntityRepositoryPort } from "@/application/ports/EntityRepository";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 
 /**
- * Generic repository for managing entities in the plugin data store.
- * Reduces duplication across use cases by providing common CRUD operations.
- * 
+ * Concrete {@link EntityRepositoryPort} backed by the plugin data store.
+ * Lives in the infrastructure layer so the application layer never imports it.
+ *
  * @template T - The entity type (must have an id field)
  */
-export class EntityRepository<T extends { id: string }> {
+export class EntityRepository<T extends { id: string }> implements EntityRepositoryPort<T> {
   constructor(
     private readonly dataStore: PluginDataStore,
     private readonly entityKey: keyof LeifPluginData

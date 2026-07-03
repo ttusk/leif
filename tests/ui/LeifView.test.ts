@@ -16,6 +16,7 @@ import { UpdateStudyItemUseCase } from "@/application/use-cases/UpdateStudyItemU
 import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
 import { App, getRecordedNotices, Plugin, resetRecordedNotices } from "../mocks/obsidian";
 import { LEIF_VIEW_TYPE, registerLeifView } from "@/ui/view/registerLeifView";
+import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 import { seedMinimalContest } from "@/infrastructure/persistence/Seeder";
 
 class InMemoryPluginDataStore implements PluginDataStore {
@@ -30,13 +31,14 @@ class InMemoryPluginDataStore implements PluginDataStore {
   }
 }
 
-async function seedUiData(dataStore: PluginDataStore): Promise<void> {
-  const createContest = new CreateContestUseCase(dataStore);
-  const createSubject = new CreateSubjectUseCase(dataStore);
-  const createStudyItem = new CreateStudyItemUseCase(dataStore);
-  const updateContestWall = new UpdateContestWallUseCase(dataStore);
-  const registerStudySession = new RegisterStudySessionUseCase(dataStore);
-  const setActiveContest = new SetActiveContestUseCase(dataStore);
+async function seedUiData(dataStore: PluginDataStore): Promise<EntityRepositoryFactory> {
+  const factory = new EntityRepositoryFactory(dataStore);
+  const createContest = new CreateContestUseCase(dataStore, factory);
+  const createSubject = new CreateSubjectUseCase(dataStore, factory);
+  const createStudyItem = new CreateStudyItemUseCase(dataStore, factory);
+  const updateContestWall = new UpdateContestWallUseCase(dataStore, factory);
+  const registerStudySession = new RegisterStudySessionUseCase(dataStore, factory);
+  const setActiveContest = new SetActiveContestUseCase(dataStore, factory);
 
   await createContest.execute({ id: "contest-2", name: "SEFAZ" });
   const { contestId, subjectId } = await seedMinimalContest(dataStore);
@@ -66,6 +68,8 @@ async function seedUiData(dataStore: PluginDataStore): Promise<void> {
     pagesOrCount: 20,
     completed: true
   });
+
+  return factory;
 }
 
 async function openLeifView(dataStore: PluginDataStore): Promise<{ plugin: Plugin; app: App; leaf: App["workspace"]["leaves"][number]; view: NonNullable<App["workspace"]["leaves"][number]["view"]> }> {
@@ -118,7 +122,7 @@ describe("LeifView", () => {
 
   it("renders dashboard data from the active contest", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
+    const factory = await seedUiData(dataStore);
 
     const { leaf } = await openLeifView(dataStore);
 
@@ -131,7 +135,7 @@ describe("LeifView", () => {
 
   it("switches the active contest from the contests tab and rerenders the dashboard", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
+    const factory = await seedUiData(dataStore);
 
     const { leaf } = await openLeifView(dataStore);
     const contestsTabButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='contests']");
@@ -166,7 +170,7 @@ describe("LeifView", () => {
 
   it("uses larger text areas when editing contest name and notes", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
+    const factory = await seedUiData(dataStore);
 
     const { leaf } = await openLeifView(dataStore);
     const contestsTabButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='contests']");
@@ -202,7 +206,7 @@ describe("LeifView", () => {
 
   it("formats session history dates with day, month and year", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
+    const factory = await seedUiData(dataStore);
 
     const { leaf } = await openLeifView(dataStore);
     const sessionsTabButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='sessions']");
@@ -221,7 +225,7 @@ describe("LeifView", () => {
 
   it("shows cycle advance button in sessions tab", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
+    const factory = await seedUiData(dataStore);
 
     const { leaf } = await openLeifView(dataStore);
     const sessionsTabButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='sessions']");
@@ -238,7 +242,7 @@ describe("LeifView", () => {
 
   it("shows the recommended subject name in the cycle-advance notice", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
+    const factory = await seedUiData(dataStore);
 
     const { leaf } = await openLeifView(dataStore);
     const sessionsTabButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='sessions']");
@@ -272,7 +276,7 @@ describe("LeifView", () => {
 
   it("deletes a session from recent history", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
+    const factory = await seedUiData(dataStore);
 
     const originalConfirm = window.confirm;
     window.confirm = () => true;
@@ -304,10 +308,10 @@ describe("LeifView", () => {
 
   it("creates a questions session from the sessions tab form", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
+    const factory = await seedUiData(dataStore);
 
-    const createTopic = new CreateTopicUseCase(dataStore);
-    const linkNotebook = new LinkQuestionNotebookUseCase(dataStore);
+    const createTopic = new CreateTopicUseCase(dataStore, factory);
+    const linkNotebook = new LinkQuestionNotebookUseCase(dataStore, factory);
     await createTopic.execute({
       id: "topic-1",
       subjectId: "subject-1",
@@ -401,10 +405,10 @@ describe("LeifView", () => {
 
   it("rejects a questions session form submission when count is 0", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
+    const factory = await seedUiData(dataStore);
 
-    const createTopic = new CreateTopicUseCase(dataStore);
-    const linkNotebook = new LinkQuestionNotebookUseCase(dataStore);
+    const createTopic = new CreateTopicUseCase(dataStore, factory);
+    const linkNotebook = new LinkQuestionNotebookUseCase(dataStore, factory);
     await createTopic.execute({
       id: "topic-1",
       subjectId: "subject-1",
@@ -486,10 +490,10 @@ describe("LeifView", () => {
 
   it("rejects a questions session form submission when count is 0", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
+    const factory = await seedUiData(dataStore);
 
-    const createTopic = new CreateTopicUseCase(dataStore);
-    const linkNotebook = new LinkQuestionNotebookUseCase(dataStore);
+    const createTopic = new CreateTopicUseCase(dataStore, factory);
+    const linkNotebook = new LinkQuestionNotebookUseCase(dataStore, factory);
     await createTopic.execute({
       id: "topic-1",
       subjectId: "subject-1",
@@ -565,11 +569,11 @@ describe("LeifView", () => {
 
   it("shows the Acertos column for questions sessions and hides it for other types", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
+    const factory = await seedUiData(dataStore);
 
-    const registerStudySession = new RegisterStudySessionUseCase(dataStore);
-    const createTopic = new CreateTopicUseCase(dataStore);
-    const linkNotebook = new LinkQuestionNotebookUseCase(dataStore);
+    const registerStudySession = new RegisterStudySessionUseCase(dataStore, factory);
+    const createTopic = new CreateTopicUseCase(dataStore, factory);
+    const linkNotebook = new LinkQuestionNotebookUseCase(dataStore, factory);
     await createTopic.execute({
       id: "topic-1",
       subjectId: "subject-1",
@@ -636,7 +640,7 @@ describe("LeifView", () => {
 
   it("uses user-facing labels for the session form type select", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
+    const factory = await seedUiData(dataStore);
 
     const { leaf } = await openLeifView(dataStore);
     const sessionsTabButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='sessions']");
@@ -681,11 +685,11 @@ describe("LeifView", () => {
 
   it("shows pages readed vs total and a completion check for items in the items tab", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
+    const factory = await seedUiData(dataStore);
 
-    const createItem = new CreateStudyItemUseCase(dataStore);
-    const updateItem = new UpdateStudyItemUseCase(dataStore);
-    const registerSession = new RegisterStudySessionUseCase(dataStore);
+    const createItem = new CreateStudyItemUseCase(dataStore, factory);
+    const updateItem = new UpdateStudyItemUseCase(dataStore, factory);
+    const registerSession = new RegisterStudySessionUseCase(dataStore, factory);
 
     const itemA = await createItem.execute({ subjectId: "subject-1", title: "Sintaxe" });
     await updateItem.execute({ itemId: itemA.id, totalPages: 100 });
@@ -737,9 +741,9 @@ describe("LeifView", () => {
 
   it("edits an item title from the items tab", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
+    const factory = await seedUiData(dataStore);
 
-    const createItem = new CreateStudyItemUseCase(dataStore);
+    const createItem = new CreateStudyItemUseCase(dataStore, factory);
     const item = await createItem.execute({ subjectId: "subject-1", title: "Sintaxe" });
 
     const { leaf } = await openLeifView(dataStore);
@@ -784,11 +788,11 @@ describe("LeifView", () => {
 
   it("shows a progress bar for pdf sessions in the sessions history table", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
+    const factory = await seedUiData(dataStore);
 
-    const createItem = new CreateStudyItemUseCase(dataStore);
-    const updateItem = new UpdateStudyItemUseCase(dataStore);
-    const registerSession = new RegisterStudySessionUseCase(dataStore);
+    const createItem = new CreateStudyItemUseCase(dataStore, factory);
+    const updateItem = new UpdateStudyItemUseCase(dataStore, factory);
+    const registerSession = new RegisterStudySessionUseCase(dataStore, factory);
 
     const itemPdf = await createItem.execute({ subjectId: "subject-1", title: "Constituição" });
     await updateItem.execute({ itemId: itemPdf.id, totalPages: 200 });
@@ -829,10 +833,10 @@ describe("LeifView", () => {
 
   it("uses user-facing labels for the item resource type select and detail row", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
+    const factory = await seedUiData(dataStore);
 
-    const createItem = new CreateStudyItemUseCase(dataStore);
-    const addResource = new AddStudyItemResourceReferenceUseCase(dataStore);
+    const createItem = new CreateStudyItemUseCase(dataStore, factory);
+    const addResource = new AddStudyItemResourceReferenceUseCase(dataStore, factory);
 
     const itemRes = await createItem.execute({ subjectId: "subject-1", title: "Gramática" });
     await addResource.execute({
@@ -880,12 +884,12 @@ describe("LeifView", () => {
 
   it("assigns a question notebook to a topic from the topics tab", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
+    const factory = await seedUiData(dataStore);
     const originalOpen = window.open;
     const openSpy = vi.fn();
     window.open = openSpy;
 
-    const createTopic = new CreateTopicUseCase(dataStore);
+    const createTopic = new CreateTopicUseCase(dataStore, factory);
     await createTopic.execute({
       id: "topic-caderno",
       subjectId: "subject-1",
@@ -957,9 +961,9 @@ describe("LeifView", () => {
 
   it("does not expose ordering controls for topics", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
+    const factory = await seedUiData(dataStore);
 
-    const createTopic = new CreateTopicUseCase(dataStore);
+    const createTopic = new CreateTopicUseCase(dataStore, factory);
     await createTopic.execute({
       id: "topic-sem-ordem",
       subjectId: "subject-1",

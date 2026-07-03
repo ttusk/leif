@@ -1,7 +1,7 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
 import type { StudyItem } from "@/domain/entities/StudyItem";
 import { ValidationError } from "@/domain/errors/DomainErrors";
-import { EntityRepository } from "@/infrastructure/persistence/EntityRepository";
 
 export interface UpdateStudyItemInput {
   itemId: string;
@@ -15,10 +15,13 @@ export interface UpdateStudyItemInput {
  * Use case for updating a study item's configuration.
  */
 export class UpdateStudyItemUseCase {
-  private readonly itemRepository: EntityRepository<StudyItem>;
+  private readonly itemRepository: EntityRepositoryPort<StudyItem>;
 
-  constructor(private readonly dataStore: PluginDataStore) {
-    this.itemRepository = new EntityRepository<StudyItem>(dataStore, "studyItems");
+  constructor(
+    private readonly dataStore: PluginDataStore,
+    repositoryFactory: RepositoryFactory
+  ) {
+    this.itemRepository = repositoryFactory.for<StudyItem>("studyItems");
   }
 
   async execute(input: UpdateStudyItemInput): Promise<StudyItem> {

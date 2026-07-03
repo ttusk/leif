@@ -13,6 +13,7 @@ import { LinkQuestionNotebookUseCase } from "@/application/use-cases/LinkQuestio
 import { RegisterStudySessionUseCase } from "@/application/use-cases/RegisterStudySessionUseCase";
 import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
 import { PluginDataStore } from "@/infrastructure/persistence/PluginDataStore";
+import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 
 class InMemoryStorageAdapter implements PersistentStorageAdapter<LeifPluginData> {
   private data: LeifPluginData | null;
@@ -37,10 +38,11 @@ function createStore(): PluginDataStore {
 describe("Study structure", () => {
   it("creates items and topics in order and exposes the active cycle snapshot", async () => {
     const store = createStore();
-    const createContest = new CreateContestUseCase(store);
-    const createSubject = new CreateSubjectUseCase(store);
-    const createStudyItem = new CreateStudyItemUseCase(store);
-    const createTopic = new CreateTopicUseCase(store);
+    const factory = new EntityRepositoryFactory(store);
+    const createContest = new CreateContestUseCase(store, factory);
+    const createSubject = new CreateSubjectUseCase(store, factory);
+    const createStudyItem = new CreateStudyItemUseCase(store, factory);
+    const createTopic = new CreateTopicUseCase(store, factory);
     const advanceCycle = new AdvanceCycleUseCase(store);
     const getSnapshot = new GetActiveCycleSnapshotUseCase(store);
 
@@ -62,9 +64,10 @@ describe("Study structure", () => {
 
   it("recommends the first pending item before the cycle has been started", async () => {
     const store = createStore();
-    const createContest = new CreateContestUseCase(store);
-    const createSubject = new CreateSubjectUseCase(store);
-    const createStudyItem = new CreateStudyItemUseCase(store);
+    const factory = new EntityRepositoryFactory(store);
+    const createContest = new CreateContestUseCase(store, factory);
+    const createSubject = new CreateSubjectUseCase(store, factory);
+    const createStudyItem = new CreateStudyItemUseCase(store, factory);
     const getSnapshot = new GetActiveCycleSnapshotUseCase(store);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });
@@ -82,13 +85,14 @@ describe("Study structure", () => {
 
   it("adds material resources to items, links a question notebook to topics, and registers study sessions", async () => {
     const store = createStore();
-    const createContest = new CreateContestUseCase(store);
-    const createSubject = new CreateSubjectUseCase(store);
-    const createStudyItem = new CreateStudyItemUseCase(store);
-    const addStudyItemResourceReference = new AddStudyItemResourceReferenceUseCase(store);
-    const createTopic = new CreateTopicUseCase(store);
-    const linkQuestionNotebook = new LinkQuestionNotebookUseCase(store);
-    const registerStudySession = new RegisterStudySessionUseCase(store);
+    const factory = new EntityRepositoryFactory(store);
+    const createContest = new CreateContestUseCase(store, factory);
+    const createSubject = new CreateSubjectUseCase(store, factory);
+    const createStudyItem = new CreateStudyItemUseCase(store, factory);
+    const addStudyItemResourceReference = new AddStudyItemResourceReferenceUseCase(store, factory);
+    const createTopic = new CreateTopicUseCase(store, factory);
+    const linkQuestionNotebook = new LinkQuestionNotebookUseCase(store, factory);
+    const registerStudySession = new RegisterStudySessionUseCase(store, factory);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });
     await createSubject.execute({ id: "subject-1", contestId: "contest-1", name: "Portuguese", plannedStudyMinutes: 60 });
@@ -164,12 +168,13 @@ describe("Study structure", () => {
 
   it("removes a question session and reverts notebook stats", async () => {
     const store = createStore();
-    const createContest = new CreateContestUseCase(store);
-    const createSubject = new CreateSubjectUseCase(store);
-    const createTopic = new CreateTopicUseCase(store);
-    const linkQuestionNotebook = new LinkQuestionNotebookUseCase(store);
-    const registerStudySession = new RegisterStudySessionUseCase(store);
-    const deleteStudySession = new DeleteStudySessionUseCase(store);
+    const factory = new EntityRepositoryFactory(store);
+    const createContest = new CreateContestUseCase(store, factory);
+    const createSubject = new CreateSubjectUseCase(store, factory);
+    const createTopic = new CreateTopicUseCase(store, factory);
+    const linkQuestionNotebook = new LinkQuestionNotebookUseCase(store, factory);
+    const registerStudySession = new RegisterStudySessionUseCase(store, factory);
+    const deleteStudySession = new DeleteStudySessionUseCase(store, factory);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });
     await createSubject.execute({ id: "subject-1", contestId: "contest-1", name: "Portuguese", plannedStudyMinutes: 60 });
@@ -208,10 +213,11 @@ describe("Study structure", () => {
 
   it("does not advance the current cycle when a question session is registered", async () => {
     const store = createStore();
-    const createContest = new CreateContestUseCase(store);
-    const createSubject = new CreateSubjectUseCase(store);
+    const factory = new EntityRepositoryFactory(store);
+    const createContest = new CreateContestUseCase(store, factory);
+    const createSubject = new CreateSubjectUseCase(store, factory);
     const advanceCycle = new AdvanceCycleUseCase(store);
-    const registerStudySession = new RegisterStudySessionUseCase(store);
+    const registerStudySession = new RegisterStudySessionUseCase(store, factory);
     const getSnapshot = new GetActiveCycleSnapshotUseCase(store);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });

@@ -1,8 +1,8 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
 import type { QuestionNotebook } from "@/domain/entities/QuestionNotebook";
 import type { Topic } from "@/domain/entities/Topic";
 import { ValidationError } from "@/domain/errors/DomainErrors";
-import { EntityRepository } from "@/infrastructure/persistence/EntityRepository";
 
 export interface UpdateTopicInput {
   topicId: string;
@@ -20,10 +20,13 @@ export interface UpdateTopicInput {
  * Use case for updating a topic's configuration.
  */
 export class UpdateTopicUseCase {
-  private readonly topicRepository: EntityRepository<Topic>;
+  private readonly topicRepository: EntityRepositoryPort<Topic>;
 
-  constructor(private readonly dataStore: PluginDataStore) {
-    this.topicRepository = new EntityRepository<Topic>(dataStore, "topics");
+  constructor(
+    private readonly dataStore: PluginDataStore,
+    repositoryFactory: RepositoryFactory
+  ) {
+    this.topicRepository = repositoryFactory.for<Topic>("topics");
   }
 
   async execute(input: UpdateTopicInput): Promise<Topic> {

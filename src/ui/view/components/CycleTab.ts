@@ -8,6 +8,7 @@ import type { Subject } from "@/domain/entities/Subject";
 import { NoActiveContestError } from "@/domain/errors/DomainErrors";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
+import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 import { Notice } from "obsidian";
 
 /**
@@ -26,11 +27,12 @@ export class CycleTab {
     private readonly dataStore: PluginDataStore,
     private readonly onUpdate: () => Promise<void>
   ) {
-    this.createSubjectUseCase = new CreateSubjectUseCase(dataStore);
+    const repositoryFactory = new EntityRepositoryFactory(dataStore);
+    this.createSubjectUseCase = new CreateSubjectUseCase(dataStore, repositoryFactory);
     this.listSubjectsForActiveContestUseCase = new ListSubjectsForActiveContestUseCase(dataStore);
-    this.reorderSubjectsUseCase = new ReorderSubjectsUseCase(dataStore);
-    this.setSubjectActiveStateUseCase = new SetSubjectActiveStateUseCase(dataStore);
-    this.updateSubjectConfigurationUseCase = new UpdateSubjectConfigurationUseCase(dataStore);
+    this.reorderSubjectsUseCase = new ReorderSubjectsUseCase(dataStore, repositoryFactory);
+    this.setSubjectActiveStateUseCase = new SetSubjectActiveStateUseCase(dataStore, repositoryFactory);
+    this.updateSubjectConfigurationUseCase = new UpdateSubjectConfigurationUseCase(dataStore, repositoryFactory);
   }
 
   /**

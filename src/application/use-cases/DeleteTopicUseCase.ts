@@ -1,7 +1,7 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
 import type { Subject } from "@/domain/entities/Subject";
 import type { Topic } from "@/domain/entities/Topic";
-import { EntityRepository } from "@/infrastructure/persistence/EntityRepository";
 
 export interface DeleteTopicInput {
   topicId: string;
@@ -11,12 +11,15 @@ export interface DeleteTopicInput {
  * Use case for deleting a topic.
  */
 export class DeleteTopicUseCase {
-  private readonly topicRepository: EntityRepository<Topic>;
-  private readonly subjectRepository: EntityRepository<Subject>;
+  private readonly topicRepository: EntityRepositoryPort<Topic>;
+  private readonly subjectRepository: EntityRepositoryPort<Subject>;
 
-  constructor(private readonly dataStore: PluginDataStore) {
-    this.topicRepository = new EntityRepository<Topic>(dataStore, "topics");
-    this.subjectRepository = new EntityRepository<Subject>(dataStore, "subjects");
+  constructor(
+    private readonly dataStore: PluginDataStore,
+    repositoryFactory: RepositoryFactory
+  ) {
+    this.topicRepository = repositoryFactory.for<Topic>("topics");
+    this.subjectRepository = repositoryFactory.for<Subject>("subjects");
   }
 
   async execute(input: DeleteTopicInput): Promise<Topic> {

@@ -1,8 +1,8 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
 import type { ResourceReference } from "@/domain/entities/ResourceReference";
 import { StudyItem } from "@/domain/entities/StudyItem";
 import { Subject } from "@/domain/entities/Subject";
-import { EntityRepository } from "@/infrastructure/persistence/EntityRepository";
 import { ValidationError } from "@/domain/errors/DomainErrors";
 import { CreateStudyItemValidator } from "@/application/validation/InputValidators";
 
@@ -20,12 +20,15 @@ export interface CreateStudyItemInput {
  * Use case for creating a new study item under a subject.
  */
 export class CreateStudyItemUseCase {
-  private readonly subjectRepository: EntityRepository<Subject>;
-  private readonly studyItemRepository: EntityRepository<StudyItem>;
+  private readonly subjectRepository: EntityRepositoryPort<Subject>;
+  private readonly studyItemRepository: EntityRepositoryPort<StudyItem>;
 
-  constructor(private readonly dataStore: PluginDataStore) {
-    this.subjectRepository = new EntityRepository<Subject>(dataStore, "subjects");
-    this.studyItemRepository = new EntityRepository<StudyItem>(dataStore, "studyItems");
+  constructor(
+    private readonly dataStore: PluginDataStore,
+    repositoryFactory: RepositoryFactory
+  ) {
+    this.subjectRepository = repositoryFactory.for<Subject>("subjects");
+    this.studyItemRepository = repositoryFactory.for<StudyItem>("studyItems");
   }
 
   async execute(input: CreateStudyItemInput): Promise<StudyItem> {

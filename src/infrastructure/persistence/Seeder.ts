@@ -10,6 +10,7 @@ import { UpdateContestWallUseCase } from "@/application/use-cases/UpdateContestW
 import type { StudyItem } from "@/domain/entities/StudyItem";
 import type { Subject } from "@/domain/entities/Subject";
 import type { Topic } from "@/domain/entities/Topic";
+import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 
 export interface SeededContest {
   id: string;
@@ -378,14 +379,15 @@ const DEMO_CONTESTS: SeedContestSpec[] = [
  * Returns the created contests so callers can reference stable IDs.
  */
 export async function seedTceSpDemo(dataStore: PluginDataStore): Promise<SeededContest[]> {
-  const createContest = new CreateContestUseCase(dataStore);
-  const createSubject = new CreateSubjectUseCase(dataStore);
-  const createItem = new CreateStudyItemUseCase(dataStore);
-  const createTopic = new CreateTopicUseCase(dataStore);
-  const linkNotebook = new LinkQuestionNotebookUseCase(dataStore);
-  const updateWall = new UpdateContestWallUseCase(dataStore);
-  const registerSession = new RegisterStudySessionUseCase(dataStore);
-  const setActive = new SetActiveContestUseCase(dataStore);
+  const repositoryFactory = new EntityRepositoryFactory(dataStore);
+  const createContest = new CreateContestUseCase(dataStore, repositoryFactory);
+  const createSubject = new CreateSubjectUseCase(dataStore, repositoryFactory);
+  const createItem = new CreateStudyItemUseCase(dataStore, repositoryFactory);
+  const createTopic = new CreateTopicUseCase(dataStore, repositoryFactory);
+  const linkNotebook = new LinkQuestionNotebookUseCase(dataStore, repositoryFactory);
+  const updateWall = new UpdateContestWallUseCase(dataStore, repositoryFactory);
+  const registerSession = new RegisterStudySessionUseCase(dataStore, repositoryFactory);
+  const setActive = new SetActiveContestUseCase(dataStore, repositoryFactory);
 
   const seededContests: SeededContest[] = [];
 
@@ -497,9 +499,10 @@ export async function seedTceSpDemo(dataStore: PluginDataStore): Promise<SeededC
  * Minimal seed for tests that need just a contest + 1 subject.
  */
 export async function seedMinimalContest(dataStore: PluginDataStore): Promise<{ contestId: string; subjectId: string }> {
-  const createContest = new CreateContestUseCase(dataStore);
-  const createSubject = new CreateSubjectUseCase(dataStore);
-  const setActive = new SetActiveContestUseCase(dataStore);
+  const repositoryFactory = new EntityRepositoryFactory(dataStore);
+  const createContest = new CreateContestUseCase(dataStore, repositoryFactory);
+  const createSubject = new CreateSubjectUseCase(dataStore, repositoryFactory);
+  const setActive = new SetActiveContestUseCase(dataStore, repositoryFactory);
 
   const contest = await createContest.execute({ id: "contest-1", name: "TRT" });
   const subject = await createSubject.execute({

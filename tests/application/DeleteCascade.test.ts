@@ -13,6 +13,7 @@ import { RegisterStudySessionUseCase } from "@/application/use-cases/RegisterStu
 import { NotFoundError } from "@/domain/errors/DomainErrors";
 import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
 import { PluginDataStore } from "@/infrastructure/persistence/PluginDataStore";
+import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 
 class InMemoryStorageAdapter implements PersistentStorageAdapter<LeifPluginData> {
   private data: LeifPluginData | null;
@@ -37,10 +38,11 @@ function createStore(): PluginDataStore {
 describe("Delete cascade", () => {
   it("deleting a study item removes its id from the owning subject", async () => {
     const store = createStore();
-    const createContest = new CreateContestUseCase(store);
-    const createSubject = new CreateSubjectUseCase(store);
-    const createStudyItem = new CreateStudyItemUseCase(store);
-    const deleteStudyItem = new DeleteStudyItemUseCase(store);
+    const factory = new EntityRepositoryFactory(store);
+    const createContest = new CreateContestUseCase(store, factory);
+    const createSubject = new CreateSubjectUseCase(store, factory);
+    const createStudyItem = new CreateStudyItemUseCase(store, factory);
+    const deleteStudyItem = new DeleteStudyItemUseCase(store, factory);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });
     await createSubject.execute({ id: "subject-1", contestId: "contest-1", name: "Portuguese", plannedStudyMinutes: 60 });
@@ -55,17 +57,19 @@ describe("Delete cascade", () => {
 
   it("throws NotFoundError when deleting a nonexistent study item", async () => {
     const store = createStore();
-    const deleteStudyItem = new DeleteStudyItemUseCase(store);
+    const factory = new EntityRepositoryFactory(store);
+    const deleteStudyItem = new DeleteStudyItemUseCase(store, factory);
 
     await expect(deleteStudyItem.execute({ itemId: "missing" })).rejects.toThrow(NotFoundError);
   });
 
   it("deleting a topic removes its id from the owning subject", async () => {
     const store = createStore();
-    const createContest = new CreateContestUseCase(store);
-    const createSubject = new CreateSubjectUseCase(store);
-    const createTopic = new CreateTopicUseCase(store);
-    const deleteTopic = new DeleteTopicUseCase(store);
+    const factory = new EntityRepositoryFactory(store);
+    const createContest = new CreateContestUseCase(store, factory);
+    const createSubject = new CreateSubjectUseCase(store, factory);
+    const createTopic = new CreateTopicUseCase(store, factory);
+    const deleteTopic = new DeleteTopicUseCase(store, factory);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });
     await createSubject.execute({ id: "subject-1", contestId: "contest-1", name: "Portuguese", plannedStudyMinutes: 60 });
@@ -80,20 +84,22 @@ describe("Delete cascade", () => {
 
   it("throws NotFoundError when deleting a nonexistent topic", async () => {
     const store = createStore();
-    const deleteTopic = new DeleteTopicUseCase(store);
+    const factory = new EntityRepositoryFactory(store);
+    const deleteTopic = new DeleteTopicUseCase(store, factory);
 
     await expect(deleteTopic.execute({ topicId: "missing" })).rejects.toThrow(NotFoundError);
   });
 
   it("deleting a contest removes its subjects, items, topics, sessions and state", async () => {
     const store = createStore();
-    const createContest = new CreateContestUseCase(store);
-    const createSubject = new CreateSubjectUseCase(store);
-    const createStudyItem = new CreateStudyItemUseCase(store);
-    const createTopic = new CreateTopicUseCase(store);
-    const linkQuestionNotebook = new LinkQuestionNotebookUseCase(store);
-    const registerStudySession = new RegisterStudySessionUseCase(store);
-    const deleteContest = new DeleteContestUseCase(store);
+    const factory = new EntityRepositoryFactory(store);
+    const createContest = new CreateContestUseCase(store, factory);
+    const createSubject = new CreateSubjectUseCase(store, factory);
+    const createStudyItem = new CreateStudyItemUseCase(store, factory);
+    const createTopic = new CreateTopicUseCase(store, factory);
+    const linkQuestionNotebook = new LinkQuestionNotebookUseCase(store, factory);
+    const registerStudySession = new RegisterStudySessionUseCase(store, factory);
+    const deleteContest = new DeleteContestUseCase(store, factory);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });
     await createContest.execute({ id: "contest-2", name: "SEFAZ" });
@@ -129,9 +135,10 @@ describe("Delete cascade", () => {
 
   it("deleting a non-active contest leaves the active contest and its data untouched", async () => {
     const store = createStore();
-    const createContest = new CreateContestUseCase(store);
-    const createSubject = new CreateSubjectUseCase(store);
-    const deleteContest = new DeleteContestUseCase(store);
+    const factory = new EntityRepositoryFactory(store);
+    const createContest = new CreateContestUseCase(store, factory);
+    const createSubject = new CreateSubjectUseCase(store, factory);
+    const deleteContest = new DeleteContestUseCase(store, factory);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });
     await createContest.execute({ id: "contest-2", name: "SEFAZ" });
@@ -147,7 +154,8 @@ describe("Delete cascade", () => {
 
   it("throws NotFoundError when deleting a nonexistent contest", async () => {
     const store = createStore();
-    const deleteContest = new DeleteContestUseCase(store);
+    const factory = new EntityRepositoryFactory(store);
+    const deleteContest = new DeleteContestUseCase(store, factory);
 
     await expect(deleteContest.execute({ contestId: "missing" })).rejects.toThrow(NotFoundError);
   });

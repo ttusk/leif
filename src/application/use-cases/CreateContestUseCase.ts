@@ -1,7 +1,7 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
 import { Contest } from "@/domain/entities/Contest";
 import { ContestState } from "@/domain/entities/ContestState";
-import { EntityRepository } from "@/infrastructure/persistence/EntityRepository";
 import { ValidationError } from "@/domain/errors/DomainErrors";
 import { CreateContestValidator } from "@/application/validation/InputValidators";
 
@@ -14,10 +14,13 @@ export interface CreateContestInput {
  * Use case for creating a new contest.
  */
 export class CreateContestUseCase {
-  private readonly contestRepository: EntityRepository<Contest>;
+  private readonly contestRepository: EntityRepositoryPort<Contest>;
 
-  constructor(private readonly dataStore: PluginDataStore) {
-    this.contestRepository = new EntityRepository<Contest>(dataStore, "contests");
+  constructor(
+    private readonly dataStore: PluginDataStore,
+    repositoryFactory: RepositoryFactory
+  ) {
+    this.contestRepository = repositoryFactory.for<Contest>("contests");
   }
 
   async execute(input: CreateContestInput): Promise<Contest> {

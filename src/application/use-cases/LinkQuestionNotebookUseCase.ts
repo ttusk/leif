@@ -1,7 +1,7 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
 import type { QuestionNotebook } from "@/domain/entities/QuestionNotebook";
 import type { Topic } from "@/domain/entities/Topic";
-import { EntityRepository } from "@/infrastructure/persistence/EntityRepository";
 import { ValidationError } from "@/domain/errors/DomainErrors";
 import { LinkQuestionNotebookValidator } from "@/application/validation/InputValidators";
 
@@ -14,10 +14,13 @@ export interface LinkQuestionNotebookInput {
  * Use case for linking a question notebook to a topic.
  */
 export class LinkQuestionNotebookUseCase {
-  private readonly topicRepository: EntityRepository<Topic>;
+  private readonly topicRepository: EntityRepositoryPort<Topic>;
 
-  constructor(private readonly dataStore: PluginDataStore) {
-    this.topicRepository = new EntityRepository<Topic>(dataStore, "topics");
+  constructor(
+    private readonly dataStore: PluginDataStore,
+    repositoryFactory: RepositoryFactory
+  ) {
+    this.topicRepository = repositoryFactory.for<Topic>("topics");
   }
 
   async execute(input: LinkQuestionNotebookInput): Promise<Topic> {

@@ -1,7 +1,7 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
 import type { StudyItem } from "@/domain/entities/StudyItem";
 import type { Subject } from "@/domain/entities/Subject";
-import { EntityRepository } from "@/infrastructure/persistence/EntityRepository";
 
 export interface DeleteStudyItemInput {
   itemId: string;
@@ -11,12 +11,15 @@ export interface DeleteStudyItemInput {
  * Use case for deleting a study item.
  */
 export class DeleteStudyItemUseCase {
-  private readonly itemRepository: EntityRepository<StudyItem>;
-  private readonly subjectRepository: EntityRepository<Subject>;
+  private readonly itemRepository: EntityRepositoryPort<StudyItem>;
+  private readonly subjectRepository: EntityRepositoryPort<Subject>;
 
-  constructor(private readonly dataStore: PluginDataStore) {
-    this.itemRepository = new EntityRepository<StudyItem>(dataStore, "studyItems");
-    this.subjectRepository = new EntityRepository<Subject>(dataStore, "subjects");
+  constructor(
+    private readonly dataStore: PluginDataStore,
+    repositoryFactory: RepositoryFactory
+  ) {
+    this.itemRepository = repositoryFactory.for<StudyItem>("studyItems");
+    this.subjectRepository = repositoryFactory.for<Subject>("subjects");
   }
 
   async execute(input: DeleteStudyItemInput): Promise<StudyItem> {

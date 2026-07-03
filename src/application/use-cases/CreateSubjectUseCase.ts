@@ -1,7 +1,7 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
 import { Subject } from "@/domain/entities/Subject";
 import { Contest } from "@/domain/entities/Contest";
-import { EntityRepository } from "@/infrastructure/persistence/EntityRepository";
 import { ValidationError } from "@/domain/errors/DomainErrors";
 import { CreateSubjectValidator } from "@/application/validation/InputValidators";
 
@@ -18,12 +18,15 @@ export interface CreateSubjectInput {
  * Use case for creating a new subject under a contest.
  */
 export class CreateSubjectUseCase {
-  private readonly contestRepository: EntityRepository<Contest>;
-  private readonly subjectRepository: EntityRepository<Subject>;
+  private readonly contestRepository: EntityRepositoryPort<Contest>;
+  private readonly subjectRepository: EntityRepositoryPort<Subject>;
 
-  constructor(private readonly dataStore: PluginDataStore) {
-    this.contestRepository = new EntityRepository<Contest>(dataStore, "contests");
-    this.subjectRepository = new EntityRepository<Subject>(dataStore, "subjects");
+  constructor(
+    private readonly dataStore: PluginDataStore,
+    repositoryFactory: RepositoryFactory
+  ) {
+    this.contestRepository = repositoryFactory.for<Contest>("contests");
+    this.subjectRepository = repositoryFactory.for<Subject>("subjects");
   }
 
   async execute(input: CreateSubjectInput): Promise<Subject> {

@@ -7,6 +7,7 @@ import { ListSubjectsForActiveContestUseCase } from "@/application/use-cases/Lis
 import { SetActiveContestUseCase } from "@/application/use-cases/SetActiveContestUseCase";
 import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
 import { PluginDataStore } from "@/infrastructure/persistence/PluginDataStore";
+import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 
 class InMemoryStorageAdapter implements PersistentStorageAdapter<LeifPluginData> {
   private data: LeifPluginData | null;
@@ -31,7 +32,8 @@ function createStore(): PluginDataStore {
 describe("Contest management", () => {
   it("sets the first created contest as active and keeps it active when adding another contest", async () => {
     const store = createStore();
-    const createContest = new CreateContestUseCase(store);
+    const factory = new EntityRepositoryFactory(store);
+    const createContest = new CreateContestUseCase(store, factory);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });
     await createContest.execute({ id: "contest-2", name: "SEFAZ" });
@@ -48,9 +50,10 @@ describe("Contest management", () => {
 
   it("switches the active contest without mixing subjects from other contests", async () => {
     const store = createStore();
-    const createContest = new CreateContestUseCase(store);
-    const createSubject = new CreateSubjectUseCase(store);
-    const setActiveContest = new SetActiveContestUseCase(store);
+    const factory = new EntityRepositoryFactory(store);
+    const createContest = new CreateContestUseCase(store, factory);
+    const createSubject = new CreateSubjectUseCase(store, factory);
+    const setActiveContest = new SetActiveContestUseCase(store, factory);
     const listSubjects = new ListSubjectsForActiveContestUseCase(store);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });

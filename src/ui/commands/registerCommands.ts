@@ -17,23 +17,25 @@ import { SetActiveContestUseCase } from "@/application/use-cases/SetActiveContes
 import { UpdateContestWallUseCase } from "@/application/use-cases/UpdateContestWallUseCase";
 import { UpdateSubjectConfigurationUseCase } from "@/application/use-cases/UpdateSubjectConfigurationUseCase";
 import { createDefaultLeifPluginData } from "@/domain/types/LeifPluginData";
+import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 import { seedTceSpDemo } from "@/infrastructure/persistence/Seeder";
 
 export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): void {
-  const createContest = new CreateContestUseCase(dataStore);
-  const createSubject = new CreateSubjectUseCase(dataStore);
-  const createStudyItem = new CreateStudyItemUseCase(dataStore);
-  const createTopic = new CreateTopicUseCase(dataStore);
-  const updateContestWall = new UpdateContestWallUseCase(dataStore);
-  const registerStudySession = new RegisterStudySessionUseCase(dataStore);
-  const setActiveContest = new SetActiveContestUseCase(dataStore);
+  const repositoryFactory = new EntityRepositoryFactory(dataStore);
+  const createContest = new CreateContestUseCase(dataStore, repositoryFactory);
+  const createSubject = new CreateSubjectUseCase(dataStore, repositoryFactory);
+  const createStudyItem = new CreateStudyItemUseCase(dataStore, repositoryFactory);
+  const createTopic = new CreateTopicUseCase(dataStore, repositoryFactory);
+  const updateContestWall = new UpdateContestWallUseCase(dataStore, repositoryFactory);
+  const registerStudySession = new RegisterStudySessionUseCase(dataStore, repositoryFactory);
+  const setActiveContest = new SetActiveContestUseCase(dataStore, repositoryFactory);
   const advanceCycle = new AdvanceCycleUseCase(dataStore);
   const getActiveCycleSnapshot = new GetActiveCycleSnapshotUseCase(dataStore);
   const getActiveContestSummary = new GetActiveContestSummaryUseCase(dataStore);
   const listSubjectsForActiveContest = new ListSubjectsForActiveContestUseCase(dataStore);
-  const reorderSubjects = new ReorderSubjectsUseCase(dataStore);
-  const setSubjectActiveState = new SetSubjectActiveStateUseCase(dataStore);
-  const updateSubjectConfiguration = new UpdateSubjectConfigurationUseCase(dataStore);
+  const reorderSubjects = new ReorderSubjectsUseCase(dataStore, repositoryFactory);
+  const setSubjectActiveState = new SetSubjectActiveStateUseCase(dataStore, repositoryFactory);
+  const updateSubjectConfiguration = new UpdateSubjectConfigurationUseCase(dataStore, repositoryFactory);
 
   plugin.addCommand({
     id: "leif-show-active-contest",

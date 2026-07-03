@@ -1,6 +1,6 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
 import type { Contest } from "@/domain/entities/Contest";
-import { EntityRepository } from "@/infrastructure/persistence/EntityRepository";
 
 export interface UpdateContestInput {
   contestId: string;
@@ -12,10 +12,13 @@ export interface UpdateContestInput {
  * Use case for updating a contest.
  */
 export class UpdateContestUseCase {
-  private readonly contestRepository: EntityRepository<Contest>;
+  private readonly contestRepository: EntityRepositoryPort<Contest>;
 
-  constructor(private readonly dataStore: PluginDataStore) {
-    this.contestRepository = new EntityRepository<Contest>(dataStore, "contests");
+  constructor(
+    private readonly dataStore: PluginDataStore,
+    repositoryFactory: RepositoryFactory
+  ) {
+    this.contestRepository = repositoryFactory.for<Contest>("contests");
   }
 
   async execute(input: UpdateContestInput): Promise<Contest> {
