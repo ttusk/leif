@@ -1,6 +1,7 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
 import type { StudySession } from "@/domain/entities/StudySession";
+import { StudySessionType } from "@/domain/entities/StudySession";
 import type { Topic } from "@/domain/entities/Topic";
 import { ValidationError } from "@/domain/errors/DomainErrors";
 import { DeleteStudySessionValidator } from "@/application/validation/InputValidators";
@@ -40,7 +41,7 @@ export class DeleteStudySessionUseCase {
   }
 
   private async updateTopicQuestionNotebookStats(session: StudySession): Promise<void> {
-    if (session.type !== "questions" || !session.topicId) {
+    if (session.type !== StudySessionType.QUESTIONS || !session.topicId) {
       return;
     }
 

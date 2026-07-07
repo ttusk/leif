@@ -336,7 +336,7 @@ export class SessionsTab {
     const typeSelect = DomHelpers.createSelect([
       ["pdf", "PDF"],
       ["video", "Vídeo"],
-      ["questions", "Questões"]
+      [StudySessionType.QUESTIONS, "Questões"]
     ]);
 
     const getItemOptions = (): Array<[string, string]> => [

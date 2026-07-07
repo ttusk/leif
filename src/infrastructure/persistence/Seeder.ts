@@ -8,6 +8,7 @@ import { RegisterStudySessionUseCase } from "@/application/use-cases/RegisterStu
 import { SetActiveContestUseCase } from "@/application/use-cases/SetActiveContestUseCase";
 import { UpdateContestWallUseCase } from "@/application/use-cases/UpdateContestWallUseCase";
 import type { StudyItem } from "@/domain/entities/StudyItem";
+import { StudySessionType } from "@/domain/entities/StudySession";
 import type { Subject } from "@/domain/entities/Subject";
 import type { Topic } from "@/domain/entities/Topic";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
@@ -64,7 +65,7 @@ interface SeedTopicSpec {
 interface SeedSessionSpec {
   item: number;
   topic: number;
-  type: "pdf" | "video" | "questions";
+  type: StudySessionType;
   date: string;
   count: number;
   correct?: number;
@@ -106,9 +107,9 @@ const DEMO_CONTESTS: SeedContestSpec[] = [
         ],
         sessions: [
           { item: 0, topic: 0, type: "pdf", date: "2026-06-01", count: 28 },
-          { item: 0, topic: 0, type: "questions", date: "2026-06-01", count: 40, correct: 34 },
+          { item: 0, topic: 0, type: StudySessionType.QUESTIONS, date: "2026-06-01", count: 40, correct: 34 },
           { item: 1, topic: 1, type: "pdf", date: "2026-06-03", count: 22 },
-          { item: 1, topic: 1, type: "questions", date: "2026-06-04", count: 35, correct: 30 }
+          { item: 1, topic: 1, type: StudySessionType.QUESTIONS, date: "2026-06-04", count: 35, correct: 30 }
         ]
       },
       {
@@ -135,9 +136,9 @@ const DEMO_CONTESTS: SeedContestSpec[] = [
         ],
         sessions: [
           { item: 0, topic: 0, type: "pdf", date: "2026-06-02", count: 24 },
-          { item: 0, topic: 0, type: "questions", date: "2026-06-02", count: 30, correct: 25 },
+          { item: 0, topic: 0, type: StudySessionType.QUESTIONS, date: "2026-06-02", count: 30, correct: 25 },
           { item: 1, topic: 1, type: "video", date: "2026-06-05", count: 1 },
-          { item: 1, topic: 1, type: "questions", date: "2026-06-06", count: 25, correct: 20 }
+          { item: 1, topic: 1, type: StudySessionType.QUESTIONS, date: "2026-06-06", count: 25, correct: 20 }
         ]
       },
       {
@@ -164,9 +165,9 @@ const DEMO_CONTESTS: SeedContestSpec[] = [
         ],
         sessions: [
           { item: 0, topic: 0, type: "pdf", date: "2026-06-07", count: 18 },
-          { item: 0, topic: 0, type: "questions", date: "2026-06-07", count: 20, correct: 17 },
+          { item: 0, topic: 0, type: StudySessionType.QUESTIONS, date: "2026-06-07", count: 20, correct: 17 },
           { item: 1, topic: 1, type: "pdf", date: "2026-06-08", count: 20 },
-          { item: 1, topic: 1, type: "questions", date: "2026-06-08", count: 18, correct: 14 }
+          { item: 1, topic: 1, type: StudySessionType.QUESTIONS, date: "2026-06-08", count: 18, correct: 14 }
         ]
       }
     ]
@@ -206,9 +207,9 @@ const DEMO_CONTESTS: SeedContestSpec[] = [
         ],
         sessions: [
           { item: 0, topic: 0, type: "pdf", date: "2026-06-01", count: 35 },
-          { item: 0, topic: 0, type: "questions", date: "2026-06-01", count: 45, correct: 36 },
+          { item: 0, topic: 0, type: StudySessionType.QUESTIONS, date: "2026-06-01", count: 45, correct: 36 },
           { item: 1, topic: 1, type: "pdf", date: "2026-06-04", count: 30 },
-          { item: 1, topic: 1, type: "questions", date: "2026-06-05", count: 35, correct: 28 }
+          { item: 1, topic: 1, type: StudySessionType.QUESTIONS, date: "2026-06-05", count: 35, correct: 28 }
         ]
       },
       {
@@ -235,9 +236,9 @@ const DEMO_CONTESTS: SeedContestSpec[] = [
         ],
         sessions: [
           { item: 0, topic: 0, type: "pdf", date: "2026-06-02", count: 26 },
-          { item: 0, topic: 0, type: "questions", date: "2026-06-02", count: 30, correct: 24 },
+          { item: 0, topic: 0, type: StudySessionType.QUESTIONS, date: "2026-06-02", count: 30, correct: 24 },
           { item: 1, topic: 1, type: "video", date: "2026-06-06", count: 1 },
-          { item: 1, topic: 1, type: "questions", date: "2026-06-07", count: 25, correct: 21 }
+          { item: 1, topic: 1, type: StudySessionType.QUESTIONS, date: "2026-06-07", count: 25, correct: 21 }
         ]
       },
       {
@@ -264,9 +265,9 @@ const DEMO_CONTESTS: SeedContestSpec[] = [
         ],
         sessions: [
           { item: 0, topic: 0, type: "pdf", date: "2026-06-03", count: 18 },
-          { item: 0, topic: 0, type: "questions", date: "2026-06-03", count: 25, correct: 19 },
+          { item: 0, topic: 0, type: StudySessionType.QUESTIONS, date: "2026-06-03", count: 25, correct: 19 },
           { item: 1, topic: 1, type: "pdf", date: "2026-06-08", count: 20 },
-          { item: 1, topic: 1, type: "questions", date: "2026-06-08", count: 20, correct: 15 }
+          { item: 1, topic: 1, type: StudySessionType.QUESTIONS, date: "2026-06-08", count: 20, correct: 15 }
         ]
       }
     ]
@@ -306,9 +307,9 @@ const DEMO_CONTESTS: SeedContestSpec[] = [
         ],
         sessions: [
           { item: 0, topic: 0, type: "pdf", date: "2026-06-01", count: 30 },
-          { item: 0, topic: 0, type: "questions", date: "2026-06-01", count: 35, correct: 29 },
+          { item: 0, topic: 0, type: StudySessionType.QUESTIONS, date: "2026-06-01", count: 35, correct: 29 },
           { item: 1, topic: 1, type: "pdf", date: "2026-06-05", count: 25 },
-          { item: 1, topic: 1, type: "questions", date: "2026-06-06", count: 30, correct: 24 }
+          { item: 1, topic: 1, type: StudySessionType.QUESTIONS, date: "2026-06-06", count: 30, correct: 24 }
         ]
       },
       {
@@ -335,9 +336,9 @@ const DEMO_CONTESTS: SeedContestSpec[] = [
         ],
         sessions: [
           { item: 0, topic: 0, type: "pdf", date: "2026-06-02", count: 22 },
-          { item: 0, topic: 0, type: "questions", date: "2026-06-02", count: 25, correct: 20 },
+          { item: 0, topic: 0, type: StudySessionType.QUESTIONS, date: "2026-06-02", count: 25, correct: 20 },
           { item: 1, topic: 1, type: "video", date: "2026-06-07", count: 1 },
-          { item: 1, topic: 1, type: "questions", date: "2026-06-08", count: 20, correct: 16 }
+          { item: 1, topic: 1, type: StudySessionType.QUESTIONS, date: "2026-06-08", count: 20, correct: 16 }
         ]
       },
       {
@@ -364,9 +365,9 @@ const DEMO_CONTESTS: SeedContestSpec[] = [
         ],
         sessions: [
           { item: 0, topic: 0, type: "pdf", date: "2026-06-03", count: 16 },
-          { item: 0, topic: 0, type: "questions", date: "2026-06-03", count: 20, correct: 17 },
+          { item: 0, topic: 0, type: StudySessionType.QUESTIONS, date: "2026-06-03", count: 20, correct: 17 },
           { item: 1, topic: 1, type: "pdf", date: "2026-06-09", count: 18 },
-          { item: 1, topic: 1, type: "questions", date: "2026-06-09", count: 20, correct: 16 }
+          { item: 1, topic: 1, type: StudySessionType.QUESTIONS, date: "2026-06-09", count: 20, correct: 16 }
         ]
       }
     ]

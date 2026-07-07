@@ -1,6 +1,6 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
-import { StudySession } from "@/domain/entities/StudySession";
+import { StudySession, StudySessionType } from "@/domain/entities/StudySession";
 import type { Topic } from "@/domain/entities/Topic";
 import type { Contest } from "@/domain/entities/Contest";
 import type { Subject } from "@/domain/entities/Subject";
@@ -67,7 +67,7 @@ export class RegisterStudySessionUseCase {
   }
 
   private async updateTopicQuestionNotebookStats(session: StudySession): Promise<void> {
-    if (session.type !== "questions" || !session.topicId) {
+    if (session.type !== StudySessionType.QUESTIONS || !session.topicId) {
       return;
     }
 

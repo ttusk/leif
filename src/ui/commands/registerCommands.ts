@@ -17,6 +17,7 @@ import { SetSubjectActiveStateUseCase } from "@/application/use-cases/SetSubject
 import { SetActiveContestUseCase } from "@/application/use-cases/SetActiveContestUseCase";
 import { UpdateContestWallUseCase } from "@/application/use-cases/UpdateContestWallUseCase";
 import { UpdateSubjectConfigurationUseCase } from "@/application/use-cases/UpdateSubjectConfigurationUseCase";
+import { StudySessionType } from "@/domain/entities/StudySession";
 import { createDefaultLeifPluginData } from "@/domain/types/LeifPluginData";
 import { createId } from "@/application/Id";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
@@ -286,7 +287,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
         contestId: data.activeContestId,
         subjectId: activeSubject.id,
         topicId: topic?.id,
-        type: "questions",
+        type: StudySessionType.QUESTIONS,
         studiedAt: new Date().toISOString(),
         pagesOrCount: 10,
         correctAnswers: 8,
