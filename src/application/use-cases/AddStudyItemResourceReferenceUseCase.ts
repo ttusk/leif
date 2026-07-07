@@ -20,7 +20,7 @@ export class AddStudyItemResourceReferenceUseCase {
     private readonly dataStore: PluginDataStore,
     repositoryFactory: RepositoryFactory
   ) {
-    this.studyItemRepository = repositoryFactory.for<StudyItem>("studyItems");
+    this.studyItemRepository = repositoryFactory.for("studyItems");
   }
 
   async execute(input: AddStudyItemResourceReferenceInput): Promise<StudyItem> {

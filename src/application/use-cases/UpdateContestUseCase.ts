@@ -18,7 +18,7 @@ export class UpdateContestUseCase {
     private readonly dataStore: PluginDataStore,
     repositoryFactory: RepositoryFactory
   ) {
-    this.contestRepository = repositoryFactory.for<Contest>("contests");
+    this.contestRepository = repositoryFactory.for("contests");
   }
 
   async execute(input: UpdateContestInput): Promise<Contest> {

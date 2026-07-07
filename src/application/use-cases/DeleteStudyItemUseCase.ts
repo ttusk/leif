@@ -18,8 +18,8 @@ export class DeleteStudyItemUseCase {
     private readonly dataStore: PluginDataStore,
     repositoryFactory: RepositoryFactory
   ) {
-    this.itemRepository = repositoryFactory.for<StudyItem>("studyItems");
-    this.subjectRepository = repositoryFactory.for<Subject>("subjects");
+    this.itemRepository = repositoryFactory.for("studyItems");
+    this.subjectRepository = repositoryFactory.for("subjects");
   }
 
   async execute(input: DeleteStudyItemInput): Promise<StudyItem> {

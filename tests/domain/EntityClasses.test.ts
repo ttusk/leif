@@ -26,6 +26,14 @@ describe("Entity Classes", () => {
     it("throws when name is empty", () => {
       expect(() => new Contest("c-1", "", [], { noticeLinks: [], examLinks: [], subjectSnapshots: [] })).toThrow(ValidationError);
     });
+
+    it("defaults wall to an empty Wall instance", () => {
+      const contest = new Contest("c-1", "TRT");
+      expect(contest.wall).toBeInstanceOf(Wall);
+      expect(contest.wall.noticeLinks).toEqual([]);
+      expect(contest.wall.examLinks).toEqual([]);
+      expect(contest.wall.subjectSnapshots).toEqual([]);
+    });
   });
 
   describe("Subject", () => {

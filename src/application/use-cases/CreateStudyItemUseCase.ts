@@ -28,8 +28,8 @@ export class CreateStudyItemUseCase {
     private readonly dataStore: PluginDataStore,
     repositoryFactory: RepositoryFactory
   ) {
-    this.subjectRepository = repositoryFactory.for<Subject>("subjects");
-    this.studyItemRepository = repositoryFactory.for<StudyItem>("studyItems");
+    this.subjectRepository = repositoryFactory.for("subjects");
+    this.studyItemRepository = repositoryFactory.for("studyItems");
   }
 
   async execute(input: CreateStudyItemInput): Promise<StudyItem> {

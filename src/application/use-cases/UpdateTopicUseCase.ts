@@ -26,7 +26,7 @@ export class UpdateTopicUseCase {
     private readonly dataStore: PluginDataStore,
     repositoryFactory: RepositoryFactory
   ) {
-    this.topicRepository = repositoryFactory.for<Topic>("topics");
+    this.topicRepository = repositoryFactory.for("topics");
   }
 
   async execute(input: UpdateTopicInput): Promise<Topic> {

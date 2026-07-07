@@ -19,7 +19,7 @@ export class UpdateStudySessionUseCase {
     private readonly dataStore: PluginDataStore,
     repositoryFactory: RepositoryFactory
   ) {
-    this.sessionRepository = repositoryFactory.for<StudySession>("studySessions");
+    this.sessionRepository = repositoryFactory.for("studySessions");
   }
 
   async execute(input: UpdateStudySessionInput): Promise<StudySession> {

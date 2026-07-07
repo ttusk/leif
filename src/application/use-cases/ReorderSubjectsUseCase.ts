@@ -21,8 +21,8 @@ export class ReorderSubjectsUseCase {
     private readonly dataStore: PluginDataStore,
     repositoryFactory: RepositoryFactory
   ) {
-    this.contestRepository = repositoryFactory.for<Contest>("contests");
-    this.subjectRepository = repositoryFactory.for<Subject>("subjects");
+    this.contestRepository = repositoryFactory.for("contests");
+    this.subjectRepository = repositoryFactory.for("subjects");
   }
 
   async execute(input: ReorderSubjectsInput): Promise<Subject[]> {

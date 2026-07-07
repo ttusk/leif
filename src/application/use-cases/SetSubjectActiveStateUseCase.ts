@@ -19,7 +19,7 @@ export class SetSubjectActiveStateUseCase {
     private readonly dataStore: PluginDataStore,
     repositoryFactory: RepositoryFactory
   ) {
-    this.subjectRepository = repositoryFactory.for<Subject>("subjects");
+    this.subjectRepository = repositoryFactory.for("subjects");
   }
 
   async execute(input: SetSubjectActiveStateInput): Promise<Subject> {

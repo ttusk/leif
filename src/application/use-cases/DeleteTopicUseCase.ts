@@ -18,8 +18,8 @@ export class DeleteTopicUseCase {
     private readonly dataStore: PluginDataStore,
     repositoryFactory: RepositoryFactory
   ) {
-    this.topicRepository = repositoryFactory.for<Topic>("topics");
-    this.subjectRepository = repositoryFactory.for<Subject>("subjects");
+    this.topicRepository = repositoryFactory.for("topics");
+    this.subjectRepository = repositoryFactory.for("subjects");
   }
 
   async execute(input: DeleteTopicInput): Promise<Topic> {

@@ -20,8 +20,8 @@ export class DeleteStudySessionUseCase {
     private readonly dataStore: PluginDataStore,
     repositoryFactory: RepositoryFactory
   ) {
-    this.sessionRepository = repositoryFactory.for<StudySession>("studySessions");
-    this.topicRepository = repositoryFactory.for<Topic>("topics");
+    this.sessionRepository = repositoryFactory.for("studySessions");
+    this.topicRepository = repositoryFactory.for("topics");
   }
 
   async execute(input: DeleteStudySessionInput): Promise<StudySession> {

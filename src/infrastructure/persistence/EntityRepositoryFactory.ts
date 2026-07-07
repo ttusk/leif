@@ -1,6 +1,6 @@
 import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
-import type { LeifPluginData } from "@/domain/types/LeifPluginData";
+import type { EntityCollections, EntityCollectionKey } from "@/domain/types/LeifPluginData";
 import { EntityRepository } from "@/infrastructure/persistence/EntityRepository";
 
 /**
@@ -11,7 +11,7 @@ import { EntityRepository } from "@/infrastructure/persistence/EntityRepository"
 export class EntityRepositoryFactory implements RepositoryFactory {
   constructor(private readonly dataStore: PluginDataStore) {}
 
-  for<T extends { id: string }>(key: keyof LeifPluginData): EntityRepositoryPort<T> {
-    return new EntityRepository<T>(this.dataStore, key);
+  for<K extends EntityCollectionKey>(key: K): EntityRepositoryPort<EntityCollections[K]> {
+    return new EntityRepository<K>(this.dataStore, key);
   }
 }

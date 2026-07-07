@@ -1,4 +1,5 @@
 import { ValidationError } from "@/domain/errors/DomainErrors";
+import { Wall } from "@/domain/entities/Wall";
 
 /**
  * Represents a public exam contest.
@@ -8,7 +9,7 @@ export class Contest {
     public readonly id: string,
     public readonly name: string,
     public readonly subjectIds: string[] = [],
-    public readonly wall: { noticeLinks: any[]; examLinks: any[]; subjectSnapshots: any[]; notes?: string } = { noticeLinks: [], examLinks: [], subjectSnapshots: [] }
+    public readonly wall: Wall = new Wall()
   ) {
     if (!id?.trim()) throw new ValidationError("Contest ID is required");
     if (!name?.trim()) throw new ValidationError("Contest name is required");

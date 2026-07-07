@@ -22,10 +22,10 @@ export class RegisterStudySessionUseCase {
     private readonly dataStore: PluginDataStore,
     repositoryFactory: RepositoryFactory
   ) {
-    this.contestRepository = repositoryFactory.for<Contest>("contests");
-    this.subjectRepository = repositoryFactory.for<Subject>("subjects");
-    this.topicRepository = repositoryFactory.for<Topic>("topics");
-    this.sessionRepository = repositoryFactory.for<StudySession>("studySessions");
+    this.contestRepository = repositoryFactory.for("contests");
+    this.subjectRepository = repositoryFactory.for("subjects");
+    this.topicRepository = repositoryFactory.for("topics");
+    this.sessionRepository = repositoryFactory.for("studySessions");
   }
 
   async execute(input: RegisterStudySessionInput): Promise<StudySession> {

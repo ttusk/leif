@@ -21,7 +21,7 @@ export class UpdateStudyItemUseCase {
     private readonly dataStore: PluginDataStore,
     repositoryFactory: RepositoryFactory
   ) {
-    this.itemRepository = repositoryFactory.for<StudyItem>("studyItems");
+    this.itemRepository = repositoryFactory.for("studyItems");
   }
 
   async execute(input: UpdateStudyItemInput): Promise<StudyItem> {

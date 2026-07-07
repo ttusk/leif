@@ -20,7 +20,7 @@ export class UpdateSubjectConfigurationUseCase {
     private readonly dataStore: PluginDataStore,
     repositoryFactory: RepositoryFactory
   ) {
-    this.subjectRepository = repositoryFactory.for<Subject>("subjects");
+    this.subjectRepository = repositoryFactory.for("subjects");
   }
 
   async execute(input: UpdateSubjectConfigurationInput): Promise<Subject> {

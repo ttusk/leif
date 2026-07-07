@@ -1,13 +1,13 @@
-import type { LeifPluginData } from "@/domain/types/LeifPluginData";
+import type { EntityCollections, EntityCollectionKey } from "@/domain/types/LeifPluginData";
 
 /**
  * Port for a generic entity repository managing a collection of entities
  * keyed by an `id` field. Application layer depends on this abstraction so
  * it stays decoupled from any concrete persistence mechanism.
  *
- * @template T - The entity type (must have an id field)
+ * @template T - The entity type
  */
-export interface EntityRepositoryPort<T extends { id: string }> {
+export interface EntityRepositoryPort<T> {
   findById(id: string): Promise<T>;
   findAll(): Promise<T[]>;
   exists(id: string): Promise<boolean>;
@@ -23,5 +23,5 @@ export interface EntityRepositoryPort<T extends { id: string }> {
  * this port instead of constructing a concrete repository themselves.
  */
 export interface RepositoryFactory {
-  for<T extends { id: string }>(key: keyof LeifPluginData): EntityRepositoryPort<T>;
+  for<K extends EntityCollectionKey>(key: K): EntityRepositoryPort<EntityCollections[K]>;
 }
