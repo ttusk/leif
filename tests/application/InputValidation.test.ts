@@ -162,4 +162,52 @@ describe("Input Validators", () => {
       expect(result.valid).toBe(true);
     });
   });
+
+  describe("UpdateContestWallValidator URL validation", () => {
+    it("accepts a valid notice URL", () => {
+      const result = new UpdateContestWallValidator().validate({
+        contestId: "contest-1",
+        wall: {
+          noticeLinks: [{ id: "l-1", label: "Edital", url: "https://example.com/edital" }],
+          examLinks: [],
+          subjectSnapshots: []
+        }
+      });
+      expect(result.valid).toBe(true);
+    });
+
+    it("rejects an invalid notice URL", () => {
+      const result = new UpdateContestWallValidator().validate({
+        contestId: "contest-1",
+        wall: {
+          noticeLinks: [{ id: "l-1", label: "Edital", url: "not-a-url" }],
+          examLinks: [],
+          subjectSnapshots: []
+        }
+      });
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes("URL"))).toBe(true);
+    });
+
+    it("rejects an invalid exam URL", () => {
+      const result = new UpdateContestWallValidator().validate({
+        contestId: "contest-1",
+        wall: {
+          noticeLinks: [],
+          examLinks: [{ id: "l-1", label: "Prova", url: "ftp:broken" }],
+          subjectSnapshots: []
+        }
+      });
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes("URL"))).toBe(true);
+    });
+
+    it("skips URL validation for empty link arrays", () => {
+      const result = new UpdateContestWallValidator().validate({
+        contestId: "contest-1",
+        wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] }
+      });
+      expect(result.valid).toBe(true);
+    });
+  });
 });

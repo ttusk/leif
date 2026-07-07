@@ -1,4 +1,5 @@
 import { ValidationError } from "@/domain/errors/DomainErrors";
+import type { WallLink } from "@/domain/entities/Wall";
 
 /**
  * Result of input validation.
@@ -59,6 +60,19 @@ function requireOneOf(value: string, allowed: string[], fieldName: string): stri
     return `${fieldName} must be one of: ${allowed.join(", ")}`;
   }
   return undefined;
+}
+
+function requireValidUrl(value: string | undefined, fieldName: string): string | undefined {
+  if (!value) return undefined;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return `${fieldName} must be an http(s) URL`;
+    }
+    return undefined;
+  } catch {
+    return `${fieldName} must be a valid http(s) URL`;
+  }
 }
 
 /**
@@ -209,7 +223,8 @@ export class LinkQuestionNotebookValidator {
       requireNonEmpty(input.topicId, "Topic ID"),
       requireNonEmpty(input.questionNotebook.id, "Question notebook ID"),
       requireNonEmpty(input.questionNotebook.name, "Question notebook name"),
-      requireNonEmpty(input.questionNotebook.url, "Question notebook URL")
+      requireNonEmpty(input.questionNotebook.url, "Question notebook URL"),
+      requireValidUrl(input.questionNotebook.url, "Question notebook URL")
     );
   }
 }
@@ -218,9 +233,13 @@ export class LinkQuestionNotebookValidator {
  * Validates input for updating a contest's wall.
  */
 export class UpdateContestWallValidator {
-  validate(input: { contestId: string }): ValidationResult {
+  validate(input: { contestId: string; wall: { noticeLinks: WallLink[]; examLinks: WallLink[]; subjectSnapshots: unknown[]; notes?: string } }): ValidationResult {
+    const noticeUrlErrors = input.wall.noticeLinks.map((link) => requireValidUrl(link.url, "Notice URL")).filter((e): e is string => e !== undefined);
+    const examUrlErrors = input.wall.examLinks.map((link) => requireValidUrl(link.url, "Exam URL")).filter((e): e is string => e !== undefined);
     return collectErrors(
-      requireNonEmpty(input.contestId, "Contest ID")
+      requireNonEmpty(input.contestId, "Contest ID"),
+      ...noticeUrlErrors,
+      ...examUrlErrors
     );
   }
 }
