@@ -29,6 +29,9 @@ function requireNonEmpty(value: string | undefined | null, fieldName: string): s
 }
 
 function requireNonNegative(value: number | undefined, fieldName: string): string | undefined {
+  if (value !== undefined && !Number.isFinite(value)) {
+    return `${fieldName} must be a finite number`;
+  }
   if (value !== undefined && value < 0) {
     return `${fieldName} cannot be negative`;
   }
@@ -37,10 +40,24 @@ function requireNonNegative(value: number | undefined, fieldName: string): strin
 
 function requireNonNegativeInteger(value: number | undefined, fieldName: string): string | undefined {
   if (value === undefined) return undefined;
+  if (!Number.isFinite(value) || Number.isNaN(value)) {
+    return `${fieldName} must be a finite number`;
+  }
   if (!Number.isInteger(value)) {
     return `${fieldName} must be an integer`;
   }
   return requireNonNegative(value, fieldName);
+}
+
+const NUMERIC_UPPER_BOUND = 1_000_000;
+
+function requireIntegerWithin(value: number | undefined, fieldName: string, max: number = NUMERIC_UPPER_BOUND): string | undefined {
+  const base = requireNonNegativeInteger(value, fieldName);
+  if (base !== undefined) return base;
+  if (value !== undefined && value > max) {
+    return `${fieldName} cannot exceed ${max}`;
+  }
+  return undefined;
 }
 
 function requireMinLength(value: string | undefined, min: number, fieldName: string): string | undefined {
@@ -105,12 +122,13 @@ export class CreateSubjectValidator {
  * Validates input for creating a study item.
  */
 export class CreateStudyItemValidator {
-  validate(input: { subjectId: string; title: string; weight?: number; questionCount?: number }): ValidationResult {
+  validate(input: { id?: string; subjectId: string; title: string; weight?: number; questionCount?: number; totalPages?: number }): ValidationResult {
     return collectErrors(
       requireNonEmpty(input.subjectId, "Subject ID"),
       requireNonEmpty(input.title, "Title"),
       requireNonNegative(input.weight, "Weight"),
-      requireNonNegative(input.questionCount, "Question count")
+      requireIntegerWithin(input.questionCount, "Question count"),
+      requireIntegerWithin(input.totalPages, "Total pages")
     );
   }
 }
@@ -124,6 +142,21 @@ export class CreateTopicValidator {
       requireNonEmpty(input.id, "ID"),
       requireNonEmpty(input.subjectId, "Subject ID"),
       requireNonEmpty(input.name, "Name")
+    );
+  }
+}
+
+/**
+ * Validates input for updating a study item's configuration.
+ */
+export class UpdateStudyItemValidator {
+  validate(input: { itemId: string; title?: string; weight?: number; questionCount?: number; totalPages?: number }): ValidationResult {
+    return collectErrors(
+      requireNonEmpty(input.itemId, "Item ID"),
+      input.title !== undefined ? requireNonEmpty(input.title, "Title") : undefined,
+      requireNonNegative(input.weight, "Weight"),
+      requireIntegerWithin(input.questionCount, "Question count"),
+      requireIntegerWithin(input.totalPages, "Total pages")
     );
   }
 }

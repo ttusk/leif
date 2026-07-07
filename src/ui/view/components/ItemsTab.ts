@@ -193,8 +193,14 @@ export class ItemsTab {
 
     const titleInput = DomHelpers.createCompactInput("text", "Título", item.title);
     const weightInput = DomHelpers.createCompactInput("number", "Peso", String(item.weight ?? 0));
+    weightInput.min = "0";
+    weightInput.step = "0.1";
     const questionInput = DomHelpers.createCompactInput("number", "Qts", String(item.questionCount ?? 0));
+    questionInput.min = "0";
+    questionInput.step = "1";
     const totalPagesInput = DomHelpers.createCompactInput("number", "Total", String(item.totalPages ?? ""));
+    totalPagesInput.min = "0";
+    totalPagesInput.step = "1";
 
     const saveButton = DomHelpers.createIconButton("save", "Salvar", {
       onClick: async () => {
@@ -331,8 +337,14 @@ export class ItemsTab {
   private openCreateItemModal(subjectId: string): void {
     const titleInput = DomHelpers.createInput("text", "Título do item");
     const weightInput = DomHelpers.createInput("number", "Peso", "1");
+    weightInput.min = "0";
+    weightInput.step = "0.1";
     const questionCountInput = DomHelpers.createInput("number", "Total de questões", "0");
+    questionCountInput.min = "0";
+    questionCountInput.step = "1";
     const totalPagesInput = DomHelpers.createInput("number", "Total de páginas (opcional)", "");
+    totalPagesInput.min = "0";
+    totalPagesInput.step = "1";
 
     const form = DomHelpers.createForm(async () => {
       try {

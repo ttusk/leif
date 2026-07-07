@@ -13,7 +13,8 @@ import {
   DeleteStudySessionValidator,
   AddStudyItemResourceReferenceValidator,
   LinkQuestionNotebookValidator,
-  UpdateContestWallValidator
+  UpdateContestWallValidator,
+  UpdateStudyItemValidator
 } from "@/application/validation/InputValidators";
 
 describe("Input Validators", () => {
@@ -60,6 +61,53 @@ describe("Input Validators", () => {
       const result = new CreateStudyItemValidator().validate({ id: "item-1", subjectId: "sub-1", title: "Syntax", weight: -1 });
       expect(result.valid).toBe(false);
       expect(result.errors).toContain("Weight cannot be negative");
+    });
+
+    it("rejects non-integer question count", () => {
+      const result = new CreateStudyItemValidator().validate({ subjectId: "sub-1", title: "X", questionCount: 1.5 });
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes("Question count must be an integer"))).toBe(true);
+    });
+
+    it("rejects non-integer total pages", () => {
+      const result = new CreateStudyItemValidator().validate({ subjectId: "sub-1", title: "X", totalPages: 2.5 });
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes("Total pages must be an integer"))).toBe(true);
+    });
+
+    it("rejects total pages above upper bound", () => {
+      const result = new CreateStudyItemValidator().validate({ subjectId: "sub-1", title: "X", totalPages: 10_000_000 });
+      expect(result.valid).toBe(false);
+      expect(result.errors.some((e) => e.includes("Total pages"))).toBe(true);
+    });
+
+    it("rejects NaN weight", () => {
+      const result = new CreateStudyItemValidator().validate({ subjectId: "sub-1", title: "X", weight: NaN });
+      expect(result.valid).toBe(false);
+    });
+  });
+
+  describe("UpdateStudyItemValidator", () => {
+    it("validates a correct update input", () => {
+      const result = new UpdateStudyItemValidator().validate({ itemId: "item-1", weight: 2, questionCount: 10, totalPages: 50 });
+      expect(result.valid).toBe(true);
+    });
+
+    it("fails when itemId is empty", () => {
+      const result = new UpdateStudyItemValidator().validate({ itemId: "" });
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain("Item ID is required");
+    });
+
+    it("fails when weight is negative", () => {
+      const result = new UpdateStudyItemValidator().validate({ itemId: "item-1", weight: -1 });
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain("Weight cannot be negative");
+    });
+
+    it("rejects non-integer question count", () => {
+      const result = new UpdateStudyItemValidator().validate({ itemId: "item-1", questionCount: 1.5 });
+      expect(result.valid).toBe(false);
     });
   });
 
