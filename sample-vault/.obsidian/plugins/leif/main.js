@@ -28,7 +28,6 @@ var import_obsidian5 = require("obsidian");
 // src/domain/types/LeifPluginData.ts
 function createDefaultLeifPluginData() {
   return {
-    version: 1,
     schemaVersion: 1,
     activeContestId: null,
     contests: [],

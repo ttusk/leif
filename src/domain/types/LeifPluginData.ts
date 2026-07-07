@@ -26,7 +26,6 @@ export interface EntityCollections {
 export type EntityCollectionKey = keyof EntityCollections;
 
 export interface LeifPluginData {
-  version: 1;
   schemaVersion?: number;
   activeContestId: string | null;
   contests: Contest[];
@@ -39,7 +38,6 @@ export interface LeifPluginData {
 
 export function createDefaultLeifPluginData(): LeifPluginData {
   return {
-    version: 1,
     schemaVersion: 1,
     activeContestId: null,
     contests: [],
