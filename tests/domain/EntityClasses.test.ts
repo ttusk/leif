@@ -8,7 +8,7 @@ import { Topic } from "@/domain/entities/Topic";
 import { StudySession } from "@/domain/entities/StudySession";
 import { QuestionNotebook } from "@/domain/entities/QuestionNotebook";
 import { ResourceReference } from "@/domain/entities/ResourceReference";
-import { WallLink, WallSubjectSnapshot, Wall } from "@/domain/entities/Wall";
+import { WallLink, WallSubjectSnapshot, Wall, wallLinkKey } from "@/domain/entities/Wall";
 import { ValidationError } from "@/domain/errors/DomainErrors";
 
 describe("Entity Classes", () => {
@@ -139,6 +139,20 @@ describe("Entity Classes", () => {
       expect(wall.noticeLinks).toEqual([]);
       expect(wall.examLinks).toEqual([]);
       expect(wall.subjectSnapshots).toEqual([]);
+    });
+  });
+
+  describe("wallLinkKey", () => {
+    it("builds a stable notice-link id from the contest id", () => {
+      expect(wallLinkKey("c-1", "notice")).toBe("c-1-notice");
+    });
+
+    it("builds a stable exam-link id from the contest id", () => {
+      expect(wallLinkKey("c-1", "exam")).toBe("c-1-exam");
+    });
+
+    it("returns the same id for the same contest + kind", () => {
+      expect(wallLinkKey("c-1", "notice")).toBe(wallLinkKey("c-1", "notice"));
     });
   });
 

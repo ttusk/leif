@@ -1086,6 +1086,9 @@ var Wall = class {
     this.notes = notes;
   }
 };
+function wallLinkKey(contestId, kind) {
+  return `${contestId}-${kind}`;
+}
 
 // src/domain/entities/Contest.ts
 var Contest = class {
@@ -2244,10 +2247,10 @@ async function seedTceSpDemo(dataStore) {
       contestId: contest.id,
       wall: {
         noticeLinks: [
-          { id: `${contest.id}-notice`, label: contestSpec.wall.noticeLabel, url: contestSpec.wall.noticeUrl }
+          { id: wallLinkKey(contest.id, "notice"), label: contestSpec.wall.noticeLabel, url: contestSpec.wall.noticeUrl }
         ],
         examLinks: [
-          { id: `${contest.id}-exam`, label: contestSpec.wall.examLabel, url: contestSpec.wall.examUrl }
+          { id: wallLinkKey(contest.id, "exam"), label: contestSpec.wall.examLabel, url: contestSpec.wall.examUrl }
         ],
         subjectSnapshots: seededSubjects.map((subject, index) => ({
           subjectId: subject.id,
@@ -4280,14 +4283,14 @@ var WallTab = class {
       try {
         const noticeLink = noticeUrl.value ? [
           {
-            id: `${activeContest.id}-notice`,
+            id: wallLinkKey(activeContest.id, "notice"),
             label: noticeLabel.value || "Edital",
             url: noticeUrl.value
           }
         ] : [];
         const examLink = examUrl.value ? [
           {
-            id: `${activeContest.id}-exam`,
+            id: wallLinkKey(activeContest.id, "exam"),
             label: examLabel.value || "Prova",
             url: examUrl.value
           }

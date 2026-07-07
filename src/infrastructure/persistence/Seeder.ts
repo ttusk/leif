@@ -11,6 +11,7 @@ import type { StudyItem } from "@/domain/entities/StudyItem";
 import { StudySessionType } from "@/domain/entities/StudySession";
 import type { Subject } from "@/domain/entities/Subject";
 import type { Topic } from "@/domain/entities/Topic";
+import { wallLinkKey } from "@/domain/entities/Wall";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 
 export interface SeededContest {
@@ -469,10 +470,10 @@ export async function seedTceSpDemo(dataStore: PluginDataStore): Promise<SeededC
       contestId: contest.id,
       wall: {
         noticeLinks: [
-          { id: `${contest.id}-notice`, label: contestSpec.wall.noticeLabel, url: contestSpec.wall.noticeUrl }
+          { id: wallLinkKey(contest.id, "notice"), label: contestSpec.wall.noticeLabel, url: contestSpec.wall.noticeUrl }
         ],
         examLinks: [
-          { id: `${contest.id}-exam`, label: contestSpec.wall.examLabel, url: contestSpec.wall.examUrl }
+          { id: wallLinkKey(contest.id, "exam"), label: contestSpec.wall.examLabel, url: contestSpec.wall.examUrl }
         ],
         subjectSnapshots: seededSubjects.map((subject, index) => ({
           subjectId: subject.id,

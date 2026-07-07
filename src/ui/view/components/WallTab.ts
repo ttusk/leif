@@ -1,6 +1,7 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import { UpdateContestWallUseCase } from "@/application/use-cases/UpdateContestWallUseCase";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
+import { wallLinkKey } from "@/domain/entities/Wall";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 
@@ -71,7 +72,7 @@ export class WallTab {
         const noticeLink = noticeUrl.value
           ? [
               {
-                id: `${activeContest.id}-notice`,
+                id: wallLinkKey(activeContest.id, "notice"),
                 label: noticeLabel.value || "Edital",
                 url: noticeUrl.value
               }
@@ -81,7 +82,7 @@ export class WallTab {
         const examLink = examUrl.value
           ? [
               {
-                id: `${activeContest.id}-exam`,
+                id: wallLinkKey(activeContest.id, "exam"),
                 label: examLabel.value || "Prova",
                 url: examUrl.value
               }

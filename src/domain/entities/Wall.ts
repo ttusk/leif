@@ -42,3 +42,17 @@ export class Wall {
     public readonly notes?: string
   ) {}
 }
+
+/**
+ * The kinds of single-link slots the wall form manages.
+ */
+export type WallLinkKind = "notice" | "exam";
+
+/**
+ * Builds the stable identifier used for the wall's single notice/exam link.
+ * The wall form overwrites the link on every save, so a deterministic id
+ * keeps the array at length 0 or 1 instead of appending duplicates.
+ */
+export function wallLinkKey(contestId: string, kind: WallLinkKind): string {
+  return `${contestId}-${kind}`;
+}
