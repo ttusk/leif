@@ -568,6 +568,7 @@ describe("LeifView", () => {
     );
 
     expect(questionsSessions).toHaveLength(0);
+    expect(getRecordedNotices().some((message) => message.includes("question count"))).toBe(true);
   });
 
   it("shows the Acertos column for questions sessions and hides it for other types", async () => {

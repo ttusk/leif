@@ -1,4 +1,6 @@
 import { ValidationError } from "@/domain/errors/DomainErrors";
+import type { WallLink } from "@/domain/entities/Wall";
+import { StudySessionType } from "@/domain/entities/StudySession";
 
 /**
  * Result of input validation.
@@ -28,6 +30,9 @@ function requireNonEmpty(value: string | undefined | null, fieldName: string): s
 }
 
 function requireNonNegative(value: number | undefined, fieldName: string): string | undefined {
+  if (value !== undefined && !Number.isFinite(value)) {
+    return `${fieldName} must be a finite number`;
+  }
   if (value !== undefined && value < 0) {
     return `${fieldName} cannot be negative`;
   }
@@ -36,10 +41,24 @@ function requireNonNegative(value: number | undefined, fieldName: string): strin
 
 function requireNonNegativeInteger(value: number | undefined, fieldName: string): string | undefined {
   if (value === undefined) return undefined;
+  if (!Number.isFinite(value) || Number.isNaN(value)) {
+    return `${fieldName} must be a finite number`;
+  }
   if (!Number.isInteger(value)) {
     return `${fieldName} must be an integer`;
   }
   return requireNonNegative(value, fieldName);
+}
+
+const NUMERIC_UPPER_BOUND = 1_000_000;
+
+function requireIntegerWithin(value: number | undefined, fieldName: string, max: number = NUMERIC_UPPER_BOUND): string | undefined {
+  const base = requireNonNegativeInteger(value, fieldName);
+  if (base !== undefined) return base;
+  if (value !== undefined && value > max) {
+    return `${fieldName} cannot exceed ${max}`;
+  }
+  return undefined;
 }
 
 function requireMinLength(value: string | undefined, min: number, fieldName: string): string | undefined {
@@ -59,6 +78,19 @@ function requireOneOf(value: string, allowed: string[], fieldName: string): stri
     return `${fieldName} must be one of: ${allowed.join(", ")}`;
   }
   return undefined;
+}
+
+function requireValidUrl(value: string | undefined, fieldName: string): string | undefined {
+  if (!value) return undefined;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return `${fieldName} must be an http(s) URL`;
+    }
+    return undefined;
+  } catch {
+    return `${fieldName} must be a valid http(s) URL`;
+  }
 }
 
 /**
@@ -91,12 +123,13 @@ export class CreateSubjectValidator {
  * Validates input for creating a study item.
  */
 export class CreateStudyItemValidator {
-  validate(input: { subjectId: string; title: string; weight?: number; questionCount?: number }): ValidationResult {
+  validate(input: { id?: string; subjectId: string; title: string; weight?: number; questionCount?: number; totalPages?: number }): ValidationResult {
     return collectErrors(
       requireNonEmpty(input.subjectId, "Subject ID"),
       requireNonEmpty(input.title, "Title"),
       requireNonNegative(input.weight, "Weight"),
-      requireNonNegative(input.questionCount, "Question count")
+      requireIntegerWithin(input.questionCount, "Question count"),
+      requireIntegerWithin(input.totalPages, "Total pages")
     );
   }
 }
@@ -115,15 +148,33 @@ export class CreateTopicValidator {
 }
 
 /**
+ * Validates input for updating a study item's configuration.
+ */
+export class UpdateStudyItemValidator {
+  validate(input: { itemId: string; title?: string; weight?: number; questionCount?: number; totalPages?: number }): ValidationResult {
+    return collectErrors(
+      requireNonEmpty(input.itemId, "Item ID"),
+      input.title !== undefined ? requireNonEmpty(input.title, "Title") : undefined,
+      requireNonNegative(input.weight, "Weight"),
+      requireIntegerWithin(input.questionCount, "Question count"),
+      requireIntegerWithin(input.totalPages, "Total pages")
+    );
+  }
+}
+
+/**
  * Validates input for registering a study session.
  */
 export class RegisterStudySessionValidator {
-  validate(input: { id: string; contestId: string; type: string; studiedAt: string }): ValidationResult {
+  validate(input: { id: string; contestId: string; type: string; studiedAt: string; pagesOrCount?: number }): ValidationResult {
     return collectErrors(
       requireNonEmpty(input.id, "ID"),
       requireNonEmpty(input.contestId, "Contest ID"),
       requireNonEmpty(input.type, "Type"),
-      requireNonEmpty(input.studiedAt, "Studied at")
+      requireNonEmpty(input.studiedAt, "Studied at"),
+      input.type === StudySessionType.QUESTIONS && (!input.pagesOrCount || input.pagesOrCount <= 0)
+        ? "A questions session requires a question count greater than zero"
+        : undefined
     );
   }
 }
@@ -209,7 +260,8 @@ export class LinkQuestionNotebookValidator {
       requireNonEmpty(input.topicId, "Topic ID"),
       requireNonEmpty(input.questionNotebook.id, "Question notebook ID"),
       requireNonEmpty(input.questionNotebook.name, "Question notebook name"),
-      requireNonEmpty(input.questionNotebook.url, "Question notebook URL")
+      requireNonEmpty(input.questionNotebook.url, "Question notebook URL"),
+      requireValidUrl(input.questionNotebook.url, "Question notebook URL")
     );
   }
 }
@@ -218,9 +270,13 @@ export class LinkQuestionNotebookValidator {
  * Validates input for updating a contest's wall.
  */
 export class UpdateContestWallValidator {
-  validate(input: { contestId: string }): ValidationResult {
+  validate(input: { contestId: string; wall: { noticeLinks: WallLink[]; examLinks: WallLink[]; subjectSnapshots: unknown[]; notes?: string } }): ValidationResult {
+    const noticeUrlErrors = input.wall.noticeLinks.map((link) => requireValidUrl(link.url, "Notice URL")).filter((e): e is string => e !== undefined);
+    const examUrlErrors = input.wall.examLinks.map((link) => requireValidUrl(link.url, "Exam URL")).filter((e): e is string => e !== undefined);
     return collectErrors(
-      requireNonEmpty(input.contestId, "Contest ID")
+      requireNonEmpty(input.contestId, "Contest ID"),
+      ...noticeUrlErrors,
+      ...examUrlErrors
     );
   }
 }

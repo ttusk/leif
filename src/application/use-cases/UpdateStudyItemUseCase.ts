@@ -2,6 +2,7 @@ import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
 import type { StudyItem } from "@/domain/entities/StudyItem";
 import { ValidationError } from "@/domain/errors/DomainErrors";
+import { UpdateStudyItemValidator } from "@/application/validation/InputValidators";
 
 export interface UpdateStudyItemInput {
   itemId: string;
@@ -25,20 +26,9 @@ export class UpdateStudyItemUseCase {
   }
 
   async execute(input: UpdateStudyItemInput): Promise<StudyItem> {
-    if (!input.itemId?.trim()) {
-      throw new ValidationError("itemId is required");
-    }
-    if (input.title !== undefined && !input.title.trim()) {
-      throw new ValidationError("title is required");
-    }
-    if (input.weight !== undefined && input.weight < 0) {
-      throw new ValidationError("weight cannot be negative");
-    }
-    if (input.questionCount !== undefined && input.questionCount < 0) {
-      throw new ValidationError("questionCount cannot be negative");
-    }
-    if (input.totalPages !== undefined && input.totalPages < 0) {
-      throw new ValidationError("totalPages cannot be negative");
+    const validation = new UpdateStudyItemValidator().validate(input);
+    if (!validation.valid) {
+      throw new ValidationError(validation.errors.join(", "));
     }
 
     return await this.itemRepository.update(input.itemId, (item) => ({

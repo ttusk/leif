@@ -60,7 +60,7 @@ function deduplicatePluginData(data) {
       subjectIds: [...new Set(contest.subjectIds)]
     })),
     subjects: deduplicateByKey(data.subjects, (s) => s.id),
-    topics: deduplicateByKey(data.topics, (t) => t.id),
+    topics: deduplicateByKey(data.topics, (t2) => t2.id),
     studyItems: deduplicateByKey(data.studyItems, (i) => i.id),
     studySessions: deduplicateByKey(data.studySessions, (s) => s.id),
     contestStates: deduplicateByKey(data.contestStates, (s) => s.contestId)
@@ -164,6 +164,43 @@ var import_obsidian2 = require("obsidian");
 // src/ui/view/shared/DomHelpers.ts
 var import_obsidian = require("obsidian");
 
+// src/ui/i18n.ts
+var ptBR = {
+  "command.openView": "Abrir painel do Leif",
+  "command.showActiveContest": "Mostrar concurso ativo",
+  "command.seedDemoData": "Criar dados de demonstra\xE7\xE3o",
+  "command.switchActiveContest": "Trocar concurso ativo",
+  "command.showActiveContestSubjects": "Mostrar mat\xE9rias do concurso ativo",
+  "command.reorderActiveContestSubjects": "Reordenar mat\xE9rias do concurso ativo",
+  "command.toggleFirstSubjectActive": "Ativar/desativar primeira mat\xE9ria",
+  "command.updateFirstSubjectConfig": "Atualizar configura\xE7\xE3o da primeira mat\xE9ria",
+  "command.advanceCycle": "Avan\xE7ar ciclo",
+  "command.showCycleSnapshot": "Mostrar snapshot do ciclo",
+  "command.showActiveContestWall": "Mostrar mural do concurso ativo",
+  "command.showActiveContestSummary": "Mostrar resumo do concurso ativo",
+  "command.registerDemoQuestionSession": "Registrar sess\xE3o de quest\xF5es de demonstra\xE7\xE3o",
+  "command.registerDemoVideoSession": "Registrar sess\xE3o de v\xEDdeo de demonstra\xE7\xE3o",
+  "command.resetPluginData": "Redefinir dados do plugin",
+  "tab.dashboard": "Dashboard",
+  "tab.contests": "Concursos",
+  "tab.cycle": "Ciclo e Mat\xE9rias",
+  "tab.items": "Itens e PDFs",
+  "tab.topics": "Assuntos e Quest\xF5es",
+  "tab.sessions": "Sess\xF5es",
+  "tab.wall": "Mural",
+  "action.cancel": "Cancelar",
+  "action.save": "Salvar",
+  "action.delete": "Excluir",
+  "action.edit": "Editar",
+  "action.create": "Criar",
+  "action.confirm": "Confirmar",
+  "action.close": "Fechar"
+};
+var bundle = ptBR;
+function t(key) {
+  return bundle[key] ?? key;
+}
+
 // src/ui/constants/index.ts
 var ICON_NAMES = {
   dashboard: "layout-dashboard",
@@ -187,13 +224,13 @@ var ICON_NAMES = {
   download: "download"
 };
 var TABS = [
-  { id: "dashboard", label: "Dashboard", icon: ICON_NAMES.dashboard },
-  { id: "contests", label: "Concursos", icon: ICON_NAMES.contests },
-  { id: "cycle", label: "Ciclo e Mat\xE9rias", icon: ICON_NAMES.cycle },
-  { id: "items", label: "Itens e PDFs", icon: ICON_NAMES.items },
-  { id: "topics", label: "Assuntos e Quest\xF5es", icon: ICON_NAMES.topics },
-  { id: "sessions", label: "Sess\xF5es", icon: ICON_NAMES.sessions },
-  { id: "wall", label: "Mural", icon: ICON_NAMES.wall }
+  { id: "dashboard", label: t("tab.dashboard"), icon: ICON_NAMES.dashboard },
+  { id: "contests", label: t("tab.contests"), icon: ICON_NAMES.contests },
+  { id: "cycle", label: t("tab.cycle"), icon: ICON_NAMES.cycle },
+  { id: "items", label: t("tab.items"), icon: ICON_NAMES.items },
+  { id: "topics", label: t("tab.topics"), icon: ICON_NAMES.topics },
+  { id: "sessions", label: t("tab.sessions"), icon: ICON_NAMES.sessions },
+  { id: "wall", label: t("tab.wall"), icon: ICON_NAMES.wall }
 ];
 
 // src/domain/errors/DomainErrors.ts
@@ -558,10 +595,10 @@ var DomHelpers = class {
   static createCrudActions(onEdit, onDelete) {
     const actions = this.createElement("div", "leif-inline-actions leif-inline-actions-compact");
     actions.appendChild(
-      this.createIconButton("edit", "Editar", { onClick: onEdit })
+      this.createIconButton("edit", t("action.edit"), { onClick: onEdit })
     );
     actions.appendChild(
-      this.createIconButton("delete", "Excluir", { onClick: onDelete })
+      this.createIconButton("delete", t("action.delete"), { onClick: onDelete })
     );
     return actions;
   }
@@ -593,13 +630,13 @@ var DomHelpers = class {
     const form = this.createForm(onSubmit);
     const actions = this.createElement("div", "leif-form-actions");
     actions.appendChild(
-      this.createButton("Cancelar", {
+      this.createButton(t("action.cancel"), {
         className: "leif-button",
         onClick: () => onCancel()
       })
     );
     actions.appendChild(
-      this.createButton("Criar", {
+      this.createButton(t("action.create"), {
         type: "submit",
         className: "leif-primary-button"
       })
@@ -624,7 +661,7 @@ var DomHelpers = class {
    * through notifyError so callers don't repeat try/catch + Notice boilerplate.
    */
   static runGuarded(action, fallbackMessage) {
-    void (async () => {
+    return (async () => {
       try {
         await action();
       } catch (error) {
@@ -648,7 +685,7 @@ var DomHelpers = class {
     const title = this.createElement("h3", "leif-modal-title");
     title.id = titleId;
     title.textContent = options.title;
-    const closeButton = this.createIconButton("x", "Fechar", {
+    const closeButton = this.createIconButton("x", t("action.close"), {
       onClick: () => close()
     });
     header.appendChild(title);
@@ -656,12 +693,12 @@ var DomHelpers = class {
     const body = this.createElement("div", "leif-modal-body");
     body.appendChild(options.content);
     const footer = this.createElement("div", "leif-modal-footer");
-    const cancelButton = this.createButton("Cancelar", {
+    const cancelButton = this.createButton(t("action.cancel"), {
       className: "leif-button",
       dataset: { leifConfirm: "cancel" },
       onClick: () => close()
     });
-    const submitButton = this.createButton(options.submitLabel ?? "Criar", {
+    const submitButton = this.createButton(options.submitLabel ?? t("action.create"), {
       className: "leif-primary-button",
       dataset: { leifConfirm: "submit" },
       onClick: () => options.onSubmit()
@@ -1079,8 +1116,30 @@ function requireNonEmpty(value, fieldName) {
   return void 0;
 }
 function requireNonNegative(value, fieldName) {
+  if (value !== void 0 && !Number.isFinite(value)) {
+    return `${fieldName} must be a finite number`;
+  }
   if (value !== void 0 && value < 0) {
     return `${fieldName} cannot be negative`;
+  }
+  return void 0;
+}
+function requireNonNegativeInteger(value, fieldName) {
+  if (value === void 0) return void 0;
+  if (!Number.isFinite(value) || Number.isNaN(value)) {
+    return `${fieldName} must be a finite number`;
+  }
+  if (!Number.isInteger(value)) {
+    return `${fieldName} must be an integer`;
+  }
+  return requireNonNegative(value, fieldName);
+}
+var NUMERIC_UPPER_BOUND = 1e6;
+function requireIntegerWithin(value, fieldName, max = NUMERIC_UPPER_BOUND) {
+  const base = requireNonNegativeInteger(value, fieldName);
+  if (base !== void 0) return base;
+  if (value !== void 0 && value > max) {
+    return `${fieldName} cannot exceed ${max}`;
   }
   return void 0;
 }
@@ -1099,6 +1158,18 @@ function requireOneOf(value, allowed, fieldName) {
     return `${fieldName} must be one of: ${allowed.join(", ")}`;
   }
   return void 0;
+}
+function requireValidUrl(value, fieldName) {
+  if (!value) return void 0;
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return `${fieldName} must be an http(s) URL`;
+    }
+    return void 0;
+  } catch {
+    return `${fieldName} must be a valid http(s) URL`;
+  }
 }
 var CreateContestValidator = class {
   validate(input) {
@@ -1124,7 +1195,8 @@ var CreateStudyItemValidator = class {
       requireNonEmpty(input.subjectId, "Subject ID"),
       requireNonEmpty(input.title, "Title"),
       requireNonNegative(input.weight, "Weight"),
-      requireNonNegative(input.questionCount, "Question count")
+      requireIntegerWithin(input.questionCount, "Question count"),
+      requireIntegerWithin(input.totalPages, "Total pages")
     );
   }
 };
@@ -1137,13 +1209,25 @@ var CreateTopicValidator = class {
     );
   }
 };
+var UpdateStudyItemValidator = class {
+  validate(input) {
+    return collectErrors(
+      requireNonEmpty(input.itemId, "Item ID"),
+      input.title !== void 0 ? requireNonEmpty(input.title, "Title") : void 0,
+      requireNonNegative(input.weight, "Weight"),
+      requireIntegerWithin(input.questionCount, "Question count"),
+      requireIntegerWithin(input.totalPages, "Total pages")
+    );
+  }
+};
 var RegisterStudySessionValidator = class {
   validate(input) {
     return collectErrors(
       requireNonEmpty(input.id, "ID"),
       requireNonEmpty(input.contestId, "Contest ID"),
       requireNonEmpty(input.type, "Type"),
-      requireNonEmpty(input.studiedAt, "Studied at")
+      requireNonEmpty(input.studiedAt, "Studied at"),
+      input.type === StudySessionType.QUESTIONS && (!input.pagesOrCount || input.pagesOrCount <= 0) ? "A questions session requires a question count greater than zero" : void 0
     );
   }
 };
@@ -1201,14 +1285,19 @@ var LinkQuestionNotebookValidator = class {
       requireNonEmpty(input.topicId, "Topic ID"),
       requireNonEmpty(input.questionNotebook.id, "Question notebook ID"),
       requireNonEmpty(input.questionNotebook.name, "Question notebook name"),
-      requireNonEmpty(input.questionNotebook.url, "Question notebook URL")
+      requireNonEmpty(input.questionNotebook.url, "Question notebook URL"),
+      requireValidUrl(input.questionNotebook.url, "Question notebook URL")
     );
   }
 };
 var UpdateContestWallValidator = class {
   validate(input) {
+    const noticeUrlErrors = input.wall.noticeLinks.map((link) => requireValidUrl(link.url, "Notice URL")).filter((e) => e !== void 0);
+    const examUrlErrors = input.wall.examLinks.map((link) => requireValidUrl(link.url, "Exam URL")).filter((e) => e !== void 0);
     return collectErrors(
-      requireNonEmpty(input.contestId, "Contest ID")
+      requireNonEmpty(input.contestId, "Contest ID"),
+      ...noticeUrlErrors,
+      ...examUrlErrors
     );
   }
 };
@@ -1258,6 +1347,12 @@ var StudyItem = class {
   }
 };
 
+// src/application/Id.ts
+function createId(prefix) {
+  const suffix = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function" ? crypto.randomUUID() : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
+  return `${prefix}-${suffix}`;
+}
+
 // src/application/use-cases/CreateStudyItemUseCase.ts
 var CreateStudyItemUseCase = class {
   constructor(dataStore, repositoryFactory) {
@@ -1273,7 +1368,7 @@ var CreateStudyItemUseCase = class {
     const subject = await this.subjectRepository.findById(input.subjectId);
     const subjectItems = (await this.studyItemRepository.findAll()).filter((item) => item.subjectId === input.subjectId);
     const nextItem = new StudyItem(
-      input.id ?? `item-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      input.id ?? createId("item"),
       input.subjectId,
       input.title,
       subjectItems.length + 1,
@@ -2223,7 +2318,7 @@ function registerCommands(plugin, dataStore) {
   const updateSubjectConfiguration = new UpdateSubjectConfigurationUseCase(dataStore, repositoryFactory);
   plugin.addCommand({
     id: "leif-show-active-contest",
-    name: "Show active contest",
+    name: t("command.showActiveContest"),
     callback: async () => {
       const data = await dataStore.load();
       const activeContest = data.contests.find((contest) => contest.id === data.activeContestId);
@@ -2232,7 +2327,7 @@ function registerCommands(plugin, dataStore) {
   });
   plugin.addCommand({
     id: "leif-seed-demo-data",
-    name: "Seed demo data",
+    name: t("command.seedDemoData"),
     callback: async () => {
       const data = await dataStore.load();
       if (data.contests.length > 0) {
@@ -2245,7 +2340,7 @@ function registerCommands(plugin, dataStore) {
   });
   plugin.addCommand({
     id: "leif-switch-active-contest",
-    name: "Switch active contest",
+    name: t("command.switchActiveContest"),
     callback: async () => {
       const data = await dataStore.load();
       if (data.contests.length === 0) {
@@ -2268,7 +2363,7 @@ function registerCommands(plugin, dataStore) {
   });
   plugin.addCommand({
     id: "leif-show-active-subjects",
-    name: "Show active contest subjects",
+    name: t("command.showActiveContestSubjects"),
     callback: async () => {
       const subjects = await listSubjectsForActiveContest.execute();
       if (subjects.length === 0) {
@@ -2286,7 +2381,7 @@ function registerCommands(plugin, dataStore) {
   });
   plugin.addCommand({
     id: "leif-reorder-active-subjects",
-    name: "Reorder active contest subjects",
+    name: t("command.reorderActiveContestSubjects"),
     callback: async () => {
       const data = await dataStore.load();
       const subjects = await listSubjectsForActiveContest.execute();
@@ -2303,7 +2398,7 @@ function registerCommands(plugin, dataStore) {
   });
   plugin.addCommand({
     id: "leif-toggle-first-subject-active",
-    name: "Toggle first subject active state",
+    name: t("command.toggleFirstSubjectActive"),
     callback: async () => {
       const subjects = await listSubjectsForActiveContest.execute();
       const subject = subjects[0];
@@ -2320,7 +2415,7 @@ function registerCommands(plugin, dataStore) {
   });
   plugin.addCommand({
     id: "leif-update-first-subject-config",
-    name: "Update first subject configuration",
+    name: t("command.updateFirstSubjectConfig"),
     callback: async () => {
       const subjects = await listSubjectsForActiveContest.execute();
       const subject = subjects[0];
@@ -2340,7 +2435,7 @@ function registerCommands(plugin, dataStore) {
   });
   plugin.addCommand({
     id: "leif-advance-cycle",
-    name: "Advance cycle",
+    name: t("command.advanceCycle"),
     callback: () => DomHelpers.runGuarded(async () => {
       const state = await advanceCycle.execute();
       new import_obsidian2.Notice(`Current subject: ${state.currentSubjectId ?? "none"}`);
@@ -2348,7 +2443,7 @@ function registerCommands(plugin, dataStore) {
   });
   plugin.addCommand({
     id: "leif-show-cycle-snapshot",
-    name: "Show cycle snapshot",
+    name: t("command.showCycleSnapshot"),
     callback: () => DomHelpers.runGuarded(async () => {
       const snapshot = await getActiveCycleSnapshot.execute();
       const data = await dataStore.load();
@@ -2364,7 +2459,7 @@ function registerCommands(plugin, dataStore) {
   });
   plugin.addCommand({
     id: "leif-show-active-contest-wall",
-    name: "Show active contest wall",
+    name: t("command.showActiveContestWall"),
     callback: async () => {
       const data = await dataStore.load();
       const activeContest = data.contests.find((contest) => contest.id === data.activeContestId);
@@ -2379,7 +2474,7 @@ function registerCommands(plugin, dataStore) {
   });
   plugin.addCommand({
     id: "leif-show-summary",
-    name: "Show active contest summary",
+    name: t("command.showActiveContestSummary"),
     callback: () => DomHelpers.runGuarded(async () => {
       const summary = await getActiveContestSummary.execute();
       if (summary.subjectSummaries.length === 0) {
@@ -2395,7 +2490,7 @@ function registerCommands(plugin, dataStore) {
   });
   plugin.addCommand({
     id: "leif-register-demo-question-session",
-    name: "Register demo question session",
+    name: t("command.registerDemoQuestionSession"),
     callback: async () => {
       const data = await dataStore.load();
       if (!data.activeContestId) {
@@ -2410,7 +2505,7 @@ function registerCommands(plugin, dataStore) {
       }
       const topic = data.topics.find((candidate) => candidate.subjectId === activeSubject.id);
       await registerStudySession.execute({
-        id: `session-demo-${Date.now()}`,
+        id: createId("session-demo"),
         contestId: data.activeContestId,
         subjectId: activeSubject.id,
         topicId: topic?.id,
@@ -2425,7 +2520,7 @@ function registerCommands(plugin, dataStore) {
   });
   plugin.addCommand({
     id: "leif-register-demo-video-session",
-    name: "Register demo video session",
+    name: t("command.registerDemoVideoSession"),
     callback: async () => {
       const data = await dataStore.load();
       if (!data.activeContestId) {
@@ -2438,7 +2533,7 @@ function registerCommands(plugin, dataStore) {
         return;
       }
       await registerStudySession.execute({
-        id: `session-video-${Date.now()}`,
+        id: createId("session-video"),
         contestId: data.activeContestId,
         subjectId: activeSubject.id,
         type: "video",
@@ -2451,7 +2546,7 @@ function registerCommands(plugin, dataStore) {
   });
   plugin.addCommand({
     id: "leif-reset-demo-data",
-    name: "Reset plugin data",
+    name: t("command.resetPluginData"),
     callback: async () => {
       await dataStore.save(createDefaultLeifPluginData());
       new import_obsidian2.Notice("Leif data reset.");
@@ -2476,7 +2571,7 @@ var DeleteContestUseCase = class {
     data.contestStates = data.contestStates.filter((s) => s.contestId !== input.contestId);
     data.subjects = data.subjects.filter((s) => s.contestId !== input.contestId);
     data.studyItems = data.studyItems.filter((i) => !subjectIds.has(i.subjectId));
-    data.topics = data.topics.filter((t) => !subjectIds.has(t.subjectId));
+    data.topics = data.topics.filter((t2) => !subjectIds.has(t2.subjectId));
     data.studySessions = data.studySessions.filter((s) => s.contestId !== input.contestId);
     if (data.activeContestId === input.contestId) {
       data.activeContestId = null;
@@ -2817,7 +2912,7 @@ var CycleTab = class {
           throw new NoActiveContestError();
         }
         await this.createSubjectUseCase.execute({
-          id: `${activeContestId}-subject-${Date.now()}`,
+          id: createId(`${activeContestId}-subject`),
           contestId: activeContestId,
           name: nameInput.value,
           plannedStudyMinutes: Number(minutesInput.value)
@@ -3089,20 +3184,9 @@ var UpdateStudyItemUseCase = class {
     this.itemRepository = repositoryFactory.for("studyItems");
   }
   async execute(input) {
-    if (!input.itemId?.trim()) {
-      throw new ValidationError("itemId is required");
-    }
-    if (input.title !== void 0 && !input.title.trim()) {
-      throw new ValidationError("title is required");
-    }
-    if (input.weight !== void 0 && input.weight < 0) {
-      throw new ValidationError("weight cannot be negative");
-    }
-    if (input.questionCount !== void 0 && input.questionCount < 0) {
-      throw new ValidationError("questionCount cannot be negative");
-    }
-    if (input.totalPages !== void 0 && input.totalPages < 0) {
-      throw new ValidationError("totalPages cannot be negative");
+    const validation = new UpdateStudyItemValidator().validate(input);
+    if (!validation.valid) {
+      throw new ValidationError(validation.errors.join(", "));
     }
     return await this.itemRepository.update(input.itemId, (item) => ({
       ...item,
@@ -3276,8 +3360,14 @@ var ItemsTab = class {
     tr.dataset.itemId = item.id;
     const titleInput = DomHelpers.createCompactInput("text", "T\xEDtulo", item.title);
     const weightInput = DomHelpers.createCompactInput("number", "Peso", String(item.weight ?? 0));
+    weightInput.min = "0";
+    weightInput.step = "0.1";
     const questionInput = DomHelpers.createCompactInput("number", "Qts", String(item.questionCount ?? 0));
+    questionInput.min = "0";
+    questionInput.step = "1";
     const totalPagesInput = DomHelpers.createCompactInput("number", "Total", String(item.totalPages ?? ""));
+    totalPagesInput.min = "0";
+    totalPagesInput.step = "1";
     const saveButton = DomHelpers.createIconButton("save", "Salvar", {
       onClick: async () => {
         try {
@@ -3364,7 +3454,7 @@ var ItemsTab = class {
         await this.addStudyItemResourceReferenceUseCase.execute({
           studyItemId: item.id,
           resourceReference: {
-            id: `${item.id}-resource-${Date.now()}`,
+            id: createId(`${item.id}-resource`),
             title: titleInput.value,
             type: typeSelect.value,
             url: urlInput.value
@@ -3392,13 +3482,19 @@ var ItemsTab = class {
   openCreateItemModal(subjectId) {
     const titleInput = DomHelpers.createInput("text", "T\xEDtulo do item");
     const weightInput = DomHelpers.createInput("number", "Peso", "1");
+    weightInput.min = "0";
+    weightInput.step = "0.1";
     const questionCountInput = DomHelpers.createInput("number", "Total de quest\xF5es", "0");
+    questionCountInput.min = "0";
+    questionCountInput.step = "1";
     const totalPagesInput = DomHelpers.createInput("number", "Total de p\xE1ginas (opcional)", "");
+    totalPagesInput.min = "0";
+    totalPagesInput.step = "1";
     const form = DomHelpers.createForm(async () => {
       try {
         const rawPages = totalPagesInput.value.trim();
         await this.createStudyItemUseCase.execute({
-          id: `${subjectId}-item-${Date.now()}`,
+          id: createId(`${subjectId}-item`),
           subjectId,
           title: titleInput.value,
           weight: Number(weightInput.value),
@@ -3731,13 +3827,10 @@ var SessionsTab = class {
         const sessionType = typeSelect.value;
         const rawCount = Number(countInput.value);
         const rawCorrect = Number(correctInput.value);
-        if (sessionType === StudySessionType.QUESTIONS && (!rawCount || rawCount <= 0)) {
-          throw new ValidationError("Informe a quantidade de quest\xF5es (maior que zero).");
-        }
         const pagesOrCount = sessionType === StudySessionType.QUESTIONS ? rawCount : rawCount || void 0;
         const correctAnswers = sessionType === StudySessionType.QUESTIONS ? Math.min(rawCorrect, rawCount) : void 0;
         await this.registerStudySessionUseCase.execute({
-          id: `session-${Date.now()}`,
+          id: createId("session"),
           contestId: activeContest.id,
           subjectId: subjectSelect.value,
           studyItemId: itemSelect.value || void 0,
@@ -4142,7 +4235,7 @@ var TopicsTab = class {
     const form = DomHelpers.createForm(async () => {
       try {
         await this.createTopicUseCase.execute({
-          id: `${subjectId}-topic-${Date.now()}`,
+          id: createId(`${subjectId}-topic`),
           subjectId,
           name: nameInput.value
         });
@@ -4474,7 +4567,7 @@ function registerLeifView(plugin, dataStore) {
   plugin.addRibbonIcon(LEIF_ICON, "Abrir Leif", () => openLeifView(plugin));
   plugin.addCommand({
     id: "leif-open-view",
-    name: "Abrir painel do Leif",
+    name: t("command.openView"),
     callback: async () => {
       await openLeifView(plugin);
     }
