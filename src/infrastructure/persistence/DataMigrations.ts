@@ -1,13 +1,6 @@
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 
 /**
- * Versioned plugin data with schema version tracking
- */
-export interface VersionedData extends LeifPluginData {
-  schemaVersion: number;
-}
-
-/**
  * Removes duplicate entries from an array based on a key extractor.
  * Keeps the first occurrence of each key.
  */
@@ -55,9 +48,9 @@ export class DataMigrationService {
    * @param data - The data to migrate (may be from any version)
    * @returns Migrated data at the current schema version
    */
-  migrate(data: any): LeifPluginData {
+  migrate(data: LeifPluginData): LeifPluginData {
     const version = data.schemaVersion ?? 1;
-    let current = data;
+    let current: LeifPluginData = data;
 
     // Apply migrations sequentially
     if (version < 2) {
@@ -81,7 +74,7 @@ export class DataMigrationService {
    * Migration from version 1 to version 2.
    * Add future migrations here when schema changes.
    */
-  private migrateV1toV2(data: any): any {
+  private migrateV1toV2(data: LeifPluginData): LeifPluginData {
     // Example: If we added a new field, we'd initialize it here
     // return { ...data, newField: defaultValue };
     return data;
@@ -91,7 +84,7 @@ export class DataMigrationService {
    * Migration from version 2 to version 3.
    * Placeholder for future migrations.
    */
-  private migrateV2toV3(data: any): any {
+  private migrateV2toV3(data: LeifPluginData): LeifPluginData {
     return data;
   }
 
