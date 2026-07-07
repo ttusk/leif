@@ -1,5 +1,6 @@
 import { ValidationError } from "@/domain/errors/DomainErrors";
 import type { WallLink } from "@/domain/entities/Wall";
+import { StudySessionType } from "@/domain/entities/StudySession";
 
 /**
  * Result of input validation.
@@ -165,12 +166,15 @@ export class UpdateStudyItemValidator {
  * Validates input for registering a study session.
  */
 export class RegisterStudySessionValidator {
-  validate(input: { id: string; contestId: string; type: string; studiedAt: string }): ValidationResult {
+  validate(input: { id: string; contestId: string; type: string; studiedAt: string; pagesOrCount?: number }): ValidationResult {
     return collectErrors(
       requireNonEmpty(input.id, "ID"),
       requireNonEmpty(input.contestId, "Contest ID"),
       requireNonEmpty(input.type, "Type"),
-      requireNonEmpty(input.studiedAt, "Studied at")
+      requireNonEmpty(input.studiedAt, "Studied at"),
+      input.type === StudySessionType.QUESTIONS && (!input.pagesOrCount || input.pagesOrCount <= 0)
+        ? "A questions session requires a question count greater than zero"
+        : undefined
     );
   }
 }

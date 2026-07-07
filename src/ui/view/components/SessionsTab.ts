@@ -9,7 +9,6 @@ import { RegisterStudySessionUseCase } from "@/application/use-cases/RegisterStu
 import { UpdateStudySessionUseCase } from "@/application/use-cases/UpdateStudySessionUseCase";
 import { StudySessionType } from "@/domain/entities/StudySession";
 import type { StudySession } from "@/domain/entities/StudySession";
-import { ValidationError } from "@/domain/errors/DomainErrors";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
@@ -302,10 +301,6 @@ export class SessionsTab {
         const sessionType = typeSelect.value as StudySessionType;
         const rawCount = Number(countInput.value);
         const rawCorrect = Number(correctInput.value);
-
-        if (sessionType === StudySessionType.QUESTIONS && (!rawCount || rawCount <= 0)) {
-          throw new ValidationError("Informe a quantidade de questões (maior que zero).");
-        }
 
         const pagesOrCount = sessionType === StudySessionType.QUESTIONS ? rawCount : rawCount || undefined;
         const correctAnswers =
