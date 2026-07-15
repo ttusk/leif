@@ -80,8 +80,8 @@ describe("ExportToCsvUseCase", () => {
     const data: LeifPluginData = {
       ...base,
       studySessions: [
-        { id: "a", contestId: "c1", subjectId: null, type: "pdf", studiedAt: "2026-06-11", pagesOrCount: 5, completed: true },
-        { id: "b", contestId: "c2", subjectId: null, type: "pdf", studiedAt: "2026-06-11", pagesOrCount: 5, completed: true }
+        { id: "a", contestId: "c1", type: "pdf", studiedAt: "2026-06-11", pagesOrCount: 5, completed: true },
+        { id: "b", contestId: "c2", type: "pdf", studiedAt: "2026-06-11", pagesOrCount: 5, completed: true }
       ]
     };
 

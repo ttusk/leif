@@ -4,11 +4,11 @@
     "type": "split",
     "children": [
       {
-        "id": "da330c5c3fdd7634",
+        "id": "4974473a24d9f20d",
         "type": "tabs",
         "children": [
           {
-            "id": "279bdb335d4d9742",
+            "id": "f50f8a33c41feff7",
             "type": "leaf",
             "state": {
               "type": "leif-main-view",
@@ -180,7 +180,7 @@
       "leif:Abrir Leif": false
     }
   },
-  "active": "279bdb335d4d9742",
+  "active": "f50f8a33c41feff7",
   "lastOpenFiles": [
     "Notes/2026-06-12.md",
     "Welcome.md",

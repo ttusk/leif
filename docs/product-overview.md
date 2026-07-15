@@ -43,16 +43,16 @@ Relationships are modeled by ID arrays (not object references), and all data is 
 
 ## What the user can do
 
-The plugin opens a side-panel view with **7 tabs**:
+The plugin opens a side-panel view with **7 user-facing areas**:
 
 | Tab | Capabilities |
 |---|---|
-| **Dashboard** | Read-only overview of the active contest: recommended subject/item cards and a per-subject summary (sessions, PDF page progress bar, questions, accuracy). |
-| **Concursos** | CRUD list of contests; set the active contest; inline-edit name + wall notes; create via modal; delete (with confirm). |
-| **Ciclo e Matérias** | List the active contest's subjects; inline-edit planned minutes + stage; click a status cell to toggle active/inactive; reorder up/down; create via modal. |
-| **Itens e PDFs** | Subject picker; CRUD table of items with page-progress bar and "✓ Concluído"; inline-edit title/weight/questions/total pages; expandable row to add pdf/video/link references; create via modal; delete. |
-| **Assuntos e Questões** | Subject picker; CRUD table of topics (notebook name shown as a link, solved/correct counts); inline-edit name + notebook stats; expandable row to link/edit a question notebook; create via modal; delete. |
-| **Sessões** | Cycle context (recommended subject/item), "Finalizar ciclo atual" button to advance the cycle; last-10 sessions table with PDF progress bars; inline-edit count/correct; delete; create session via modal with dependent subject→item/topic selects and a question-field visibility toggle. |
+| **Hoje** | Overview of the active contest: next study activity, planned duration/stage, what comes next, and a per-subject summary (sessions, PDF page progress bar, questions, accuracy). |
+| **Plano** | Study-cycle setup: list the active contest's subjects; inline-create and inline-edit planned minutes + stage; click a status cell to toggle active/inactive; reorder up/down next to the order number. |
+| **Edital** | Syllabus/topic map: subject picker; simplified topics table; inline-create topics; inline-edit name + notebook stats; expandable row to link/edit a question notebook; inline delete confirmation. |
+| **Registros** | Study-session history and cycle action: recommended subject/item context, "Marcar como estudado" button, last-10 sessions table with compact result cells, inline-create sessions, inline-edit count/correct, and inline delete confirmation. |
+| **Recursos** | Study resources: subject picker; simplified resources table with page-progress bar and "✓ Concluído"; inline-create items; inline-edit title/weight/questions/total pages; expandable row to add pdf/video/link references; inline delete confirmation. |
+| **Concursos** | Contest management: simplified list of contests; set the active contest; inline-create contests; inline-edit name + wall notes; inline delete confirmation. |
 | **Mural** | Edit the active contest's notice link, exam link and notes; read-only subject snapshots table (subject, weight, score, target items). |
 
 Additionally, **15 commands** are registered for the command palette (mostly demo/utility entry points today, e.g. `Leif: Seed demo data`, `Leif: Advance cycle`, `Leif: Reset plugin data`), plus `Leif: Abrir painel do Leif` to open the panel.
@@ -65,8 +65,8 @@ Additionally, **15 commands** are registered for the command palette (mostly dem
 4. Register the study items for each subject (attach PDFs/videos/links).
 5. Register topics and link question notebooks where relevant.
 6. Register study sessions as you progress.
-7. Use the Dashboard to follow progress and performance.
-8. When a subject's item is done, use "Finalizar ciclo atual" to advance to the next recommended subject/item.
+7. Use Hoje to decide what to study next and follow progress/performance.
+8. When a subject's item is done, use "Finalizar ciclo atual" in Registros to advance to the next recommended subject/item.
 
 ## Persistence
 

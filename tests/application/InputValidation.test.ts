@@ -52,12 +52,12 @@ describe("Input Validators", () => {
 
   describe("CreateStudyItemValidator", () => {
     it("validates a correct study item input", () => {
-      const result = new CreateStudyItemValidator().validate({ id: "item-1", subjectId: "sub-1", title: "Syntax" });
+      const result = new CreateStudyItemValidator().validate({ subjectId: "sub-1", title: "Syntax" });
       expect(result.valid).toBe(true);
     });
 
     it("fails when weight is negative", () => {
-      const result = new CreateStudyItemValidator().validate({ id: "item-1", subjectId: "sub-1", title: "Syntax", weight: -1 });
+      const result = new CreateStudyItemValidator().validate({ subjectId: "sub-1", title: "Syntax", weight: -1 });
       expect(result.valid).toBe(false);
       expect(result.errors).toContain("Weight cannot be negative");
     });
@@ -156,8 +156,7 @@ describe("Input Validators", () => {
   describe("UpdateContestWallValidator", () => {
     it("validates a correct input", () => {
       const result = new UpdateContestWallValidator().validate({
-        contestId: "contest-1",
-        wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] }
+        contestId: "contest-1"
       });
       expect(result.valid).toBe(true);
     });

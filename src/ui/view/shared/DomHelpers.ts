@@ -138,7 +138,6 @@ export class DomHelpers {
     input.type = type;
     input.placeholder = placeholder;
     input.value = value;
-    input.className = "leif-input";
     return input;
   }
 
@@ -152,7 +151,6 @@ export class DomHelpers {
     selectedValue?: string
   ): HTMLSelectElement {
     const select = document.createElement("select");
-    select.className = "leif-select";
 
     options.forEach(([value, label]) => {
       const option = document.createElement("option");
@@ -174,7 +172,6 @@ export class DomHelpers {
     const textarea = document.createElement("textarea");
     textarea.placeholder = placeholder;
     textarea.value = value;
-    textarea.className = "leif-textarea";
     return textarea;
   }
 
@@ -182,8 +179,21 @@ export class DomHelpers {
    * Creates a label for a form control.
    */
   static createLabel(text: string, control: HTMLElement): HTMLElement {
-    const label = this.createElement("label", "leif-label");
-    const span = this.createElement("span", "leif-label-text");
+    const label = this.createElement("label", "setting-item");
+    const span = this.createElement("span", "setting-item-name");
+    const controlWrapper = this.createElement("span", "setting-item-control");
+    span.textContent = text;
+    controlWrapper.appendChild(control);
+    label.append(span, controlWrapper);
+    return label;
+  }
+
+  /**
+   * Creates a vertically stacked label for larger fields.
+   */
+  static createStackedLabel(text: string, control: HTMLElement): HTMLElement {
+    const label = this.createElement("label", "leif-field-stack");
+    const span = this.createElement("span", "leif-field-label");
     span.textContent = text;
     label.append(span, control);
     return label;
@@ -269,7 +279,7 @@ export class DomHelpers {
   ): HTMLButtonElement {
     const button = document.createElement("button");
     button.type = options.type || "button";
-    button.className = options.className || "leif-button";
+    button.className = options.className || "";
 
     if (options.icon) {
       button.appendChild(this.createTextWithIcon(text, options.icon));
@@ -308,9 +318,9 @@ export class DomHelpers {
   ): HTMLButtonElement {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = options.className || "leif-icon-button";
+    button.className = options.className || "clickable-icon";
     button.setAttribute("aria-label", title);
-    button.appendChild(this.createIcon(icon, "leif-icon-button-icon"));
+    button.appendChild(this.createIcon(icon));
 
     if (options.dataset) {
       Object.entries(options.dataset).forEach(([key, value]) => {
@@ -332,18 +342,10 @@ export class DomHelpers {
   }
 
   /**
-   * Creates a button group container.
-   */
-  static createButtonGroup(): HTMLElement {
-    return this.createElement("div", "leif-button-group");
-  }
-
-  /**
    * Creates a form element.
    */
   static createForm(onSubmit?: (event: Event) => void | Promise<void>): HTMLFormElement {
     const form = document.createElement("form");
-    form.className = "leif-form";
     if (onSubmit) {
       form.addEventListener("submit", (event) => {
         event.preventDefault();
@@ -381,7 +383,7 @@ export class DomHelpers {
    */
   static createCompactInput(type: string, placeholder: string, value = ""): HTMLInputElement {
     const input = this.createInput(type, placeholder, value);
-    input.className = "leif-input leif-input-compact";
+    input.size = 8;
     return input;
   }
 
@@ -431,13 +433,6 @@ export class DomHelpers {
   }
 
   /**
-   * Creates a form row for organizing form elements.
-   */
-  static createFormRow(): HTMLElement {
-    return this.createElement("div", "leif-form-row");
-  }
-
-  /**
    * Creates a table cell with optional text or child element.
    */
   static createCell(text: string | null, element?: HTMLElement): HTMLElement {
@@ -459,21 +454,20 @@ export class DomHelpers {
     onSubmit: (event: Event) => void | Promise<void>,
     onCancel: () => void | Promise<void>
   ): HTMLElement {
-    const card = this.createElement("section", "leif-card leif-create-form");
+    const card = this.createElement("section", "leif-card");
     card.appendChild(this.createSectionSubtitle(title, "add"));
 
     const form = this.createForm(onSubmit);
     const actions = this.createElement("div", "leif-form-actions");
     actions.appendChild(
       this.createButton(t("action.cancel"), {
-        className: "leif-button",
         onClick: () => onCancel()
       })
     );
     actions.appendChild(
       this.createButton(t("action.create"), {
         type: "submit",
-        className: "leif-primary-button"
+        className: "mod-cta"
       })
     );
 
@@ -488,7 +482,7 @@ export class DomHelpers {
    */
   static notifyError(error: unknown, fallbackMessage: string): void {
     if (error instanceof NoActiveContestError) {
-      new Notice("Nenhum concurso ativo. Selecione um concurso para continuar.");
+      new Notice("Escolha um concurso para continuar.");
       return;
     }
     new Notice(error instanceof Error ? error.message : fallbackMessage);
@@ -509,157 +503,6 @@ export class DomHelpers {
         this.notifyError(error, fallbackMessage);
       }
     })();
-  }
-
-  /**
-   * Creates a modal overlay with a centered card.
-   * Implements role=dialog, aria-modal, a focus trap and Escape-to-close.
-   * Returns { open, close } functions.
-   */
-  static createModal(options: {
-    title: string;
-    content: HTMLElement;
-    onSubmit: () => void | Promise<void>;
-    onCancel?: () => void;
-    submitLabel?: string;
-  }): { open: () => void; close: () => void } {
-    const overlay = this.createElement("div", "leif-modal-overlay");
-    const card = this.createElement("div", "leif-modal-card");
-    card.setAttribute("role", "dialog");
-    card.setAttribute("aria-modal", "true");
-
-    const titleId = `leif-modal-title-${Math.random().toString(36).slice(2, 9)}`;
-    card.setAttribute("aria-labelledby", titleId);
-
-    const header = this.createElement("div", "leif-modal-header");
-    const title = this.createElement("h3", "leif-modal-title");
-    title.id = titleId;
-    title.textContent = options.title;
-    const closeButton = this.createIconButton("x", t("action.close"), {
-      onClick: () => close()
-    });
-    header.appendChild(title);
-    header.appendChild(closeButton);
-
-    const body = this.createElement("div", "leif-modal-body");
-    body.appendChild(options.content);
-
-    const footer = this.createElement("div", "leif-modal-footer");
-    const cancelButton = this.createButton(t("action.cancel"), {
-      className: "leif-button",
-      dataset: { leifConfirm: "cancel" },
-      onClick: () => close()
-    });
-    const submitButton = this.createButton(options.submitLabel ?? t("action.create"), {
-      className: "leif-primary-button",
-      dataset: { leifConfirm: "submit" },
-      onClick: () => options.onSubmit()
-    });
-    footer.appendChild(cancelButton);
-    footer.appendChild(submitButton);
-
-    card.append(header, body, footer);
-    overlay.appendChild(card);
-
-    let previouslyFocused: HTMLElement | null = null;
-    let focusTrapHandler: ((event: KeyboardEvent) => void) | null = null;
-    let escapeHandler: ((event: KeyboardEvent) => void) | null = null;
-
-    const focusable = (): HTMLElement[] => {
-      const elements = card.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      return Array.from(elements).filter((element) => !element.hasAttribute("disabled"));
-    };
-
-    const open = (): void => {
-      previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-      document.body.appendChild(overlay);
-      const first = focusable()[0] ?? card;
-      first.focus();
-
-      focusTrapHandler = (event: KeyboardEvent): void => {
-        if (event.key !== "Tab") return;
-        const elements = focusable();
-        if (elements.length === 0) {
-          event.preventDefault();
-          return;
-        }
-        const firstEl = elements[0];
-        const lastEl = elements[elements.length - 1];
-        if (event.shiftKey && document.activeElement === firstEl) {
-          event.preventDefault();
-          lastEl.focus();
-        } else if (!event.shiftKey && document.activeElement === lastEl) {
-          event.preventDefault();
-          firstEl.focus();
-        }
-      };
-
-      escapeHandler = (event: KeyboardEvent): void => {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          close();
-        }
-      };
-
-      card.addEventListener("keydown", focusTrapHandler);
-      overlay.addEventListener("keydown", escapeHandler);
-    };
-
-    const close = (): void => {
-      if (focusTrapHandler) card.removeEventListener("keydown", focusTrapHandler);
-      if (escapeHandler) overlay.removeEventListener("keydown", escapeHandler);
-      if (overlay.parentNode) {
-        overlay.parentNode.removeChild(overlay);
-      }
-      previouslyFocused?.focus();
-      options.onCancel?.();
-    };
-
-    overlay.addEventListener("click", (event) => {
-      if (event.target === overlay) {
-        close();
-      }
-    });
-
-    return { open, close };
-  }
-
-  /**
-   * Creates an accessible confirmation dialog (replaces native window.confirm).
-   * Resolves the returned promise with true when confirmed, false when cancelled.
-   */
-  static confirm(options: {
-    title: string;
-    message: string;
-    confirmLabel?: string;
-    cancelLabel?: string;
-  }): Promise<boolean> {
-    return new Promise<boolean>((resolve) => {
-      let resolved = false;
-      const settle = (value: boolean): void => {
-        if (resolved) return;
-        resolved = true;
-        resolve(value);
-      };
-
-      const message = this.createElement("p", "leif-modal-message");
-      message.textContent = options.message;
-
-      const modal = this.createModal({
-        title: options.title,
-        content: message,
-        submitLabel: options.confirmLabel ?? "Confirmar",
-        onSubmit: () => {
-          settle(true);
-          modal.close();
-        },
-        onCancel: () => settle(false)
-      });
-
-      modal.open();
-    });
   }
 
   /**

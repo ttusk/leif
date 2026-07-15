@@ -30,7 +30,7 @@ As funcionalidades principais já estão implementadas e cobertas por testes, ma
 - Abertura do link do caderno no navegador.
 - Registro manual de sessões de PDF, vídeo e questões.
 - Acompanhamento de páginas lidas, questões resolvidas e acertos.
-- Dashboard com resumo por matéria.
+- Hoje com próxima atividade e resumo por matéria.
 - Exportação de dados em CSV.
 - Vault de exemplo com dados de demonstração.
 
@@ -85,14 +85,14 @@ Abra o painel principal pela faixa lateral esquerda ou pela paleta de comandos:
 Leif: Abrir painel do Leif
 ```
 
-O painel é dividido nas seguintes abas:
+O painel é dividido pelas etapas principais do estudo:
 
-- `Dashboard`
+- `Hoje`
+- `Plano`
+- `Edital`
+- `Registros`
+- `Recursos`
 - `Concursos`
-- `Ciclo e Matérias`
-- `Itens e PDFs`
-- `Assuntos e Questões`
-- `Sessões`
 - `Mural`
 
 ### Fluxo recomendado
@@ -102,8 +102,9 @@ O painel é dividido nas seguintes abas:
 3. Defina a ordem e o status das matérias no ciclo.
 4. Cadastre os itens de estudo de cada matéria.
 5. Cadastre os assuntos e associe cadernos de questões quando necessário.
-6. Registre sessões de estudo conforme avançar.
-7. Use o Dashboard para acompanhar progresso e desempenho.
+6. Use `Hoje` para ver a próxima atividade.
+7. Registre sessões de estudo em `Registros` conforme avançar.
+8. Acompanhe progresso e desempenho em `Hoje`.
 
 ## Conceitos principais
 

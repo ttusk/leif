@@ -23,7 +23,7 @@ __export(main_exports, {
   default: () => LeifPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian5 = require("obsidian");
+var import_obsidian6 = require("obsidian");
 
 // src/domain/types/LeifPluginData.ts
 function createDefaultLeifPluginData() {
@@ -174,18 +174,18 @@ var ptBR = {
   "command.toggleFirstSubjectActive": "Ativar/desativar primeira mat\xE9ria",
   "command.updateFirstSubjectConfig": "Atualizar configura\xE7\xE3o da primeira mat\xE9ria",
   "command.advanceCycle": "Avan\xE7ar ciclo",
-  "command.showCycleSnapshot": "Mostrar snapshot do ciclo",
+  "command.showCycleSnapshot": "Mostrar estado do ciclo",
   "command.showActiveContestWall": "Mostrar mural do concurso ativo",
   "command.showActiveContestSummary": "Mostrar resumo do concurso ativo",
   "command.registerDemoQuestionSession": "Registrar sess\xE3o de quest\xF5es de demonstra\xE7\xE3o",
   "command.registerDemoVideoSession": "Registrar sess\xE3o de v\xEDdeo de demonstra\xE7\xE3o",
   "command.resetPluginData": "Redefinir dados do plugin",
-  "tab.dashboard": "Dashboard",
+  "tab.dashboard": "Hoje",
   "tab.contests": "Concursos",
-  "tab.cycle": "Ciclo e Mat\xE9rias",
-  "tab.items": "Itens e PDFs",
-  "tab.topics": "Assuntos e Quest\xF5es",
-  "tab.sessions": "Sess\xF5es",
+  "tab.cycle": "Plano",
+  "tab.items": "Recursos",
+  "tab.topics": "Edital",
+  "tab.sessions": "Registros",
   "tab.wall": "Mural",
   "action.cancel": "Cancelar",
   "action.save": "Salvar",
@@ -202,7 +202,7 @@ function t(key) {
 
 // src/ui/constants/index.ts
 var ICON_NAMES = {
-  dashboard: "layout-dashboard",
+  dashboard: "calendar-check",
   contests: "trophy",
   cycle: "refresh-cw",
   items: "file-text",
@@ -224,11 +224,11 @@ var ICON_NAMES = {
 };
 var TABS = [
   { id: "dashboard", label: t("tab.dashboard"), icon: ICON_NAMES.dashboard },
-  { id: "contests", label: t("tab.contests"), icon: ICON_NAMES.contests },
   { id: "cycle", label: t("tab.cycle"), icon: ICON_NAMES.cycle },
-  { id: "items", label: t("tab.items"), icon: ICON_NAMES.items },
   { id: "topics", label: t("tab.topics"), icon: ICON_NAMES.topics },
   { id: "sessions", label: t("tab.sessions"), icon: ICON_NAMES.sessions },
+  { id: "items", label: t("tab.items"), icon: ICON_NAMES.items },
+  { id: "contests", label: t("tab.contests"), icon: ICON_NAMES.contests },
   { id: "wall", label: t("tab.wall"), icon: ICON_NAMES.wall }
 ];
 
@@ -372,7 +372,6 @@ var DomHelpers = class {
     input.type = type;
     input.placeholder = placeholder;
     input.value = value;
-    input.className = "leif-input";
     return input;
   }
   /**
@@ -382,7 +381,6 @@ var DomHelpers = class {
    */
   static createSelect(options, selectedValue) {
     const select = document.createElement("select");
-    select.className = "leif-select";
     options.forEach(([value, label]) => {
       const option = document.createElement("option");
       option.value = value;
@@ -401,15 +399,26 @@ var DomHelpers = class {
     const textarea = document.createElement("textarea");
     textarea.placeholder = placeholder;
     textarea.value = value;
-    textarea.className = "leif-textarea";
     return textarea;
   }
   /**
    * Creates a label for a form control.
    */
   static createLabel(text, control) {
-    const label = this.createElement("label", "leif-label");
-    const span = this.createElement("span", "leif-label-text");
+    const label = this.createElement("label", "setting-item");
+    const span = this.createElement("span", "setting-item-name");
+    const controlWrapper = this.createElement("span", "setting-item-control");
+    span.textContent = text;
+    controlWrapper.appendChild(control);
+    label.append(span, controlWrapper);
+    return label;
+  }
+  /**
+   * Creates a vertically stacked label for larger fields.
+   */
+  static createStackedLabel(text, control) {
+    const label = this.createElement("label", "leif-field-stack");
+    const span = this.createElement("span", "leif-field-label");
     span.textContent = text;
     label.append(span, control);
     return label;
@@ -477,7 +486,7 @@ var DomHelpers = class {
   static createButton(text, options = {}) {
     const button = document.createElement("button");
     button.type = options.type || "button";
-    button.className = options.className || "leif-button";
+    button.className = options.className || "";
     if (options.icon) {
       button.appendChild(this.createTextWithIcon(text, options.icon));
     } else {
@@ -503,9 +512,9 @@ var DomHelpers = class {
   static createIconButton(icon, title, options = {}) {
     const button = document.createElement("button");
     button.type = "button";
-    button.className = options.className || "leif-icon-button";
+    button.className = options.className || "clickable-icon";
     button.setAttribute("aria-label", title);
-    button.appendChild(this.createIcon(icon, "leif-icon-button-icon"));
+    button.appendChild(this.createIcon(icon));
     if (options.dataset) {
       Object.entries(options.dataset).forEach(([key, value]) => {
         button.dataset[key] = value;
@@ -522,17 +531,10 @@ var DomHelpers = class {
     return button;
   }
   /**
-   * Creates a button group container.
-   */
-  static createButtonGroup() {
-    return this.createElement("div", "leif-button-group");
-  }
-  /**
    * Creates a form element.
    */
   static createForm(onSubmit) {
     const form = document.createElement("form");
-    form.className = "leif-form";
     if (onSubmit) {
       form.addEventListener("submit", (event) => {
         event.preventDefault();
@@ -564,7 +566,7 @@ var DomHelpers = class {
    */
   static createCompactInput(type, placeholder, value = "") {
     const input = this.createInput(type, placeholder, value);
-    input.className = "leif-input leif-input-compact";
+    input.size = 8;
     return input;
   }
   /**
@@ -602,12 +604,6 @@ var DomHelpers = class {
     return actions;
   }
   /**
-   * Creates a form row for organizing form elements.
-   */
-  static createFormRow() {
-    return this.createElement("div", "leif-form-row");
-  }
-  /**
    * Creates a table cell with optional text or child element.
    */
   static createCell(text, element) {
@@ -624,20 +620,19 @@ var DomHelpers = class {
    * @returns Form element
    */
   static createInlineForm(title, onSubmit, onCancel) {
-    const card = this.createElement("section", "leif-card leif-create-form");
+    const card = this.createElement("section", "leif-card");
     card.appendChild(this.createSectionSubtitle(title, "add"));
     const form = this.createForm(onSubmit);
     const actions = this.createElement("div", "leif-form-actions");
     actions.appendChild(
       this.createButton(t("action.cancel"), {
-        className: "leif-button",
         onClick: () => onCancel()
       })
     );
     actions.appendChild(
       this.createButton(t("action.create"), {
         type: "submit",
-        className: "leif-primary-button"
+        className: "mod-cta"
       })
     );
     card.appendChild(form);
@@ -650,7 +645,7 @@ var DomHelpers = class {
    */
   static notifyError(error, fallbackMessage) {
     if (error instanceof NoActiveContestError) {
-      new import_obsidian.Notice("Nenhum concurso ativo. Selecione um concurso para continuar.");
+      new import_obsidian.Notice("Escolha um concurso para continuar.");
       return;
     }
     new import_obsidian.Notice(error instanceof Error ? error.message : fallbackMessage);
@@ -667,127 +662,6 @@ var DomHelpers = class {
         this.notifyError(error, fallbackMessage);
       }
     })();
-  }
-  /**
-   * Creates a modal overlay with a centered card.
-   * Implements role=dialog, aria-modal, a focus trap and Escape-to-close.
-   * Returns { open, close } functions.
-   */
-  static createModal(options) {
-    const overlay = this.createElement("div", "leif-modal-overlay");
-    const card = this.createElement("div", "leif-modal-card");
-    card.setAttribute("role", "dialog");
-    card.setAttribute("aria-modal", "true");
-    const titleId = `leif-modal-title-${Math.random().toString(36).slice(2, 9)}`;
-    card.setAttribute("aria-labelledby", titleId);
-    const header = this.createElement("div", "leif-modal-header");
-    const title = this.createElement("h3", "leif-modal-title");
-    title.id = titleId;
-    title.textContent = options.title;
-    const closeButton = this.createIconButton("x", t("action.close"), {
-      onClick: () => close()
-    });
-    header.appendChild(title);
-    header.appendChild(closeButton);
-    const body = this.createElement("div", "leif-modal-body");
-    body.appendChild(options.content);
-    const footer = this.createElement("div", "leif-modal-footer");
-    const cancelButton = this.createButton(t("action.cancel"), {
-      className: "leif-button",
-      dataset: { leifConfirm: "cancel" },
-      onClick: () => close()
-    });
-    const submitButton = this.createButton(options.submitLabel ?? t("action.create"), {
-      className: "leif-primary-button",
-      dataset: { leifConfirm: "submit" },
-      onClick: () => options.onSubmit()
-    });
-    footer.appendChild(cancelButton);
-    footer.appendChild(submitButton);
-    card.append(header, body, footer);
-    overlay.appendChild(card);
-    let previouslyFocused = null;
-    let focusTrapHandler = null;
-    let escapeHandler = null;
-    const focusable = () => {
-      const elements = card.querySelectorAll(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-      return Array.from(elements).filter((element) => !element.hasAttribute("disabled"));
-    };
-    const open = () => {
-      previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-      document.body.appendChild(overlay);
-      const first = focusable()[0] ?? card;
-      first.focus();
-      focusTrapHandler = (event) => {
-        if (event.key !== "Tab") return;
-        const elements = focusable();
-        if (elements.length === 0) {
-          event.preventDefault();
-          return;
-        }
-        const firstEl = elements[0];
-        const lastEl = elements[elements.length - 1];
-        if (event.shiftKey && document.activeElement === firstEl) {
-          event.preventDefault();
-          lastEl.focus();
-        } else if (!event.shiftKey && document.activeElement === lastEl) {
-          event.preventDefault();
-          firstEl.focus();
-        }
-      };
-      escapeHandler = (event) => {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          close();
-        }
-      };
-      card.addEventListener("keydown", focusTrapHandler);
-      overlay.addEventListener("keydown", escapeHandler);
-    };
-    const close = () => {
-      if (focusTrapHandler) card.removeEventListener("keydown", focusTrapHandler);
-      if (escapeHandler) overlay.removeEventListener("keydown", escapeHandler);
-      if (overlay.parentNode) {
-        overlay.parentNode.removeChild(overlay);
-      }
-      previouslyFocused?.focus();
-      options.onCancel?.();
-    };
-    overlay.addEventListener("click", (event) => {
-      if (event.target === overlay) {
-        close();
-      }
-    });
-    return { open, close };
-  }
-  /**
-   * Creates an accessible confirmation dialog (replaces native window.confirm).
-   * Resolves the returned promise with true when confirmed, false when cancelled.
-   */
-  static confirm(options) {
-    return new Promise((resolve) => {
-      let resolved = false;
-      const settle = (value) => {
-        if (resolved) return;
-        resolved = true;
-        resolve(value);
-      };
-      const message = this.createElement("p", "leif-modal-message");
-      message.textContent = options.message;
-      const modal = this.createModal({
-        title: options.title,
-        content: message,
-        submitLabel: options.confirmLabel ?? "Confirmar",
-        onSubmit: () => {
-          settle(true);
-          modal.close();
-        },
-        onCancel: () => settle(false)
-      });
-      modal.open();
-    });
   }
   /**
    * Creates a visual progress bar with a fill and a label.
@@ -1864,6 +1738,35 @@ var LinkQuestionNotebookUseCase = class {
 };
 
 // src/infrastructure/persistence/Seeder.ts
+function createDemoResourceReferences(subjectId, itemIndex, title) {
+  const slug = title.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const references = [
+    {
+      id: `${subjectId}-resource-${itemIndex + 1}-pdf`,
+      title: `Apostila: ${title}`,
+      type: "pdf",
+      url: `https://materiais.example.com/${subjectId}/${slug}.pdf`,
+      notes: "Material principal para leitura e marca\xE7\xF5es."
+    },
+    {
+      id: `${subjectId}-resource-${itemIndex + 1}-questions`,
+      title: `Lista de quest\xF5es: ${title}`,
+      type: "link",
+      url: `https://questoes.example.com/${subjectId}/${slug}`,
+      notes: "Use depois da primeira leitura."
+    }
+  ];
+  if (itemIndex % 2 === 0) {
+    references.push({
+      id: `${subjectId}-resource-${itemIndex + 1}-video`,
+      title: `Aula r\xE1pida: ${title}`,
+      type: "video",
+      url: `https://videos.example.com/${subjectId}/${slug}`,
+      notes: "Revis\xE3o visual para destravar o assunto."
+    });
+  }
+  return references;
+}
 var DEMO_CONTESTS = [
   {
     id: "tce-sp-2026",
@@ -1873,16 +1776,19 @@ var DEMO_CONTESTS = [
       noticeUrl: "https://www.tcesp.org.br",
       examLabel: "Prova TCE-SP 2023",
       examUrl: "https://www.tcesp.org.br",
-      notes: "Priorizar Portugu\xEAs, Constitucional e Controle Externo. Meta: 80 quest\xF5es por dia."
+      notes: "Priorizar Portugu\xEAs, Constitucional e Controle Externo. Meta: 80 quest\xF5es por dia.\n\nCheck-list manual:\n- revisar erros de Portugu\xEAs toda sexta;\n- manter Controle Externo no ciclo mesmo quando o rendimento cair;\n- deixar Racioc\xEDnio L\xF3gico pausado at\xE9 fechar a primeira volta."
     },
     subjects: [
       {
         id: "tce-portuguese",
         name: "Portugu\xEAs",
         plannedStudyMinutes: 90,
+        currentStage: "Revis\xE3o por quest\xF5es",
         items: [
           { title: "Interpreta\xE7\xE3o de textos", weight: 3, questionCount: 60, totalPages: 110 },
-          { title: "Sintaxe", weight: 2, questionCount: 45, totalPages: 85 }
+          { title: "Sintaxe", weight: 2, questionCount: 45, totalPages: 85 },
+          { title: "Crase", weight: 2, questionCount: 32, totalPages: 48 },
+          { title: "Pontua\xE7\xE3o", weight: 2, questionCount: 38, totalPages: 58 }
         ],
         topics: [
           {
@@ -1896,19 +1802,36 @@ var DEMO_CONTESTS = [
             name: "Concord\xE2ncia e reg\xEAncia",
             notebookName: "QConcursos - Sintaxe TCE",
             notebookUrl: "https://qconcursos.example.com/tce-sintaxe"
+          },
+          {
+            id: "tce-portuguese-crase",
+            name: "Uso da crase",
+            notebookName: "Tec - Crase",
+            notebookUrl: "https://tec.example.com/tce-crase"
+          },
+          {
+            id: "tce-portuguese-punctuation",
+            name: "Pontua\xE7\xE3o e sentido",
+            notebookName: "QConcursos - Pontua\xE7\xE3o TCE",
+            notebookUrl: "https://qconcursos.example.com/tce-pontuacao"
           }
         ],
         sessions: [
           { item: 0, topic: 0, type: "pdf", date: "2026-06-01", count: 28 },
           { item: 0, topic: 0, type: StudySessionType.QUESTIONS, date: "2026-06-01", count: 40, correct: 34 },
           { item: 1, topic: 1, type: "pdf", date: "2026-06-03", count: 22 },
-          { item: 1, topic: 1, type: StudySessionType.QUESTIONS, date: "2026-06-04", count: 35, correct: 30 }
+          { item: 1, topic: 1, type: StudySessionType.QUESTIONS, date: "2026-06-04", count: 35, correct: 30 },
+          { item: 2, topic: 2, type: "video", date: "2026-06-09", count: 1 },
+          { item: 2, topic: 2, type: StudySessionType.QUESTIONS, date: "2026-06-10", count: 28, correct: 22 },
+          { item: 3, topic: 3, type: "pdf", date: "2026-06-11", count: 58 },
+          { item: 3, topic: 3, type: StudySessionType.QUESTIONS, date: "2026-06-12", count: 30, correct: 26 }
         ]
       },
       {
         id: "tce-constitutional",
         name: "Direito Constitucional",
         plannedStudyMinutes: 100,
+        currentStage: "Base te\xF3rica",
         items: [
           { title: "Direitos fundamentais", weight: 3, questionCount: 50, totalPages: 95 },
           { title: "Organiza\xE7\xE3o do Estado", weight: 2, questionCount: 35, totalPages: 70 }
@@ -1938,6 +1861,7 @@ var DEMO_CONTESTS = [
         id: "tce-external-control",
         name: "Controle Externo",
         plannedStudyMinutes: 80,
+        currentStage: "Caderno de erros",
         items: [
           { title: "Tribunais de Contas", weight: 3, questionCount: 45, totalPages: 90 },
           { title: "Fiscaliza\xE7\xE3o cont\xE1bil", weight: 2, questionCount: 30, totalPages: 65 }
@@ -1962,6 +1886,39 @@ var DEMO_CONTESTS = [
           { item: 1, topic: 1, type: "pdf", date: "2026-06-08", count: 20 },
           { item: 1, topic: 1, type: StudySessionType.QUESTIONS, date: "2026-06-08", count: 18, correct: 14 }
         ]
+      },
+      {
+        id: "tce-logic",
+        name: "Racioc\xEDnio L\xF3gico",
+        plannedStudyMinutes: 45,
+        isActive: false,
+        currentStage: "Pausada at\xE9 fechar Portugu\xEAs",
+        items: [
+          { title: "Proposi\xE7\xF5es l\xF3gicas", weight: 2, questionCount: 30, totalPages: 50 },
+          { title: "Diagramas l\xF3gicos", weight: 1, questionCount: 24, totalPages: 42 },
+          { title: "Sequ\xEAncias e padr\xF5es", weight: 1, questionCount: 20, totalPages: 36 }
+        ],
+        topics: [
+          {
+            id: "tce-logic-propositions",
+            name: "Conectivos e tabelas-verdade",
+            notebookName: "Tec - L\xF3gica TCE",
+            notebookUrl: "https://tec.example.com/logica-tce"
+          },
+          {
+            id: "tce-logic-diagrams",
+            name: "Diagramas l\xF3gicos",
+            notebookName: "QConcursos - Diagramas",
+            notebookUrl: "https://qconcursos.example.com/diagramas-logicos"
+          },
+          {
+            id: "tce-logic-sequences",
+            name: "Sequ\xEAncias num\xE9ricas",
+            notebookName: "Estrat\xE9gia - Sequ\xEAncias",
+            notebookUrl: "https://estrategia.example.com/sequencias"
+          }
+        ],
+        sessions: []
       }
     ]
   },
@@ -2185,7 +2142,9 @@ async function seedTceSpDemo(dataStore) {
         id: subjectSpec.id,
         contestId: contest.id,
         name: subjectSpec.name,
-        plannedStudyMinutes: subjectSpec.plannedStudyMinutes
+        plannedStudyMinutes: subjectSpec.plannedStudyMinutes,
+        isActive: subjectSpec.isActive,
+        currentStage: subjectSpec.currentStage ?? "Base"
       });
       const items = [];
       for (let index = 0; index < subjectSpec.items.length; index += 1) {
@@ -2197,7 +2156,12 @@ async function seedTceSpDemo(dataStore) {
             title: itemSpec.title,
             weight: itemSpec.weight,
             questionCount: itemSpec.questionCount,
-            totalPages: itemSpec.totalPages
+            totalPages: itemSpec.totalPages,
+            resourceReferences: itemSpec.resourceReferences ?? createDemoResourceReferences(
+              subject.id,
+              index,
+              itemSpec.title
+            )
           })
         );
       }
@@ -2294,7 +2258,7 @@ function registerCommands(plugin, dataStore) {
     callback: async () => {
       const data = await dataStore.load();
       const activeContest = data.contests.find((contest) => contest.id === data.activeContestId);
-      new import_obsidian2.Notice(activeContest ? `Active contest: ${activeContest.name}` : "No active contest configured.");
+      new import_obsidian2.Notice(activeContest ? `Concurso escolhido: ${activeContest.name}` : "Nenhum concurso escolhido.");
     }
   });
   plugin.addCommand({
@@ -2303,11 +2267,11 @@ function registerCommands(plugin, dataStore) {
     callback: async () => {
       const data = await dataStore.load();
       if (data.contests.length > 0) {
-        new import_obsidian2.Notice("Leif already has data. Demo seed skipped.");
+        new import_obsidian2.Notice("O Leif j\xE1 tem dados. Mantive tudo como est\xE1.");
         return;
       }
       await seedTceSpDemo(dataStore);
-      new import_obsidian2.Notice("Leif demo data created.");
+      new import_obsidian2.Notice("Dados de exemplo criados.");
     }
   });
   plugin.addCommand({
@@ -2316,7 +2280,7 @@ function registerCommands(plugin, dataStore) {
     callback: async () => {
       const data = await dataStore.load();
       if (data.contests.length === 0) {
-        new import_obsidian2.Notice("At least two contests are required to switch the active contest.");
+        new import_obsidian2.Notice("Cadastre pelo menos dois concursos para alternar.");
         return;
       }
       if (data.contests.length === 1 && data.activeContestId) {
@@ -2324,13 +2288,13 @@ function registerCommands(plugin, dataStore) {
           ...data,
           activeContestId: null
         });
-        new import_obsidian2.Notice("Active contest switched to: none");
+        new import_obsidian2.Notice("Nenhum concurso escolhido agora.");
         return;
       }
       const currentIndex = data.contests.findIndex((contest) => contest.id === data.activeContestId);
       const nextContest = data.contests[(currentIndex + 1 + data.contests.length) % data.contests.length];
       await setActiveContest.execute({ contestId: nextContest.id });
-      new import_obsidian2.Notice(`Active contest switched to: ${nextContest.name}`);
+      new import_obsidian2.Notice(`Agora estudando: ${nextContest.name}`);
     }
   });
   plugin.addCommand({
@@ -2339,13 +2303,13 @@ function registerCommands(plugin, dataStore) {
     callback: async () => {
       const subjects = await listSubjectsForActiveContest.execute();
       if (subjects.length === 0) {
-        new import_obsidian2.Notice("No subjects found for the active contest.");
+        new import_obsidian2.Notice("Nenhuma mat\xE9ria encontrada nesse concurso.");
         return;
       }
       new import_obsidian2.Notice(
         subjects.map((subject) => {
-          const stage = subject.currentStage ?? "no stage";
-          const state = subject.isActive ? "active" : "inactive";
+          const stage = subject.currentStage ?? "sem etapa";
+          const state = subject.isActive ? "ativa" : "inativa";
           return `${subject.order}. ${subject.name} [${state}] ${subject.plannedStudyMinutes}m (${stage})`;
         }).join(" | ")
       );
@@ -2358,14 +2322,14 @@ function registerCommands(plugin, dataStore) {
       const data = await dataStore.load();
       const subjects = await listSubjectsForActiveContest.execute();
       if (!data.activeContestId || subjects.length < 2) {
-        new import_obsidian2.Notice("At least two subjects are required to reorder the active contest.");
+        new import_obsidian2.Notice("Cadastre pelo menos duas mat\xE9rias para reordenar.");
         return;
       }
       await reorderSubjects.execute({
         contestId: data.activeContestId,
         subjectIdsInOrder: subjects.map((subject) => subject.id).reverse()
       });
-      new import_obsidian2.Notice("Active contest subjects reordered.");
+      new import_obsidian2.Notice("Mat\xE9rias reordenadas.");
     }
   });
   plugin.addCommand({
@@ -2375,14 +2339,14 @@ function registerCommands(plugin, dataStore) {
       const subjects = await listSubjectsForActiveContest.execute();
       const subject = subjects[0];
       if (!subject) {
-        new import_obsidian2.Notice("No subject found for the active contest.");
+        new import_obsidian2.Notice("Nenhuma mat\xE9ria encontrada nesse concurso.");
         return;
       }
       const updatedSubject = await setSubjectActiveState.execute({
         subjectId: subject.id,
         isActive: !subject.isActive
       });
-      new import_obsidian2.Notice(`Subject ${updatedSubject.name} is now ${updatedSubject.isActive ? "active" : "inactive"}.`);
+      new import_obsidian2.Notice(`${updatedSubject.name} agora est\xE1 ${updatedSubject.isActive ? "ativa" : "inativa"}.`);
     }
   });
   plugin.addCommand({
@@ -2392,16 +2356,16 @@ function registerCommands(plugin, dataStore) {
       const subjects = await listSubjectsForActiveContest.execute();
       const subject = subjects[0];
       if (!subject) {
-        new import_obsidian2.Notice("No subject found for the active contest.");
+        new import_obsidian2.Notice("Nenhuma mat\xE9ria encontrada nesse concurso.");
         return;
       }
       const updatedSubject = await updateSubjectConfiguration.execute({
         subjectId: subject.id,
         plannedStudyMinutes: subject.plannedStudyMinutes + 15,
-        currentStage: "Review"
+        currentStage: "Revis\xE3o"
       });
       new import_obsidian2.Notice(
-        `Subject ${updatedSubject.name} updated to ${updatedSubject.plannedStudyMinutes} minutes and stage ${updatedSubject.currentStage}.`
+        `${updatedSubject.name}: ${updatedSubject.plannedStudyMinutes} min, etapa ${updatedSubject.currentStage}.`
       );
     }
   });
@@ -2410,8 +2374,8 @@ function registerCommands(plugin, dataStore) {
     name: t("command.advanceCycle"),
     callback: () => DomHelpers.runGuarded(async () => {
       const state = await advanceCycle.execute();
-      new import_obsidian2.Notice(`Current subject: ${state.currentSubjectId ?? "none"}`);
-    }, "Could not advance cycle.")
+      new import_obsidian2.Notice(`Mat\xE9ria atual: ${state.currentSubjectId ?? "nenhuma"}`);
+    }, "N\xE3o consegui avan\xE7ar o ciclo.")
   });
   plugin.addCommand({
     id: "leif-show-cycle-snapshot",
@@ -2420,14 +2384,14 @@ function registerCommands(plugin, dataStore) {
       const snapshot = await getActiveCycleSnapshot.execute();
       const data = await dataStore.load();
       const itemMap = new Map(data.studyItems.map((item) => [item.id, item.title]));
-      const currentLabel = snapshot.currentSubject?.name ?? "none";
-      const nextLabel = snapshot.nextSubject?.name ?? "none";
-      const currentItemLabel = snapshot.currentItemId ? itemMap.get(snapshot.currentItemId) ?? snapshot.currentItemId : "none";
-      const nextItemLabel = snapshot.nextItemId ? itemMap.get(snapshot.nextItemId) ?? snapshot.nextItemId : "none";
+      const currentLabel = snapshot.currentSubject?.name ?? "nenhuma";
+      const nextLabel = snapshot.nextSubject?.name ?? "nenhuma";
+      const currentItemLabel = snapshot.currentItemId ? itemMap.get(snapshot.currentItemId) ?? snapshot.currentItemId : "nenhum";
+      const nextItemLabel = snapshot.nextItemId ? itemMap.get(snapshot.nextItemId) ?? snapshot.nextItemId : "nenhum";
       new import_obsidian2.Notice(
-        `Current: ${currentLabel} | Next: ${nextLabel} | Current item: ${currentItemLabel} | Next item: ${nextItemLabel}`
+        `Agora: ${currentLabel} | Depois: ${nextLabel} | Item atual: ${currentItemLabel} | Pr\xF3ximo item: ${nextItemLabel}`
       );
-    }, "Could not read cycle snapshot.")
+    }, "N\xE3o consegui ler o ciclo.")
   });
   plugin.addCommand({
     id: "leif-show-active-contest-wall",
@@ -2436,11 +2400,11 @@ function registerCommands(plugin, dataStore) {
       const data = await dataStore.load();
       const activeContest = data.contests.find((contest) => contest.id === data.activeContestId);
       if (!activeContest) {
-        new import_obsidian2.Notice("No active contest configured.");
+        new import_obsidian2.Notice("Nenhum concurso escolhido.");
         return;
       }
       new import_obsidian2.Notice(
-        `${activeContest.name}: notices ${activeContest.wall.noticeLinks.length}, exams ${activeContest.wall.examLinks.length}, notes ${activeContest.wall.notes ?? "none"}`
+        `${activeContest.name}: ${activeContest.wall.noticeLinks.length} edital, ${activeContest.wall.examLinks.length} prova, notas: ${activeContest.wall.notes ?? "nenhuma"}`
       );
     }
   });
@@ -2450,15 +2414,15 @@ function registerCommands(plugin, dataStore) {
     callback: () => DomHelpers.runGuarded(async () => {
       const summary = await getActiveContestSummary.execute();
       if (summary.subjectSummaries.length === 0) {
-        new import_obsidian2.Notice("No subject summary available for the active contest.");
+        new import_obsidian2.Notice("Ainda n\xE3o h\xE1 resumo das mat\xE9rias nesse concurso.");
         return;
       }
       const message = summary.subjectSummaries.map((subjectSummary) => {
-        const accuracy = subjectSummary.questionAccuracy === null ? "n/a" : `${Math.round(subjectSummary.questionAccuracy * 100)}%`;
-        return `${subjectSummary.subjectName}: PDF ${subjectSummary.pdfProgressCount}, Questions ${subjectSummary.questionProgressCount}, Accuracy ${accuracy}`;
+        const accuracy = subjectSummary.questionAccuracy === null ? "sem dados" : `${Math.round(subjectSummary.questionAccuracy * 100)}%`;
+        return `${subjectSummary.subjectName}: PDF ${subjectSummary.pdfProgressCount}, quest\xF5es ${subjectSummary.questionProgressCount}, acerto ${accuracy}`;
       }).join(" | ");
       new import_obsidian2.Notice(message);
-    }, "Could not load active contest summary.")
+    }, "N\xE3o consegui carregar o resumo.")
   });
   plugin.addCommand({
     id: "leif-register-demo-question-session",
@@ -2466,13 +2430,13 @@ function registerCommands(plugin, dataStore) {
     callback: async () => {
       const data = await dataStore.load();
       if (!data.activeContestId) {
-        new import_obsidian2.Notice("No active contest configured.");
+        new import_obsidian2.Notice("Nenhum concurso escolhido.");
         return;
       }
       const contestState = data.contestStates.find((state) => state.contestId === data.activeContestId);
       const activeSubject = data.subjects.find((subject) => subject.id === contestState?.currentSubjectId) ?? data.subjects.find((subject) => subject.contestId === data.activeContestId);
       if (!activeSubject) {
-        new import_obsidian2.Notice("No subject available for the active contest.");
+        new import_obsidian2.Notice("Nenhuma mat\xE9ria dispon\xEDvel nesse concurso.");
         return;
       }
       const topic = data.topics.find((candidate) => candidate.subjectId === activeSubject.id);
@@ -2487,7 +2451,7 @@ function registerCommands(plugin, dataStore) {
         correctAnswers: 8,
         completed: true
       });
-      new import_obsidian2.Notice(`Demo question session registered for: ${activeSubject.name}`);
+      new import_obsidian2.Notice(`Sess\xE3o de quest\xF5es criada em ${activeSubject.name}.`);
     }
   });
   plugin.addCommand({
@@ -2496,12 +2460,12 @@ function registerCommands(plugin, dataStore) {
     callback: async () => {
       const data = await dataStore.load();
       if (!data.activeContestId) {
-        new import_obsidian2.Notice("No active contest configured.");
+        new import_obsidian2.Notice("Nenhum concurso escolhido.");
         return;
       }
       const activeSubject = (await listSubjectsForActiveContest.execute())[0];
       if (!activeSubject) {
-        new import_obsidian2.Notice("No subject available for the active contest.");
+        new import_obsidian2.Notice("Nenhuma mat\xE9ria dispon\xEDvel nesse concurso.");
         return;
       }
       await registerStudySession.execute({
@@ -2513,7 +2477,7 @@ function registerCommands(plugin, dataStore) {
         pagesOrCount: 1,
         completed: true
       });
-      new import_obsidian2.Notice(`Demo video session registered for: ${activeSubject.name}`);
+      new import_obsidian2.Notice(`Sess\xE3o de v\xEDdeo criada em ${activeSubject.name}.`);
     }
   });
   plugin.addCommand({
@@ -2521,13 +2485,16 @@ function registerCommands(plugin, dataStore) {
     name: t("command.resetPluginData"),
     callback: async () => {
       await dataStore.save(createDefaultLeifPluginData());
-      new import_obsidian2.Notice("Leif data reset.");
+      new import_obsidian2.Notice("Dados do Leif limpos.");
     }
   });
 }
 
 // src/ui/view/LeifView.ts
-var import_obsidian4 = require("obsidian");
+var import_obsidian5 = require("obsidian");
+
+// src/ui/view/components/ContestsTab.ts
+var import_obsidian3 = require("obsidian");
 
 // src/application/use-cases/DeleteContestUseCase.ts
 var DeleteContestUseCase = class {
@@ -2577,6 +2544,8 @@ var ContestsTab = class {
     this.dataStore = dataStore;
     this.onUpdate = onUpdate;
     this.editingContestId = null;
+    this.isCreatingContest = false;
+    this.pendingDeleteContestId = null;
     const repositoryFactory = new EntityRepositoryFactory(dataStore);
     this.createContestUseCase = new CreateContestUseCase(dataStore, repositoryFactory);
     this.setActiveContestUseCase = new SetActiveContestUseCase(dataStore, repositoryFactory);
@@ -2588,42 +2557,39 @@ var ContestsTab = class {
     header.appendChild(DomHelpers.createSectionTitle("Concursos"));
     header.appendChild(
       DomHelpers.createIconButton("add", "Novo concurso", {
-        onClick: () => this.openCreateContestModal()
+        onClick: async () => {
+          this.isCreatingContest = true;
+          await this.onUpdate();
+        }
       })
     );
     container.appendChild(header);
     container.appendChild(
-      DomHelpers.createParagraph("Cadastre concursos e defina qual deles est\xE1 ativo.")
+      DomHelpers.createParagraph("Escolha qual concurso est\xE1 na mesa agora.")
     );
-    const contestsCard = DomHelpers.createCard("Lista de concursos");
-    if (data.contests.length === 0) {
-      contestsCard.appendChild(DomHelpers.createParagraph("Nenhum concurso cadastrado."));
+    if (this.isCreatingContest) {
+      container.appendChild(this.renderCreateContestForm());
     }
-    const { container: tableContainer, tbody } = DomHelpers.createCrudTable([
-      "Concurso",
-      "ID",
-      "Notas",
-      "Status",
-      "A\xE7\xF5es"
-    ]);
+    const contestsCard = DomHelpers.createCard("Seus concursos");
+    if (data.contests.length === 0) {
+      contestsCard.appendChild(DomHelpers.createParagraph("Nenhum concurso por aqui ainda."));
+    }
+    const list = DomHelpers.createElement("div", "leif-contest-list");
     data.contests.forEach((contest) => {
       const isEditing = this.editingContestId === contest.id;
       if (isEditing) {
-        tbody.appendChild(this.renderEditableRow(contest, data));
+        list.appendChild(this.renderEditableCard(contest, data));
       } else {
-        tbody.appendChild(this.renderDisplayRow(contest, data));
+        list.appendChild(this.renderDisplayCard(contest, data));
       }
     });
-    contestsCard.appendChild(tableContainer);
+    contestsCard.appendChild(list);
     container.appendChild(contestsCard);
   }
-  renderDisplayRow(contest, data) {
-    const tr = DomHelpers.createElement("tr");
+  renderDisplayCard(contest, data) {
+    const card = DomHelpers.createElement("section", "leif-contest-card");
+    card.dataset.contestCardId = contest.id;
     const isActive = data.activeContestId === contest.id;
-    tr.appendChild(DomHelpers.createCell(contest.name));
-    tr.appendChild(DomHelpers.createCell(contest.id));
-    tr.appendChild(DomHelpers.createCell(contest.wall.notes ?? "\u2014"));
-    tr.appendChild(DomHelpers.createCell(isActive ? "Ativo" : "Inativo"));
     const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
     if (!isActive) {
       actions.appendChild(
@@ -2632,9 +2598,10 @@ var ContestsTab = class {
           onClick: async () => {
             try {
               await this.setActiveContestUseCase.execute({ contestId: contest.id });
+              new import_obsidian3.Notice(`${contest.name} agora \xE9 o concurso ativo.`);
               await this.onUpdate();
             } catch (error) {
-              DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel ativar o concurso.");
+              DomHelpers.notifyError(error, "N\xE3o consegui escolher esse concurso.");
             }
           }
         })
@@ -2651,35 +2618,56 @@ var ContestsTab = class {
     actions.appendChild(
       DomHelpers.createIconButton("delete", "Excluir", {
         onClick: async () => {
-          const confirmed = await DomHelpers.confirm({
-            title: "Excluir concurso",
-            message: `Excluir "${contest.name}"?`,
-            confirmLabel: "Excluir"
-          });
-          if (!confirmed) return;
-          try {
-            await this.deleteContestUseCase.execute({ contestId: contest.id });
-            await this.onUpdate();
-          } catch (error) {
-            DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel excluir o concurso.");
-          }
+          this.pendingDeleteContestId = contest.id;
+          await this.onUpdate();
         }
       })
     );
-    const actionsCell = DomHelpers.createElement("td");
-    actionsCell.appendChild(actions);
-    tr.appendChild(actionsCell);
-    return tr;
+    if (this.pendingDeleteContestId === contest.id) {
+      actions.append(
+        DomHelpers.createButton("Excluir?", {
+          dataset: { contestDeleteId: contest.id },
+          onClick: async () => {
+            try {
+              await this.deleteContestUseCase.execute({ contestId: contest.id });
+              this.pendingDeleteContestId = null;
+              await this.onUpdate();
+            } catch (error) {
+              DomHelpers.notifyError(error, "N\xE3o consegui excluir esse concurso.");
+            }
+          }
+        }),
+        DomHelpers.createButton("Cancelar", {
+          onClick: async () => {
+            this.pendingDeleteContestId = null;
+            await this.onUpdate();
+          }
+        })
+      );
+    }
+    const header = DomHelpers.createElement("div", "leif-contest-card-header");
+    const titleGroup = DomHelpers.createElement("div", "leif-contest-card-title-group");
+    const title = DomHelpers.createElement("strong", "leif-contest-card-title");
+    title.textContent = contest.name;
+    const status = DomHelpers.createElement("span", isActive ? "leif-status-active" : "leif-status-inactive");
+    status.textContent = isActive ? "Estudando agora" : "Guardado";
+    titleGroup.append(title, status);
+    header.append(titleGroup, actions);
+    const notes = DomHelpers.createParagraph(contest.wall.notes?.trim() || "Sem notas ainda.");
+    const meta = DomHelpers.createElement("div", "leif-contest-meta");
+    meta.append(this.renderMetaChip("ID", contest.id));
+    card.append(header, notes, meta);
+    return card;
   }
-  renderEditableRow(contest, data) {
-    const tr = DomHelpers.createElement("tr");
-    tr.className = "leif-editing-row";
+  renderEditableCard(contest, data) {
+    const card = DomHelpers.createElement("section", "leif-contest-card is-editing");
+    card.dataset.contestCardId = contest.id;
     const nameInput = DomHelpers.createTextarea("Nome", contest.name);
     nameInput.rows = 1;
-    nameInput.className = "leif-textarea leif-textarea-inline";
+    nameInput.cols = 24;
     const notesInput = DomHelpers.createTextarea("Notas", contest.wall.notes ?? "");
     notesInput.rows = 2;
-    notesInput.className = "leif-textarea leif-textarea-inline leif-textarea-notes";
+    notesInput.cols = 32;
     const saveButton = DomHelpers.createIconButton("save", "Salvar", {
       onClick: async () => {
         try {
@@ -2691,7 +2679,7 @@ var ContestsTab = class {
           this.editingContestId = null;
           await this.onUpdate();
         } catch (error) {
-          DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel salvar.");
+          DomHelpers.notifyError(error, "N\xE3o consegui salvar.");
         }
       }
     });
@@ -2704,16 +2692,22 @@ var ContestsTab = class {
     const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
     actions.appendChild(saveButton);
     actions.appendChild(cancelButton);
-    tr.appendChild(DomHelpers.createCell(null, nameInput));
-    tr.appendChild(DomHelpers.createCell(contest.id));
-    tr.appendChild(DomHelpers.createCell(null, notesInput));
-    tr.appendChild(DomHelpers.createCell(data.activeContestId === contest.id ? "Ativo" : "Inativo"));
-    const actionsCell = DomHelpers.createElement("td");
-    actionsCell.appendChild(actions);
-    tr.appendChild(actionsCell);
-    return tr;
+    const fields = DomHelpers.createElement("div", "leif-grid leif-grid-2");
+    fields.append(
+      DomHelpers.createLabel("Nome", nameInput),
+      DomHelpers.createLabel("Notas", notesInput)
+    );
+    const status = DomHelpers.createElement("span", data.activeContestId === contest.id ? "leif-status-active" : "leif-status-inactive");
+    status.textContent = data.activeContestId === contest.id ? "Estudando agora" : "Guardado";
+    card.append(
+      DomHelpers.createSectionSubtitle("Editar concurso"),
+      fields,
+      status,
+      actions
+    );
+    return card;
   }
-  openCreateContestModal() {
+  renderCreateContestForm() {
     const idInput = DomHelpers.createInput("text", "ID do concurso");
     const nameInput = DomHelpers.createInput("text", "Nome do concurso");
     const form = DomHelpers.createForm(async () => {
@@ -2722,22 +2716,42 @@ var ContestsTab = class {
           id: idInput.value.trim(),
           name: nameInput.value.trim()
         });
-        modal.close();
+        this.isCreatingContest = false;
         await this.onUpdate();
       } catch (error) {
-        DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel criar o concurso.");
+        DomHelpers.notifyError(error, "N\xE3o consegui criar esse concurso.");
       }
     });
+    form.classList.add("leif-card");
     form.append(
+      DomHelpers.createSectionSubtitle("Novo concurso"),
       DomHelpers.createLabel("ID", idInput),
-      DomHelpers.createLabel("Nome", nameInput)
+      DomHelpers.createLabel("Nome", nameInput),
+      DomHelpers.createElement("div", "leif-form-actions")
     );
-    const modal = DomHelpers.createModal({
-      title: "Novo concurso",
-      content: form,
-      onSubmit: () => form.requestSubmit()
-    });
-    modal.open();
+    const actions = form.querySelector(".leif-form-actions");
+    actions?.append(
+      DomHelpers.createButton("Cancelar", {
+        onClick: async () => {
+          this.isCreatingContest = false;
+          await this.onUpdate();
+        }
+      }),
+      DomHelpers.createButton("Criar", {
+        type: "submit",
+        className: "mod-cta"
+      })
+    );
+    return form;
+  }
+  renderMetaChip(label, value) {
+    const chip = DomHelpers.createElement("span", "leif-next-activity-chip");
+    const labelEl = DomHelpers.createElement("span", "leif-next-activity-chip-label");
+    labelEl.textContent = `${label}:`;
+    const valueEl = DomHelpers.createElement("span", "leif-next-activity-chip-value");
+    valueEl.textContent = value;
+    chip.append(labelEl, valueEl);
+    return chip;
   }
 };
 
@@ -2747,6 +2761,7 @@ var CycleTab = class {
     this.dataStore = dataStore;
     this.onUpdate = onUpdate;
     this.editingSubjectId = null;
+    this.isCreatingSubject = false;
     const repositoryFactory = new EntityRepositoryFactory(dataStore);
     this.createSubjectUseCase = new CreateSubjectUseCase(dataStore, repositoryFactory);
     this.listSubjectsForActiveContestUseCase = new ListSubjectsForActiveContestUseCase(dataStore);
@@ -2759,16 +2774,22 @@ var CycleTab = class {
    */
   async render(container, data) {
     const header = DomHelpers.createElement("div", "leif-section-header");
-    header.appendChild(DomHelpers.createSectionTitle("Ciclo e Mat\xE9rias"));
+    header.appendChild(DomHelpers.createSectionTitle("Plano"));
     header.appendChild(
       DomHelpers.createIconButton("add", "Nova mat\xE9ria", {
-        onClick: () => this.openCreateSubjectModal(data)
+        onClick: async () => {
+          this.isCreatingSubject = true;
+          await this.onUpdate();
+        }
       })
     );
     container.appendChild(header);
     container.appendChild(
-      DomHelpers.createParagraph("Gerencie a ordem, o status, o tempo e a etapa das mat\xE9rias.")
+      DomHelpers.createParagraph("Ajuste a ordem das mat\xE9rias e o tempo de cada uma.")
     );
+    if (this.isCreatingSubject) {
+      container.appendChild(this.renderCreateSubjectForm(data));
+    }
     const activeContest = data.contests.find((contest) => contest.id === data.activeContestId) ?? null;
     const subjects = await this.listSubjectsForActiveContestUseCase.execute();
     const card = DomHelpers.createCard(
@@ -2776,7 +2797,7 @@ var CycleTab = class {
     );
     if (subjects.length === 0) {
       card.appendChild(
-        DomHelpers.createParagraph("Nenhuma mat\xE9ria cadastrada para o concurso ativo.")
+        DomHelpers.createParagraph("Ainda n\xE3o h\xE1 mat\xE9rias nesse concurso.")
       );
       container.appendChild(card);
       return;
@@ -2785,7 +2806,7 @@ var CycleTab = class {
     const table = DomHelpers.createElement("table", "leif-table");
     const thead = DomHelpers.createElement("thead");
     const headerRow = DomHelpers.createElement("tr");
-    ["Ordem", "Mat\xE9ria", "Tempo", "Etapa", "Status", "A\xE7\xF5es"].forEach((header2) => {
+    ["Ordem", "Mat\xE9ria", "Tempo", "Etapa", "Ciclo", "Editar"].forEach((header2) => {
       const th = DomHelpers.createElement("th");
       th.textContent = header2;
       headerRow.appendChild(th);
@@ -2803,9 +2824,9 @@ var CycleTab = class {
     card.appendChild(tableWrapper);
     container.appendChild(card);
   }
-  renderDisplayRow(subject, _subjects, _index, activeContestId) {
+  renderDisplayRow(subject, subjects, index, activeContestId) {
     const tr = DomHelpers.createElement("tr");
-    tr.appendChild(DomHelpers.createCell(String(subject.order)));
+    tr.appendChild(this.renderOrderCell(subject, subjects, index, activeContestId));
     tr.appendChild(DomHelpers.createCell(subject.name));
     tr.appendChild(DomHelpers.createCell(`${subject.plannedStudyMinutes} min`));
     tr.appendChild(DomHelpers.createCell(subject.currentStage ?? "\u2014"));
@@ -2821,9 +2842,9 @@ var CycleTab = class {
       "Min",
       String(subject.plannedStudyMinutes)
     );
-    minutesInput.className = "leif-input leif-input-compact";
+    minutesInput.size = 8;
     const stageInput = DomHelpers.createInput("text", "Etapa", subject.currentStage ?? "");
-    stageInput.className = "leif-input leif-input-compact";
+    stageInput.size = 12;
     const saveButton = DomHelpers.createIconButton("save", "Salvar", {
       onClick: async () => {
         try {
@@ -2835,7 +2856,7 @@ var CycleTab = class {
           this.editingSubjectId = null;
           await this.onUpdate();
         } catch (error) {
-          DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel salvar a configura\xE7\xE3o.");
+          DomHelpers.notifyError(error, "N\xE3o consegui salvar essa mat\xE9ria.");
         }
       }
     });
@@ -2848,33 +2869,15 @@ var CycleTab = class {
     const controls = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
     controls.appendChild(saveButton);
     controls.appendChild(cancelButton);
-    if (index > 0) {
-      controls.appendChild(
-        DomHelpers.createIconButton("up", "Subir", {
-          onClick: async () => {
-            await this.moveSubject(subjects, index, index - 1, activeContestId);
-          }
-        })
-      );
-    }
-    if (index < subjects.length - 1) {
-      controls.appendChild(
-        DomHelpers.createIconButton("down", "Descer", {
-          onClick: async () => {
-            await this.moveSubject(subjects, index, index + 1, activeContestId);
-          }
-        })
-      );
-    }
-    tr.appendChild(DomHelpers.createCell(String(subject.order)));
+    tr.appendChild(this.renderOrderCell(subject, subjects, index, activeContestId));
     tr.appendChild(DomHelpers.createCell(subject.name));
     tr.appendChild(DomHelpers.createCell(null, minutesInput));
     tr.appendChild(DomHelpers.createCell(null, stageInput));
-    tr.appendChild(DomHelpers.createCell(subject.isActive ? "Ativa" : "Inativa"));
+    tr.appendChild(DomHelpers.createCell(subject.isActive ? "No ciclo" : "Pausada"));
     tr.appendChild(DomHelpers.createCell(null, controls));
     return tr;
   }
-  openCreateSubjectModal(data) {
+  renderCreateSubjectForm(data) {
     const activeContestId = data.activeContestId;
     const nameInput = DomHelpers.createInput("text", "Nome da mat\xE9ria");
     const minutesInput = DomHelpers.createInput("number", "Minutos planejados", "60");
@@ -2889,28 +2892,44 @@ var CycleTab = class {
           name: nameInput.value,
           plannedStudyMinutes: Number(minutesInput.value)
         });
-        modal.close();
+        this.isCreatingSubject = false;
         await this.onUpdate();
       } catch (error) {
-        DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel criar a mat\xE9ria.");
+        DomHelpers.notifyError(error, "N\xE3o consegui criar essa mat\xE9ria.");
       }
     });
+    form.classList.add("leif-card");
     form.append(
+      DomHelpers.createSectionSubtitle("Nova mat\xE9ria"),
       DomHelpers.createLabel("Nome", nameInput),
-      DomHelpers.createLabel("Minutos", minutesInput)
+      DomHelpers.createLabel("Minutos", minutesInput),
+      DomHelpers.createElement("div", "leif-form-actions")
     );
-    const modal = DomHelpers.createModal({
-      title: "Nova mat\xE9ria",
-      content: form,
-      onSubmit: () => form.requestSubmit()
-    });
-    modal.open();
+    const actions = form.querySelector(".leif-form-actions");
+    actions?.append(
+      DomHelpers.createButton("Cancelar", {
+        onClick: async () => {
+          this.isCreatingSubject = false;
+          await this.onUpdate();
+        }
+      }),
+      DomHelpers.createButton("Criar", {
+        type: "submit",
+        className: "mod-cta"
+      })
+    );
+    return form;
   }
   renderStatusCell(subject, activeContestId) {
     const td = DomHelpers.createElement("td", "leif-status-cell");
     const span = DomHelpers.createElement("span", subject.isActive ? "leif-status-active" : "leif-status-inactive");
-    span.textContent = subject.isActive ? "Ativa" : "Inativa";
+    span.textContent = subject.isActive ? "No ciclo" : "Pausada";
     td.appendChild(span);
+    td.setAttribute(
+      "aria-label",
+      subject.isActive ? "Clique para pausar esta mat\xE9ria" : "Clique para colocar esta mat\xE9ria no ciclo"
+    );
+    td.title = subject.isActive ? "Clique para pausar" : "Clique para colocar no ciclo";
     td.addEventListener("click", async () => {
       try {
         await this.setSubjectActiveStateUseCase.execute({
@@ -2919,9 +2938,38 @@ var CycleTab = class {
         });
         await this.onUpdate();
       } catch (error) {
-        DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel alterar o status da mat\xE9ria.");
+        DomHelpers.notifyError(error, "N\xE3o consegui alterar essa mat\xE9ria.");
       }
     });
+    return td;
+  }
+  renderOrderCell(subject, subjects, index, activeContestId) {
+    const td = DomHelpers.createElement("td", "leif-order-cell");
+    const content = DomHelpers.createElement("div", "leif-order-control");
+    const order = DomHelpers.createElement("span", "leif-order-number");
+    const buttons = DomHelpers.createElement("div", "leif-order-actions");
+    order.textContent = String(subject.order);
+    content.appendChild(order);
+    if (index > 0) {
+      buttons.appendChild(
+        DomHelpers.createIconButton("up", "Subir", {
+          onClick: async () => {
+            await this.moveSubject(subjects, index, index - 1, activeContestId);
+          }
+        })
+      );
+    }
+    if (index < subjects.length - 1) {
+      buttons.appendChild(
+        DomHelpers.createIconButton("down", "Descer", {
+          onClick: async () => {
+            await this.moveSubject(subjects, index, index + 1, activeContestId);
+          }
+        })
+      );
+    }
+    content.appendChild(buttons);
+    td.appendChild(content);
     return td;
   }
   renderEditCell(subject) {
@@ -2950,7 +2998,7 @@ var CycleTab = class {
       });
       await this.onUpdate();
     } catch (error) {
-      DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel reordenar as mat\xE9rias.");
+      DomHelpers.notifyError(error, "N\xE3o consegui reordenar as mat\xE9rias.");
     }
   }
 };
@@ -3032,9 +3080,12 @@ var DashboardTab = class {
   constructor(dataStore, onUpdate) {
     this.dataStore = dataStore;
     this.onUpdate = onUpdate;
+    this.isRegisteringNextActivity = false;
+    const repositoryFactory = new EntityRepositoryFactory(dataStore);
     this.getActiveCycleSnapshotUseCase = new GetActiveCycleSnapshotUseCase(dataStore);
     this.getActiveContestSummaryUseCase = new GetActiveContestSummaryUseCase(dataStore);
     this.getActiveContestProgressDashboardUseCase = new GetActiveContestProgressDashboardUseCase(dataStore);
+    this.registerStudySessionUseCase = new RegisterStudySessionUseCase(dataStore, repositoryFactory);
   }
   /**
    * Renders the dashboard tab content.
@@ -3043,10 +3094,10 @@ var DashboardTab = class {
     const activeContest = data.contests.find((contest) => contest.id === data.activeContestId) ?? null;
     if (!activeContest) {
       container.append(
-        DomHelpers.createSectionTitle("Dashboard"),
+        DomHelpers.createSectionTitle("Hoje"),
         DomHelpers.createEmptyState(
-          "Nenhum concurso ativo",
-          "Crie um concurso na aba Concursos para come\xE7ar."
+          "Nada escolhido ainda",
+          "Escolha um concurso para o Leif saber por onde come\xE7ar."
         )
       );
       return;
@@ -3056,21 +3107,34 @@ var DashboardTab = class {
     const progress = await this.getActiveContestProgressDashboardUseCase.execute();
     const itemMap = new Map(data.studyItems.map((item) => [item.id, item.title]));
     const recommendedSubject = snapshot.currentSubject ?? snapshot.nextSubject;
-    const afterRecommendedSubject = snapshot.currentSubject && snapshot.nextSubject?.id !== snapshot.currentSubject.id ? snapshot.nextSubject : null;
+    const afterRecommendedSubject = snapshot.currentSubject && snapshot.nextSubject?.id !== snapshot.currentSubject.id ? snapshot.nextSubject : this.findFollowingActiveSubject(data, activeContest.id, recommendedSubject?.id);
     const recommendedItemId = snapshot.currentItemId ?? snapshot.nextItemId;
     const afterRecommendedItemId = snapshot.currentItemId ? snapshot.nextItemId : null;
-    container.appendChild(DomHelpers.createSectionTitle("Dashboard"));
+    container.appendChild(DomHelpers.createSectionTitle("Hoje"));
     container.appendChild(
-      DomHelpers.createParagraph("Vis\xE3o geral do concurso ativo.")
+      DomHelpers.createParagraph("O que estudar agora e como o dia est\xE1 andando.")
     );
-    const cycleSection = DomHelpers.createElement("div", "leif-grid leif-grid-2");
-    cycleSection.appendChild(
-      this.renderCycleCard("Mat\xE9ria recomendada", recommendedSubject?.name ?? "N\xE3o definida", "Depois", afterRecommendedSubject?.name ?? "\u2014")
+    container.appendChild(
+      this.renderNextActivityPanel({
+        subjectName: recommendedSubject?.name ?? "Sem mat\xE9ria ativa",
+        itemName: recommendedSubject ? itemMap.get(recommendedItemId ?? "") ?? "Sem item definido" : "Crie ou ative uma mat\xE9ria no Plano para aparecer aqui.",
+        plannedMinutes: recommendedSubject?.plannedStudyMinutes,
+        stage: recommendedSubject?.currentStage,
+        nextSubjectName: afterRecommendedSubject?.name,
+        nextItemName: itemMap.get(afterRecommendedItemId ?? ""),
+        onRegister: recommendedSubject ? async () => {
+          this.isRegisteringNextActivity = true;
+          await this.onUpdate();
+        } : void 0,
+        registerForm: this.isRegisteringNextActivity && recommendedSubject ? this.renderRecommendedSessionForm({
+          contestId: activeContest.id,
+          subjectId: recommendedSubject.id,
+          subjectName: recommendedSubject.name,
+          itemId: recommendedItemId ?? void 0,
+          itemName: itemMap.get(recommendedItemId ?? "") ?? void 0
+        }) : void 0
+      })
     );
-    cycleSection.appendChild(
-      this.renderCycleCard("Item recomendado", itemMap.get(recommendedItemId ?? "") ?? "N\xE3o definido", "Seguinte", itemMap.get(afterRecommendedItemId ?? "") ?? "\u2014")
-    );
-    container.appendChild(cycleSection);
     const subjectSummaryCard = DomHelpers.createCard("Resumo por mat\xE9ria");
     const progressMap = new Map(progress.pdfProgressBySubject.map((s) => [s.subjectId, s]));
     const rows = summary.subjectSummaries.map((subjectSummary) => {
@@ -3086,30 +3150,148 @@ var DashboardTab = class {
         subjectSummary.questionAccuracy === null ? "-" : `${Math.round(subjectSummary.questionAccuracy * 100)}%`
       ];
     });
-    subjectSummaryCard.appendChild(
-      DomHelpers.createTable(
-        ["Mat\xE9ria", "Sess\xF5es", "P\xE1ginas", "Quest\xF5es", "Acerto"],
-        rows
-      )
-    );
+    if (rows.length === 0) {
+      subjectSummaryCard.appendChild(
+        DomHelpers.createParagraph("Quando voc\xEA come\xE7ar a registrar estudos, o resumo aparece aqui.")
+      );
+    } else {
+      subjectSummaryCard.appendChild(
+        DomHelpers.createTable(
+          ["Mat\xE9ria", "Sess\xF5es", "P\xE1ginas", "Quest\xF5es", "Acerto"],
+          rows
+        )
+      );
+    }
     container.appendChild(subjectSummaryCard);
   }
-  renderCycleCard(label, value, nextLabel, nextValue) {
-    const card = DomHelpers.createElement("div", "leif-card leif-cycle-card");
-    const main = DomHelpers.createElement("div", "leif-cycle-main");
-    const mainLabel = DomHelpers.createElement("span", "leif-cycle-label");
-    mainLabel.textContent = label;
-    const mainValue = DomHelpers.createElement("span", "leif-cycle-value");
-    mainValue.textContent = value;
-    main.append(mainLabel, mainValue);
-    const next = DomHelpers.createElement("div", "leif-cycle-next");
-    const nextLabelEl = DomHelpers.createElement("span", "leif-cycle-next-label");
-    nextLabelEl.textContent = `${nextLabel}: `;
-    const nextValueEl = DomHelpers.createElement("span", "leif-cycle-next-value");
-    nextValueEl.textContent = nextValue;
-    next.append(nextLabelEl, nextValueEl);
-    card.append(main, next);
-    return card;
+  renderNextActivityPanel(activity) {
+    const panel = DomHelpers.createElement("section", "leif-next-activity");
+    const intro = DomHelpers.createElement("div", "leif-next-activity-intro");
+    const label = DomHelpers.createElement("span", "leif-next-activity-label");
+    label.textContent = "Estudar agora";
+    const subject = DomHelpers.createElement("strong", "leif-next-activity-subject");
+    subject.textContent = activity.subjectName;
+    const item = DomHelpers.createElement("span", "leif-next-activity-item");
+    item.textContent = activity.itemName;
+    intro.append(label, subject, item);
+    const meta = DomHelpers.createElement("div", "leif-next-activity-meta");
+    meta.append(
+      this.renderActivityMeta("Tempo", activity.plannedMinutes ? `${activity.plannedMinutes} min` : "sem tempo definido"),
+      this.renderActivityMeta("Etapa", activity.stage?.trim() ? activity.stage : "sem etapa")
+    );
+    if (activity.nextSubjectName || activity.nextItemName) {
+      const next = DomHelpers.createElement("div", "leif-next-activity-next");
+      next.textContent = [
+        activity.nextSubjectName ? `Depois vem ${activity.nextSubjectName}` : void 0,
+        activity.nextItemName ? `na fila: ${activity.nextItemName}` : void 0
+      ].filter(Boolean).join(" \xB7 ");
+      meta.appendChild(next);
+    }
+    if (activity.onRegister) {
+      meta.appendChild(
+        DomHelpers.createButton("Registrar agora", {
+          className: "mod-cta",
+          onClick: activity.onRegister
+        })
+      );
+    }
+    panel.append(intro, meta);
+    if (activity.registerForm) {
+      panel.appendChild(activity.registerForm);
+    }
+    return panel;
+  }
+  renderActivityMeta(label, value) {
+    const item = DomHelpers.createElement("span", "leif-next-activity-chip");
+    const labelEl = DomHelpers.createElement("span", "leif-next-activity-chip-label");
+    labelEl.textContent = `${label}:`;
+    const valueEl = DomHelpers.createElement("span", "leif-next-activity-chip-value");
+    valueEl.textContent = value;
+    item.append(labelEl, valueEl);
+    return item;
+  }
+  findFollowingActiveSubject(data, contestId, subjectId) {
+    if (!subjectId) return null;
+    const activeSubjects = data.subjects.filter((subject) => subject.contestId === contestId && subject.isActive).slice().sort((a, b) => a.order - b.order);
+    if (activeSubjects.length < 2) return null;
+    const currentIndex = activeSubjects.findIndex((subject) => subject.id === subjectId);
+    if (currentIndex === -1) return null;
+    return activeSubjects[(currentIndex + 1) % activeSubjects.length] ?? null;
+  }
+  renderRecommendedSessionForm(activity) {
+    const typeSelect = DomHelpers.createSelect([
+      [StudySessionType.PDF, "PDF"],
+      [StudySessionType.VIDEO, "V\xEDdeo"],
+      [StudySessionType.QUESTIONS, "Quest\xF5es"]
+    ]);
+    const countInput = DomHelpers.createInput("number", "P\xE1ginas ou quantidade", "0");
+    const correctInput = DomHelpers.createInput("number", "Acertos", "0");
+    const correctLabel = DomHelpers.createLabel("Acertos", correctInput);
+    const dateInput = DomHelpers.createInput("date", "Data");
+    dateInput.value = this.getDefaultDateValue();
+    const syncQuestionField = () => {
+      correctLabel.style.display = typeSelect.value === StudySessionType.QUESTIONS ? "" : "none";
+    };
+    typeSelect.addEventListener("change", syncQuestionField);
+    syncQuestionField();
+    const form = DomHelpers.createForm(async () => {
+      try {
+        const sessionType = typeSelect.value;
+        const rawCount = Number(countInput.value);
+        const rawCorrect = Number(correctInput.value);
+        if (sessionType === StudySessionType.QUESTIONS && (!rawCount || rawCount <= 0)) {
+          throw new ValidationError("Informe uma quantidade de quest\xF5es maior que zero.");
+        }
+        await this.registerStudySessionUseCase.execute({
+          id: createId("session"),
+          contestId: activity.contestId,
+          subjectId: activity.subjectId,
+          studyItemId: activity.itemId,
+          type: sessionType,
+          studiedAt: dateInput.value,
+          pagesOrCount: sessionType === StudySessionType.QUESTIONS ? rawCount : rawCount || void 0,
+          correctAnswers: sessionType === StudySessionType.QUESTIONS ? Math.min(rawCorrect, rawCount) : void 0,
+          completed: true
+        });
+        this.isRegisteringNextActivity = false;
+        await this.onUpdate();
+      } catch (error) {
+        DomHelpers.notifyError(error, "N\xE3o consegui salvar esse registro.");
+      }
+    });
+    const context = DomHelpers.createElement("div", "leif-stack");
+    context.append(
+      DomHelpers.createKeyValueRow("Mat\xE9ria", activity.subjectName),
+      DomHelpers.createKeyValueRow("Item", activity.itemName ?? "Sem item definido")
+    );
+    const fields = DomHelpers.createElement("div", "leif-grid leif-grid-2");
+    fields.append(
+      DomHelpers.createLabel("Tipo", typeSelect),
+      DomHelpers.createLabel("Quantidade", countInput),
+      correctLabel,
+      DomHelpers.createLabel("Data", dateInput)
+    );
+    const actions = DomHelpers.createElement("div", "leif-form-actions");
+    actions.append(
+      DomHelpers.createButton("Cancelar", {
+        onClick: async () => {
+          this.isRegisteringNextActivity = false;
+          await this.onUpdate();
+        }
+      }),
+      DomHelpers.createButton("Registrar", {
+        className: "mod-cta",
+        onClick: () => form.requestSubmit()
+      })
+    );
+    form.append(context, fields, actions);
+    return form;
+  }
+  getDefaultDateValue() {
+    const now = /* @__PURE__ */ new Date();
+    const timezoneOffset = now.getTimezoneOffset() * 6e4;
+    const localDate = new Date(now.getTime() - timezoneOffset);
+    return localDate.toISOString().split("T")[0];
   }
 };
 
@@ -3176,7 +3358,8 @@ var UpdateStudyItemUseCase = class {
       title: input.title !== void 0 ? input.title.trim() : item.title,
       weight: input.weight !== void 0 ? input.weight : item.weight,
       questionCount: input.questionCount !== void 0 ? input.questionCount : item.questionCount,
-      totalPages: input.totalPages !== void 0 ? input.totalPages : item.totalPages
+      totalPages: input.totalPages !== void 0 ? input.totalPages : item.totalPages,
+      resourceReferences: input.resourceReferences !== void 0 ? input.resourceReferences : item.resourceReferences
     }));
   }
 };
@@ -3197,8 +3380,10 @@ var SubjectPicker = class {
     select.addEventListener("change", () => {
       void onChange(select.value);
     });
-    const wrapper = DomHelpers.createElement("div", "leif-toolbar");
-    wrapper.appendChild(DomHelpers.createLabel("Mat\xE9ria", select));
+    const wrapper = DomHelpers.createElement("div", "leif-subject-picker");
+    const label = DomHelpers.createElement("span", "leif-subject-picker-label");
+    label.textContent = "Mat\xE9ria";
+    wrapper.append(label, select);
     return wrapper;
   }
 };
@@ -3211,6 +3396,8 @@ var ItemsTab = class {
     this.selectedSubjectId = null;
     this.editingItemId = null;
     this.expandedItemId = null;
+    this.isCreatingItem = false;
+    this.pendingDeleteItemId = null;
     const repositoryFactory = new EntityRepositoryFactory(dataStore);
     this.createStudyItemUseCase = new CreateStudyItemUseCase(dataStore, repositoryFactory);
     this.addStudyItemResourceReferenceUseCase = new AddStudyItemResourceReferenceUseCase(dataStore, repositoryFactory);
@@ -3220,21 +3407,27 @@ var ItemsTab = class {
   }
   async render(container, data) {
     const header = DomHelpers.createElement("div", "leif-section-header");
-    header.appendChild(DomHelpers.createSectionTitle("Itens e PDFs"));
+    header.appendChild(DomHelpers.createSectionTitle("Recursos"));
     header.appendChild(
       DomHelpers.createIconButton("add", "Novo item", {
-        onClick: () => this.openCreateItemModal(
-          SubjectPicker.getSelectedSubject(data, this.selectedSubjectId)?.id ?? ""
-        )
+        onClick: async () => {
+          this.isCreatingItem = true;
+          await this.onUpdate();
+        }
       })
     );
     container.appendChild(header);
+    container.appendChild(
+      DomHelpers.createParagraph(
+        "Guarde materiais de estudo por mat\xE9ria \u2014 PDFs, v\xEDdeos e links \u2014 e acompanhe o avan\xE7o de leitura sem sair do Obsidian."
+      )
+    );
     const subject = SubjectPicker.getSelectedSubject(data, this.selectedSubjectId);
     if (!subject) {
       container.appendChild(
         DomHelpers.createEmptyState(
-          "Nenhuma mat\xE9ria selecionada",
-          "Cadastre mat\xE9rias no concurso ativo."
+          "Sem mat\xE9ria escolhida",
+          "Crie uma mat\xE9ria no Plano para adicionar recursos."
         )
       );
       return;
@@ -3245,6 +3438,9 @@ var ItemsTab = class {
         await this.onUpdate();
       })
     );
+    if (this.isCreatingItem) {
+      container.appendChild(this.renderCreateItemForm(subject.id));
+    }
     const progress = await this.getActiveContestProgressDashboardUseCase.execute();
     const subjectProgress = progress.pdfProgressBySubject.find(
       (entry) => entry.subjectId === subject.id
@@ -3252,13 +3448,13 @@ var ItemsTab = class {
     const items = data.studyItems.filter((item) => item.subjectId === subject.id).sort((left, right) => left.order - right.order);
     const card = DomHelpers.createCard(`Itens de ${subject.name}`);
     if (items.length === 0) {
-      card.appendChild(DomHelpers.createParagraph("Nenhum item cadastrado."));
+      card.appendChild(DomHelpers.createParagraph("Nenhum recurso cadastrado nessa mat\xE9ria."));
       container.appendChild(card);
       return;
     }
     const { container: tableContainer, tbody } = DomHelpers.createCrudTable([
       "Ordem",
-      "Item",
+      "Recurso",
       "Peso",
       "Quest\xF5es",
       "P\xE1ginas",
@@ -3271,26 +3467,22 @@ var ItemsTab = class {
       const isEditing = this.editingItemId === item.id;
       const isExpanded = this.expandedItemId === item.id;
       if (isEditing) {
-        tbody.appendChild(this.renderEditableRow(item, itemProgress, data));
+        tbody.appendChild(this.renderEditableRow(item));
+        tbody.appendChild(this.renderEditMaterialsRow(item));
       } else {
-        tbody.appendChild(this.renderDisplayRow(item, itemProgress, data));
+        tbody.appendChild(this.renderDisplayRow(item, itemProgress));
       }
       if (isExpanded && !isEditing) {
-        tbody.appendChild(this.renderDetailRow(item, data));
+        tbody.appendChild(this.renderDetailRow(item));
       }
     });
     card.appendChild(tableContainer);
     container.appendChild(card);
   }
-  renderDisplayRow(item, itemProgress, data) {
+  renderDisplayRow(item, itemProgress) {
     const tr = DomHelpers.createElement("tr");
     tr.dataset.itemId = item.id;
     const refs = item.resourceReferences ?? [];
-    tr.appendChild(DomHelpers.createCell(String(item.order)));
-    tr.appendChild(DomHelpers.createCell(item.title));
-    tr.appendChild(DomHelpers.createCell(String(item.weight ?? 0)));
-    tr.appendChild(DomHelpers.createCell(String(item.questionCount ?? 0)));
-    tr.appendChild(DomHelpers.createCell(null, this.renderPagesCell(item, itemProgress)));
     const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
     const hasRefs = refs.length > 0;
     actions.appendChild(
@@ -3298,7 +3490,7 @@ var ItemsTab = class {
         this.expandedItemId === item.id ? "collapse" : "expand",
         this.expandedItemId === item.id ? "Recolher" : "Expandir",
         {
-          className: `leif-icon-button ${hasRefs ? "" : "leif-expand-button"}`,
+          className: `clickable-icon ${hasRefs ? "" : "leif-expand-button"}`,
           onClick: async () => {
             this.expandedItemId = this.expandedItemId === item.id ? null : item.id;
             await this.onUpdate();
@@ -3317,34 +3509,57 @@ var ItemsTab = class {
     actions.appendChild(
       DomHelpers.createIconButton("delete", "Excluir", {
         onClick: async () => {
-          const confirmed = await DomHelpers.confirm({
-            title: "Excluir item",
-            message: `Excluir "${item.title}"?`,
-            confirmLabel: "Excluir"
-          });
-          if (!confirmed) return;
-          try {
-            await this.deleteStudyItemUseCase.execute({ itemId: item.id });
-            await this.onUpdate();
-          } catch (error) {
-            DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel excluir o item.");
-          }
+          this.pendingDeleteItemId = item.id;
+          await this.onUpdate();
         }
       })
     );
-    const actionsCell = DomHelpers.createElement("td");
-    actionsCell.appendChild(actions);
-    tr.appendChild(actionsCell);
+    if (this.pendingDeleteItemId === item.id) {
+      actions.append(
+        DomHelpers.createButton("Excluir?", {
+          onClick: async () => {
+            try {
+              await this.deleteStudyItemUseCase.execute({ itemId: item.id });
+              this.pendingDeleteItemId = null;
+              await this.onUpdate();
+            } catch (error) {
+              DomHelpers.notifyError(error, "N\xE3o consegui excluir esse recurso.");
+            }
+          }
+        }),
+        DomHelpers.createButton("Cancelar", {
+          onClick: async () => {
+            this.pendingDeleteItemId = null;
+            await this.onUpdate();
+          }
+        })
+      );
+    }
+    const title = DomHelpers.createElement("strong", "leif-resource-table-title");
+    title.textContent = item.title;
+    const titleCell = DomHelpers.createCell(null, title);
+    titleCell.classList.add("leif-resource-title-cell");
+    tr.append(
+      DomHelpers.createCell(String(item.order)),
+      titleCell,
+      DomHelpers.createCell(String(item.weight ?? 0)),
+      DomHelpers.createCell(String(item.questionCount ?? 0)),
+      DomHelpers.createCell(null, this.renderPagesCell(item, itemProgress)),
+      DomHelpers.createCell(null, actions)
+    );
     return tr;
   }
-  renderEditableRow(item, itemProgress, data) {
-    const tr = DomHelpers.createElement("tr");
-    tr.className = "leif-editing-row";
+  renderEditableRow(item) {
+    const tr = DomHelpers.createElement("tr", "leif-editing-row");
     tr.dataset.itemId = item.id;
     const titleInput = DomHelpers.createCompactInput("text", "T\xEDtulo", item.title);
     const weightInput = DomHelpers.createCompactInput("number", "Peso", String(item.weight ?? 0));
     const questionInput = DomHelpers.createCompactInput("number", "Qts", String(item.questionCount ?? 0));
     const totalPagesInput = DomHelpers.createCompactInput("number", "Total", String(item.totalPages ?? ""));
+    titleInput.classList.add("leif-resource-edit-input");
+    weightInput.classList.add("leif-resource-edit-input");
+    questionInput.classList.add("leif-resource-edit-input");
+    totalPagesInput.classList.add("leif-resource-edit-input");
     const saveButton = DomHelpers.createIconButton("save", "Salvar", {
       onClick: async () => {
         try {
@@ -3359,7 +3574,7 @@ var ItemsTab = class {
           this.editingItemId = null;
           await this.onUpdate();
         } catch (error) {
-          DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel salvar.");
+          DomHelpers.notifyError(error, "N\xE3o consegui salvar.");
         }
       }
     });
@@ -3372,14 +3587,58 @@ var ItemsTab = class {
     const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
     actions.appendChild(saveButton);
     actions.appendChild(cancelButton);
-    tr.appendChild(DomHelpers.createCell(String(item.order)));
-    tr.appendChild(DomHelpers.createCell(null, titleInput));
-    tr.appendChild(DomHelpers.createCell(null, weightInput));
-    tr.appendChild(DomHelpers.createCell(null, questionInput));
-    tr.appendChild(DomHelpers.createCell(null, totalPagesInput));
-    const actionsCell = DomHelpers.createElement("td");
-    actionsCell.appendChild(actions);
-    tr.appendChild(actionsCell);
+    tr.append(
+      DomHelpers.createCell(String(item.order)),
+      DomHelpers.createCell(null, titleInput),
+      DomHelpers.createCell(null, weightInput),
+      DomHelpers.createCell(null, questionInput),
+      DomHelpers.createCell(null, totalPagesInput),
+      DomHelpers.createCell(null, actions)
+    );
+    return tr;
+  }
+  renderDetailRow(item) {
+    const tr = DomHelpers.createElement("tr", "leif-detail-row");
+    const td = DomHelpers.createElement("td");
+    td.colSpan = 6;
+    td.appendChild(this.renderDetailContent(item));
+    tr.appendChild(td);
+    return tr;
+  }
+  renderEditMaterialsRow(item) {
+    const tr = DomHelpers.createElement("tr", "leif-detail-row leif-resource-edit-materials");
+    const td = DomHelpers.createElement("td");
+    td.colSpan = 6;
+    const content = DomHelpers.createElement("div", "leif-detail-content");
+    const references = item.resourceReferences ?? [];
+    const materialSection = DomHelpers.createElement("section", "leif-resource-material-section");
+    materialSection.append(
+      DomHelpers.createSectionSubtitle("Materiais do recurso"),
+      DomHelpers.createParagraph("Edite ou remova os materiais j\xE1 ligados a este recurso.")
+    );
+    if (references.length > 0) {
+      const list = DomHelpers.createElement("div", "leif-resource-material-editor-list");
+      references.forEach((reference) => {
+        list.appendChild(this.renderMaterialEditor(item, reference));
+      });
+      materialSection.appendChild(list);
+    } else {
+      materialSection.appendChild(
+        DomHelpers.createParagraph("Nenhum material vinculado ainda.")
+      );
+    }
+    const addSection = DomHelpers.createElement("section", "leif-resource-material-section");
+    addSection.append(
+      DomHelpers.createSectionSubtitle("Adicionar novo material"),
+      DomHelpers.createParagraph("Use esta \xE1rea para anexar PDF, v\xEDdeo ou link ao recurso em edi\xE7\xE3o."),
+      this.renderAddMaterialForm(item)
+    );
+    content.append(
+      materialSection,
+      addSection
+    );
+    td.appendChild(content);
+    tr.appendChild(td);
     return tr;
   }
   renderPagesCell(item, progress) {
@@ -3395,30 +3654,86 @@ var ItemsTab = class {
     }
     return cell;
   }
-  renderDetailRow(item, data) {
-    const tr = DomHelpers.createElement("tr");
-    tr.className = "leif-detail-row";
-    const td = DomHelpers.createElement("td");
-    td.colSpan = 6;
+  renderDetailContent(item) {
     const content = DomHelpers.createElement("div", "leif-detail-content");
+    content.classList.add("leif-resource-detail");
+    const header = DomHelpers.createElement("div", "leif-resource-detail-header");
+    const titleGroup = DomHelpers.createElement("div", "leif-resource-detail-title-group");
+    titleGroup.append(
+      DomHelpers.createSectionSubtitle("Materiais deste recurso"),
+      DomHelpers.createParagraph("Arquivos, aulas e links j\xE1 conectados a este recurso.")
+    );
+    header.appendChild(titleGroup);
+    content.appendChild(header);
     if (item.resourceReferences && item.resourceReferences.length > 0) {
       const list = DomHelpers.createElement("div", "leif-detail-list");
       item.resourceReferences.forEach((ref) => {
-        const row = DomHelpers.createElement("div", "leif-detail-list-item");
-        row.appendChild(
-          DomHelpers.createParagraph(`${this.formatResourceType(ref.type)}: ${ref.title}`)
-        );
+        const row = DomHelpers.createElement("div", "leif-detail-list-item leif-material-row");
+        const materialInfo = DomHelpers.createElement("div", "leif-material-info");
+        const type = DomHelpers.createElement("span", "leif-material-type");
+        type.textContent = this.formatResourceType(ref.type);
+        const title = DomHelpers.createElement("span", "leif-material-title");
+        title.textContent = ref.title;
+        materialInfo.append(type, title);
+        row.appendChild(materialInfo);
         if (ref.url) {
           const link = DomHelpers.createElement("a");
           link.href = ref.url;
-          link.textContent = "\u{1F517}";
+          link.className = "leif-material-open-link";
+          link.textContent = "Abrir";
           link.target = "_blank";
+          link.rel = "noopener";
           row.appendChild(link);
         }
         list.appendChild(row);
       });
       content.appendChild(list);
+    } else {
+      content.appendChild(
+        DomHelpers.createParagraph("Nenhum material vinculado ainda.")
+      );
     }
+    return content;
+  }
+  renderMaterialEditor(item, reference) {
+    const titleInput = DomHelpers.createInput("text", "T\xEDtulo", reference.title);
+    const typeSelect = DomHelpers.createSelect([
+      ["pdf", "PDF"],
+      ["video", "V\xEDdeo"],
+      ["link", "Link"]
+    ], reference.type);
+    const urlInput = DomHelpers.createInput("url", "URL", reference.url ?? "");
+    const row = DomHelpers.createElement("div", "leif-resource-material-editor");
+    row.dataset.resourceMaterialEditorId = reference.id;
+    row.append(
+      this.renderMaterialField("T\xEDtulo", titleInput),
+      this.renderMaterialField("Tipo", typeSelect),
+      this.renderMaterialField("URL", urlInput)
+    );
+    const actions = DomHelpers.createElement("div", "leif-resource-material-editor-actions");
+    actions.append(
+      DomHelpers.createIconButton("save", "Salvar material", {
+        dataset: { resourceSaveMaterialId: reference.id },
+        onClick: async () => {
+          await this.updateMaterialReference(item, reference.id, {
+            id: reference.id,
+            title: titleInput.value.trim(),
+            type: typeSelect.value,
+            url: urlInput.value.trim()
+          });
+        }
+      }),
+      DomHelpers.createIconButton("delete", "Excluir material", {
+        dataset: { resourceDeleteMaterialId: reference.id },
+        onClick: async () => {
+          await this.deleteMaterialReference(item, reference.id);
+        }
+      })
+    );
+    row.appendChild(actions);
+    return row;
+  }
+  renderAddMaterialForm(item) {
     const titleInput = DomHelpers.createInput("text", "T\xEDtulo");
     const typeSelect = DomHelpers.createSelect([
       ["pdf", "PDF"],
@@ -3441,22 +3756,57 @@ var ItemsTab = class {
         urlInput.value = "";
         await this.onUpdate();
       } catch (error) {
-        DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel adicionar refer\xEAncia.");
+        DomHelpers.notifyError(error, "N\xE3o consegui adicionar esse link.");
       }
     });
-    form.className = "leif-detail-form";
+    form.className = "leif-resource-material-form";
     form.append(
-      DomHelpers.createLabel("T\xEDtulo", titleInput),
-      DomHelpers.createLabel("Tipo", typeSelect),
-      DomHelpers.createLabel("URL", urlInput),
-      DomHelpers.createIconButton("add", "Adicionar", { onClick: () => form.requestSubmit() })
+      this.renderMaterialField("T\xEDtulo", titleInput),
+      this.renderMaterialField("Tipo", typeSelect),
+      this.renderMaterialField("URL", urlInput),
+      DomHelpers.createElement("div", "leif-form-actions")
     );
-    content.appendChild(form);
-    td.appendChild(content);
-    tr.appendChild(td);
-    return tr;
+    const actions = form.querySelector(".leif-form-actions");
+    actions?.append(
+      DomHelpers.createButton("Salvar material", {
+        type: "submit",
+        className: "mod-cta"
+      })
+    );
+    return form;
   }
-  openCreateItemModal(subjectId) {
+  renderMaterialField(label, control) {
+    const field = DomHelpers.createElement("label", "leif-material-field");
+    const labelEl = DomHelpers.createElement("span", "leif-material-field-label");
+    labelEl.textContent = label;
+    field.append(labelEl, control);
+    return field;
+  }
+  async updateMaterialReference(item, referenceId, nextReference) {
+    try {
+      await this.updateStudyItemUseCase.execute({
+        itemId: item.id,
+        resourceReferences: (item.resourceReferences ?? []).map(
+          (reference) => reference.id === referenceId ? nextReference : reference
+        )
+      });
+      await this.onUpdate();
+    } catch (error) {
+      DomHelpers.notifyError(error, "N\xE3o consegui salvar esse material.");
+    }
+  }
+  async deleteMaterialReference(item, referenceId) {
+    try {
+      await this.updateStudyItemUseCase.execute({
+        itemId: item.id,
+        resourceReferences: (item.resourceReferences ?? []).filter((reference) => reference.id !== referenceId)
+      });
+      await this.onUpdate();
+    } catch (error) {
+      DomHelpers.notifyError(error, "N\xE3o consegui excluir esse material.");
+    }
+  }
+  renderCreateItemForm(subjectId) {
     const titleInput = DomHelpers.createInput("text", "T\xEDtulo do item");
     const weightInput = DomHelpers.createInput("number", "Peso", "1");
     const questionCountInput = DomHelpers.createInput("number", "Total de quest\xF5es", "0");
@@ -3472,24 +3822,39 @@ var ItemsTab = class {
           questionCount: Number(questionCountInput.value),
           totalPages: rawPages === "" ? void 0 : Number(rawPages)
         });
-        modal.close();
+        this.isCreatingItem = false;
         await this.onUpdate();
       } catch (error) {
-        DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel criar o item.");
+        DomHelpers.notifyError(error, "N\xE3o consegui criar esse recurso.");
       }
     });
-    form.append(
+    const fields = DomHelpers.createElement("div", "leif-grid leif-grid-2");
+    fields.append(
       DomHelpers.createLabel("T\xEDtulo", titleInput),
       DomHelpers.createLabel("Peso", weightInput),
       DomHelpers.createLabel("Quest\xF5es", questionCountInput),
       DomHelpers.createLabel("P\xE1ginas", totalPagesInput)
     );
-    const modal = DomHelpers.createModal({
-      title: "Novo item",
-      content: form,
-      onSubmit: () => form.requestSubmit()
-    });
-    modal.open();
+    form.classList.add("leif-card");
+    form.append(
+      DomHelpers.createSectionSubtitle("Novo recurso"),
+      fields,
+      DomHelpers.createElement("div", "leif-form-actions")
+    );
+    const actions = form.querySelector(".leif-form-actions");
+    actions?.append(
+      DomHelpers.createButton("Cancelar", {
+        onClick: async () => {
+          this.isCreatingItem = false;
+          await this.onUpdate();
+        }
+      }),
+      DomHelpers.createButton("Criar", {
+        type: "submit",
+        className: "mod-cta"
+      })
+    );
+    return form;
   }
   formatResourceType(type) {
     if (type === "pdf") return "PDF";
@@ -3499,7 +3864,7 @@ var ItemsTab = class {
 };
 
 // src/ui/view/components/SessionsTab.ts
-var import_obsidian3 = require("obsidian");
+var import_obsidian4 = require("obsidian");
 
 // src/application/use-cases/DeleteStudySessionUseCase.ts
 var DeleteStudySessionUseCase = class {
@@ -3575,6 +3940,8 @@ var SessionsTab = class {
     this.dataStore = dataStore;
     this.onUpdate = onUpdate;
     this.editingSessionId = null;
+    this.isCreatingSession = false;
+    this.pendingDeleteSessionId = null;
     const repositoryFactory = new EntityRepositoryFactory(dataStore);
     this.registerStudySessionUseCase = new RegisterStudySessionUseCase(dataStore, repositoryFactory);
     this.deleteStudySessionUseCase = new DeleteStudySessionUseCase(dataStore, repositoryFactory);
@@ -3586,22 +3953,25 @@ var SessionsTab = class {
   }
   async render(container, data) {
     const header = DomHelpers.createElement("div", "leif-section-header");
-    header.appendChild(DomHelpers.createSectionTitle("Sess\xF5es"));
+    header.appendChild(DomHelpers.createSectionTitle("Registros"));
     header.appendChild(
       DomHelpers.createIconButton("add", "Nova sess\xE3o", {
-        onClick: () => this.openCreateSessionModal(data)
+        onClick: async () => {
+          this.isCreatingSession = true;
+          await this.onUpdate();
+        }
       })
     );
     container.appendChild(header);
     container.appendChild(
-      DomHelpers.createParagraph("Registre sess\xF5es e gerencie o ciclo de estudos.")
+      DomHelpers.createParagraph("Anote o que voc\xEA estudou. O Leif cuida do resto.")
     );
     const activeContest = data.contests.find((contest) => contest.id === data.activeContestId) ?? null;
     if (!activeContest) {
       container.appendChild(
         DomHelpers.createEmptyState(
-          "Nenhum concurso ativo",
-          "Selecione um concurso para registrar sess\xF5es."
+          "Sem concurso escolhido",
+          "Escolha um concurso antes de registrar estudos."
         )
       );
       return;
@@ -3613,7 +3983,7 @@ var SessionsTab = class {
     const recommendedItemId = snapshot.currentItemId ?? snapshot.nextItemId;
     const cycleContext = DomHelpers.createElement("div", "leif-cycle-context");
     const nowLabel = DomHelpers.createElement("span", "leif-cycle-context-label");
-    nowLabel.textContent = "Mat\xE9ria recomendada: ";
+    nowLabel.textContent = "Agora: ";
     const nowValue = DomHelpers.createElement("span", "leif-cycle-context-value");
     nowValue.textContent = recommendedSubject?.name ?? "\u2014";
     cycleContext.appendChild(nowLabel);
@@ -3625,27 +3995,30 @@ var SessionsTab = class {
     }
     if (afterRecommendedSubject) {
       const nextInfo = DomHelpers.createElement("span", "leif-cycle-context-next");
-      nextInfo.textContent = `Depois: ${afterRecommendedSubject.name}`;
+      nextInfo.textContent = `Depois vem ${afterRecommendedSubject.name}`;
       cycleContext.appendChild(nextInfo);
     }
     container.appendChild(cycleContext);
     const cycleAction = DomHelpers.createElement("div", "leif-cycle-action");
     cycleAction.appendChild(
-      DomHelpers.createButton("Finalizar ciclo atual", {
-        className: "leif-primary-button",
+      DomHelpers.createButton("Marcar como estudado", {
+        className: "mod-cta",
         icon: "refresh-cw",
         onClick: async () => {
           try {
             const result = await this.advanceCycleUseCase.execute();
-            new import_obsidian3.Notice(`Ciclo finalizado! Mat\xE9ria recomendada: ${result.currentSubject?.name ?? "\u2014"}`);
+            new import_obsidian4.Notice(`Pronto. Agora vem ${result.currentSubject?.name ?? "\u2014"}.`);
             await this.onUpdate();
           } catch (error) {
-            DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel finalizar o ciclo.");
+            DomHelpers.notifyError(error, "N\xE3o consegui avan\xE7ar o plano.");
           }
         }
       })
     );
     container.appendChild(cycleAction);
+    if (this.isCreatingSession) {
+      container.appendChild(this.renderCreateSessionForm(data));
+    }
     const subjects = data.subjects.filter((subject) => subject.contestId === activeContest.id);
     const recentSessions = DomHelpers.createCard("Hist\xF3rico recente");
     const sessions = data.studySessions.filter((session) => session.contestId === activeContest.id).slice().reverse().slice(0, 10);
@@ -3654,12 +4027,9 @@ var SessionsTab = class {
     } else {
       const { container: tableContainer, tbody } = DomHelpers.createCrudTable([
         "Data",
-        "Mat\xE9ria",
-        "Assunto",
+        "Estudo",
         "Tipo",
-        "Progresso",
-        "Acertos",
-        "A\xE7\xF5es"
+        "Resultado"
       ]);
       sessions.forEach((session) => {
         const isEditing = this.editingSessionId === session.id;
@@ -3678,21 +4048,6 @@ var SessionsTab = class {
     tr.dataset.sessionId = session.id;
     const subjectName = data.subjects.find((subject) => subject.id === session.subjectId)?.name ?? "\u2014";
     const topicName = data.topics.find((topic) => topic.id === session.topicId)?.name ?? "\u2014";
-    tr.appendChild(DomHelpers.createCell(new Date(session.studiedAt).toLocaleDateString("pt-BR")));
-    tr.appendChild(DomHelpers.createCell(subjectName));
-    tr.appendChild(DomHelpers.createCell(topicName));
-    tr.appendChild(DomHelpers.createCell(this.formatSessionType(session.type)));
-    tr.appendChild(
-      DomHelpers.createCell(
-        null,
-        this.renderSessionProgress(session, data)
-      )
-    );
-    tr.appendChild(
-      DomHelpers.createCell(
-        session.type === StudySessionType.QUESTIONS ? String(session.correctAnswers ?? 0) : "\u2014"
-      )
-    );
     const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
     actions.appendChild(
       DomHelpers.createIconButton("edit", "Editar", {
@@ -3706,24 +4061,43 @@ var SessionsTab = class {
       DomHelpers.createIconButton("delete", "Excluir", {
         dataset: { sessionDeleteId: session.id },
         onClick: async () => {
-          const confirmed = await DomHelpers.confirm({
-            title: "Excluir sess\xE3o",
-            message: "Excluir esta sess\xE3o?",
-            confirmLabel: "Excluir"
-          });
-          if (!confirmed) return;
-          try {
-            await this.deleteStudySessionUseCase.execute({ sessionId: session.id });
-            await this.onUpdate();
-          } catch (error) {
-            DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel excluir a sess\xE3o.");
-          }
+          this.pendingDeleteSessionId = session.id;
+          await this.onUpdate();
         }
       })
     );
-    const actionsCell = DomHelpers.createElement("td");
-    actionsCell.appendChild(actions);
-    tr.appendChild(actionsCell);
+    if (this.pendingDeleteSessionId === session.id) {
+      actions.append(
+        DomHelpers.createButton("Excluir?", {
+          dataset: { sessionConfirmDeleteId: session.id },
+          onClick: async () => {
+            try {
+              await this.deleteStudySessionUseCase.execute({ sessionId: session.id });
+              this.pendingDeleteSessionId = null;
+              await this.onUpdate();
+            } catch (error) {
+              DomHelpers.notifyError(error, "N\xE3o consegui excluir esse registro.");
+            }
+          }
+        }),
+        DomHelpers.createButton("Cancelar", {
+          onClick: async () => {
+            this.pendingDeleteSessionId = null;
+            await this.onUpdate();
+          }
+        })
+      );
+    }
+    const dateCell = DomHelpers.createElement("td", "leif-session-date-cell");
+    const dateContent = DomHelpers.createElement("div", "leif-topic-title-content");
+    const date = DomHelpers.createElement("span");
+    date.textContent = new Date(session.studiedAt).toLocaleDateString("pt-BR");
+    dateContent.append(date, actions);
+    dateCell.appendChild(dateContent);
+    tr.appendChild(dateCell);
+    tr.appendChild(DomHelpers.createCell(this.formatStudyLabel(subjectName, topicName)));
+    tr.appendChild(DomHelpers.createCell(this.formatSessionType(session.type)));
+    tr.appendChild(DomHelpers.createCell(null, this.renderSessionResult(session, data)));
     return tr;
   }
   renderSessionProgress(session, data) {
@@ -3758,7 +4132,7 @@ var SessionsTab = class {
           this.editingSessionId = null;
           await this.onUpdate();
         } catch (error) {
-          DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel salvar.");
+          DomHelpers.notifyError(error, "N\xE3o consegui salvar.");
         }
       }
     });
@@ -3773,25 +4147,21 @@ var SessionsTab = class {
     actions.appendChild(cancelButton);
     const subjectName = data.subjects.find((subject) => subject.id === session.subjectId)?.name ?? "\u2014";
     const topicName = data.topics.find((topic) => topic.id === session.topicId)?.name ?? "\u2014";
+    const resultFields = DomHelpers.createElement("div", "leif-inline-fields");
+    resultFields.append(countInput);
+    if (session.type === StudySessionType.QUESTIONS) {
+      resultFields.append(correctInput);
+    }
+    resultFields.append(actions);
     tr.appendChild(DomHelpers.createCell(new Date(session.studiedAt).toLocaleDateString("pt-BR")));
-    tr.appendChild(DomHelpers.createCell(subjectName));
-    tr.appendChild(DomHelpers.createCell(topicName));
+    tr.appendChild(DomHelpers.createCell(this.formatStudyLabel(subjectName, topicName)));
     tr.appendChild(DomHelpers.createCell(this.formatSessionType(session.type)));
-    tr.appendChild(DomHelpers.createCell(null, countInput));
-    tr.appendChild(
-      DomHelpers.createCell(
-        session.type === StudySessionType.QUESTIONS ? null : "\u2014",
-        session.type === StudySessionType.QUESTIONS ? correctInput : void 0
-      )
-    );
-    const actionsCell = DomHelpers.createElement("td");
-    actionsCell.appendChild(actions);
-    tr.appendChild(actionsCell);
+    tr.appendChild(DomHelpers.createCell(null, resultFields));
     return tr;
   }
-  openCreateSessionModal(data) {
+  renderCreateSessionForm(data) {
     const activeContest = data.contests.find((contest) => contest.id === data.activeContestId);
-    if (!activeContest) return;
+    if (!activeContest) return DomHelpers.createEmptyState("Sem concurso escolhido", "Escolha um concurso antes de registrar.");
     const subjects = data.subjects.filter((subject) => subject.contestId === activeContest.id);
     const form = DomHelpers.createForm(async () => {
       try {
@@ -3799,7 +4169,7 @@ var SessionsTab = class {
         const rawCount = Number(countInput.value);
         const rawCorrect = Number(correctInput.value);
         if (sessionType === StudySessionType.QUESTIONS && (!rawCount || rawCount <= 0)) {
-          throw new ValidationError("Informe a quantidade de quest\xF5es (maior que zero).");
+          throw new ValidationError("Informe uma quantidade de quest\xF5es maior que zero.");
         }
         const pagesOrCount = sessionType === StudySessionType.QUESTIONS ? rawCount : rawCount || void 0;
         const correctAnswers = sessionType === StudySessionType.QUESTIONS ? Math.min(rawCorrect, rawCount) : void 0;
@@ -3815,10 +4185,10 @@ var SessionsTab = class {
           correctAnswers,
           completed: true
         });
-        modal.close();
+        this.isCreatingSession = false;
         await this.onUpdate();
       } catch (error) {
-        DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel registrar a sess\xE3o.");
+        DomHelpers.notifyError(error, "N\xE3o consegui salvar esse registro.");
       }
     });
     const subjectSelect = DomHelpers.createSelect(
@@ -3870,7 +4240,7 @@ var SessionsTab = class {
     typeSelect.addEventListener("change", syncQuestionField);
     syncDependentSelects();
     syncQuestionField();
-    const formGrid = DomHelpers.createElement("div", "leif-form-grid");
+    const formGrid = DomHelpers.createElement("div", "leif-grid leif-grid-2");
     formGrid.append(
       DomHelpers.createLabel("Mat\xE9ria", subjectSelect),
       DomHelpers.createLabel("Tipo", typeSelect),
@@ -3880,18 +4250,42 @@ var SessionsTab = class {
       correctLabel,
       DomHelpers.createLabel("Data", dateInput)
     );
-    form.appendChild(formGrid);
-    const modal = DomHelpers.createModal({
-      title: "Nova sess\xE3o",
-      content: form,
-      onSubmit: () => form.requestSubmit()
-    });
-    modal.open();
+    form.classList.add("leif-card");
+    form.append(
+      DomHelpers.createSectionSubtitle("Novo registro"),
+      formGrid,
+      DomHelpers.createElement("div", "leif-form-actions")
+    );
+    const actions = form.querySelector(".leif-form-actions");
+    actions?.append(
+      DomHelpers.createButton("Cancelar", {
+        onClick: async () => {
+          this.isCreatingSession = false;
+          await this.onUpdate();
+        }
+      }),
+      DomHelpers.createButton("Registrar", {
+        type: "submit",
+        className: "mod-cta"
+      })
+    );
+    return form;
   }
   formatSessionType(type) {
     if (type === StudySessionType.QUESTIONS) return "Quest\xF5es";
     if (type === StudySessionType.VIDEO) return "V\xEDdeo";
     return "PDF";
+  }
+  formatStudyLabel(subjectName, topicName) {
+    return topicName === "\u2014" ? subjectName : `${subjectName} \xB7 ${topicName}`;
+  }
+  renderSessionResult(session, data) {
+    if (session.type === StudySessionType.QUESTIONS) {
+      const result = DomHelpers.createElement("span");
+      result.textContent = `${session.correctAnswers ?? 0}/${session.pagesOrCount ?? 0} acertos`;
+      return result;
+    }
+    return this.renderSessionProgress(session, data);
   }
   getDefaultDateValue() {
     const now = /* @__PURE__ */ new Date();
@@ -3916,6 +4310,24 @@ var DeleteTopicUseCase = class {
       topicIds: subject.topicIds.filter((id) => id !== input.topicId)
     }));
     return topic;
+  }
+};
+
+// src/domain/entities/QuestionNotebook.ts
+var QuestionNotebook = class {
+  constructor(id, name, url, solvedQuestions = 0, correctAnswers = 0, notes) {
+    this.id = id;
+    this.name = name;
+    this.url = url;
+    this.solvedQuestions = solvedQuestions;
+    this.correctAnswers = correctAnswers;
+    this.notes = notes;
+    if (!id?.trim()) throw new ValidationError("QuestionNotebook ID is required");
+    if (!name?.trim()) throw new ValidationError("QuestionNotebook name is required");
+    if (!url?.trim()) throw new ValidationError("QuestionNotebook URL is required");
+    if (solvedQuestions < 0) throw new ValidationError("Solved questions cannot be negative");
+    if (correctAnswers < 0) throw new ValidationError("Correct answers cannot be negative");
+    if (correctAnswers > solvedQuestions) throw new ValidationError("Correct answers cannot exceed solved questions");
   }
 };
 
@@ -3966,6 +4378,8 @@ var TopicsTab = class {
     this.selectedSubjectId = null;
     this.editingTopicId = null;
     this.expandedTopicId = null;
+    this.isCreatingTopic = false;
+    this.pendingDeleteTopicId = null;
     const repositoryFactory = new EntityRepositoryFactory(dataStore);
     this.createTopicUseCase = new CreateTopicUseCase(dataStore, repositoryFactory);
     this.deleteTopicUseCase = new DeleteTopicUseCase(dataStore, repositoryFactory);
@@ -3974,21 +4388,27 @@ var TopicsTab = class {
   }
   async render(container, data) {
     const header = DomHelpers.createElement("div", "leif-section-header");
-    header.appendChild(DomHelpers.createSectionTitle("Assuntos e Quest\xF5es"));
+    header.appendChild(DomHelpers.createSectionTitle("Edital"));
     header.appendChild(
       DomHelpers.createIconButton("add", "Novo assunto", {
-        onClick: () => this.openCreateTopicModal(
-          SubjectPicker.getSelectedSubject(data, this.selectedSubjectId)?.id ?? ""
-        )
+        onClick: async () => {
+          this.isCreatingTopic = true;
+          await this.onUpdate();
+        }
       })
     );
     container.appendChild(header);
+    container.appendChild(
+      DomHelpers.createParagraph(
+        "Transforme o edital em assuntos pequenos e conecte cadernos de quest\xF5es quando fizer sentido."
+      )
+    );
     const subject = SubjectPicker.getSelectedSubject(data, this.selectedSubjectId);
     if (!subject) {
       container.appendChild(
         DomHelpers.createEmptyState(
-          "Nenhuma mat\xE9ria selecionada",
-          "Cadastre mat\xE9rias no concurso ativo."
+          "Sem mat\xE9ria escolhida",
+          "Crie uma mat\xE9ria no Plano para organizar o edital."
         )
       );
       return;
@@ -3999,19 +4419,20 @@ var TopicsTab = class {
         await this.onUpdate();
       })
     );
+    if (this.isCreatingTopic) {
+      container.appendChild(this.renderCreateTopicForm(subject.id));
+    }
     const topics = data.topics.filter((topic) => topic.subjectId === subject.id);
     const card = DomHelpers.createCard(`Assuntos de ${subject.name}`);
     if (topics.length === 0) {
-      card.appendChild(DomHelpers.createParagraph("Nenhum assunto cadastrado."));
+      card.appendChild(DomHelpers.createParagraph("Nenhum assunto cadastrado nessa mat\xE9ria."));
       container.appendChild(card);
       return;
     }
     const { container: tableContainer, tbody } = DomHelpers.createCrudTable([
       "Assunto",
-      "Caderno",
-      "Resolv.",
-      "Acert.",
-      "A\xE7\xF5es"
+      "Quest\xF5es",
+      "Caderno"
     ]);
     topics.forEach((topic) => {
       const isEditing = this.editingTopicId === topic.id;
@@ -4032,17 +4453,13 @@ var TopicsTab = class {
     const tr = DomHelpers.createElement("tr");
     tr.dataset.topicId = topic.id;
     const hasDetails = Boolean(topic.questionNotebook);
-    tr.appendChild(DomHelpers.createCell(topic.name));
-    tr.appendChild(DomHelpers.createCell(null, this.renderNotebookCell(topic)));
-    tr.appendChild(DomHelpers.createCell(String(topic.questionNotebook?.solvedQuestions ?? 0)));
-    tr.appendChild(DomHelpers.createCell(String(topic.questionNotebook?.correctAnswers ?? 0)));
     const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
     actions.appendChild(
       DomHelpers.createIconButton(
         this.expandedTopicId === topic.id ? "collapse" : "expand",
         this.expandedTopicId === topic.id ? "Recolher" : "Expandir",
         {
-          className: `leif-icon-button ${hasDetails ? "" : "leif-expand-button"}`,
+          className: `clickable-icon ${hasDetails ? "" : "leif-expand-button"}`,
           onClick: async () => {
             this.expandedTopicId = this.expandedTopicId === topic.id ? null : topic.id;
             await this.onUpdate();
@@ -4061,24 +4478,41 @@ var TopicsTab = class {
     actions.appendChild(
       DomHelpers.createIconButton("delete", "Excluir", {
         onClick: async () => {
-          const confirmed = await DomHelpers.confirm({
-            title: "Excluir assunto",
-            message: `Excluir "${topic.name}"?`,
-            confirmLabel: "Excluir"
-          });
-          if (!confirmed) return;
-          try {
-            await this.deleteTopicUseCase.execute({ topicId: topic.id });
-            await this.onUpdate();
-          } catch (error) {
-            DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel excluir o assunto.");
-          }
+          this.pendingDeleteTopicId = topic.id;
+          await this.onUpdate();
         }
       })
     );
-    const actionsCell = DomHelpers.createElement("td");
-    actionsCell.appendChild(actions);
-    tr.appendChild(actionsCell);
+    if (this.pendingDeleteTopicId === topic.id) {
+      actions.append(
+        DomHelpers.createButton("Excluir?", {
+          onClick: async () => {
+            try {
+              await this.deleteTopicUseCase.execute({ topicId: topic.id });
+              this.pendingDeleteTopicId = null;
+              await this.onUpdate();
+            } catch (error) {
+              DomHelpers.notifyError(error, "N\xE3o consegui excluir esse assunto.");
+            }
+          }
+        }),
+        DomHelpers.createButton("Cancelar", {
+          onClick: async () => {
+            this.pendingDeleteTopicId = null;
+            await this.onUpdate();
+          }
+        })
+      );
+    }
+    const titleCell = DomHelpers.createElement("td", "leif-topic-title-cell");
+    const titleContent = DomHelpers.createElement("div", "leif-topic-title-content");
+    const title = DomHelpers.createElement("span", "leif-topic-title");
+    title.textContent = topic.name;
+    titleContent.append(title, actions);
+    titleCell.appendChild(titleContent);
+    tr.appendChild(titleCell);
+    tr.appendChild(DomHelpers.createCell(this.formatQuestionProgress(topic)));
+    tr.appendChild(DomHelpers.createCell(null, this.renderNotebookCell(topic)));
     return tr;
   }
   renderNotebookCell(topic) {
@@ -4133,7 +4567,7 @@ var TopicsTab = class {
           this.editingTopicId = null;
           await this.onUpdate();
         } catch (error) {
-          DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel salvar.");
+          DomHelpers.notifyError(error, "N\xE3o consegui salvar.");
         }
       }
     });
@@ -4146,20 +4580,24 @@ var TopicsTab = class {
     const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
     actions.appendChild(saveButton);
     actions.appendChild(cancelButton);
-    tr.appendChild(DomHelpers.createCell(null, nameInput));
-    tr.appendChild(DomHelpers.createCell(null, DomHelpers.createParagraph(topic.questionNotebook?.name ?? "\u2014")));
-    tr.appendChild(DomHelpers.createCell(null, solvedInput));
-    tr.appendChild(DomHelpers.createCell(null, correctInput));
-    const actionsCell = DomHelpers.createElement("td");
-    actionsCell.appendChild(actions);
-    tr.appendChild(actionsCell);
+    const titleCell = DomHelpers.createElement("td", "leif-topic-title-cell");
+    const titleContent = DomHelpers.createElement("div", "leif-topic-title-content");
+    titleContent.append(nameInput, actions);
+    titleCell.appendChild(titleContent);
+    tr.appendChild(titleCell);
+    const questionCell = DomHelpers.createElement("td");
+    const questionFields = DomHelpers.createElement("div", "leif-inline-fields");
+    questionFields.append(solvedInput, correctInput);
+    questionCell.appendChild(questionFields);
+    tr.appendChild(questionCell);
+    tr.appendChild(DomHelpers.createCell(null, DomHelpers.createParagraph(topic.questionNotebook?.name ?? "Sem caderno")));
     return tr;
   }
   renderDetailRow(topic, data) {
     const tr = DomHelpers.createElement("tr");
     tr.className = "leif-detail-row";
     const td = DomHelpers.createElement("td");
-    td.colSpan = 5;
+    td.colSpan = 3;
     const content = DomHelpers.createElement("div", "leif-detail-content");
     const notebookName = DomHelpers.createInput("text", "Caderno", topic.questionNotebook?.name ?? "");
     const notebookUrl = DomHelpers.createInput("url", "URL", topic.questionNotebook?.url ?? "");
@@ -4187,7 +4625,7 @@ var TopicsTab = class {
         });
         await this.onUpdate();
       } catch (error) {
-        DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel vincular caderno.");
+        DomHelpers.notifyError(error, "N\xE3o consegui salvar esse caderno.");
       }
     });
     notebookForm.className = "leif-detail-form";
@@ -4204,7 +4642,7 @@ var TopicsTab = class {
     tr.appendChild(td);
     return tr;
   }
-  openCreateTopicModal(subjectId) {
+  renderCreateTopicForm(subjectId) {
     const nameInput = DomHelpers.createInput("text", "Nome do assunto");
     const form = DomHelpers.createForm(async () => {
       try {
@@ -4213,19 +4651,40 @@ var TopicsTab = class {
           subjectId,
           name: nameInput.value
         });
-        modal.close();
+        this.isCreatingTopic = false;
         await this.onUpdate();
       } catch (error) {
-        DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel criar o assunto.");
+        DomHelpers.notifyError(error, "N\xE3o consegui criar esse assunto.");
       }
     });
-    form.append(DomHelpers.createLabel("Nome", nameInput));
-    const modal = DomHelpers.createModal({
-      title: "Novo assunto",
-      content: form,
-      onSubmit: () => form.requestSubmit()
-    });
-    modal.open();
+    form.classList.add("leif-card");
+    form.append(
+      DomHelpers.createSectionSubtitle("Novo assunto"),
+      DomHelpers.createLabel("Nome", nameInput),
+      DomHelpers.createElement("div", "leif-form-actions")
+    );
+    const actions = form.querySelector(".leif-form-actions");
+    actions?.append(
+      DomHelpers.createButton("Cancelar", {
+        onClick: async () => {
+          this.isCreatingTopic = false;
+          await this.onUpdate();
+        }
+      }),
+      DomHelpers.createButton("Criar", {
+        type: "submit",
+        className: "mod-cta"
+      })
+    );
+    return form;
+  }
+  formatQuestionProgress(topic) {
+    const solved = topic.questionNotebook?.solvedQuestions ?? 0;
+    const correct = topic.questionNotebook?.correctAnswers ?? 0;
+    if (solved === 0) {
+      return "0 resolvidas";
+    }
+    return `${correct}/${solved} acertos`;
   }
 };
 
@@ -4239,14 +4698,14 @@ var WallTab = class {
   async render(container, data) {
     container.appendChild(DomHelpers.createSectionTitle("Mural"));
     container.appendChild(
-      DomHelpers.createParagraph("Centralize os links e notas principais do concurso.")
+      DomHelpers.createParagraph("Guarde links oficiais e anota\xE7\xF5es \xFAteis do concurso ativo.")
     );
     const activeContest = data.contests.find((contest) => contest.id === data.activeContestId) ?? null;
     if (!activeContest) {
       container.appendChild(
         DomHelpers.createEmptyState(
-          "Nenhum concurso ativo",
-          "Selecione um concurso para editar o mural."
+          "Sem concurso escolhido",
+          "Escolha um concurso para guardar links e notas."
         )
       );
       return;
@@ -4279,6 +4738,8 @@ var WallTab = class {
       "Notas do concurso",
       activeContest.wall.notes ?? ""
     );
+    notes.rows = 8;
+    notes.classList.add("leif-wall-notes");
     const form = DomHelpers.createForm(async () => {
       try {
         const noticeLink = noticeUrl.value ? [
@@ -4306,28 +4767,46 @@ var WallTab = class {
         });
         await this.onUpdate();
       } catch (error) {
-        DomHelpers.notifyError(error, "N\xE3o foi poss\xEDvel salvar o mural.");
+        DomHelpers.notifyError(error, "N\xE3o consegui salvar o mural.");
       }
     });
-    form.classList.add("leif-card");
+    form.classList.add("leif-wall-form");
+    const notesCard = DomHelpers.createElement("section", "leif-wall-card leif-wall-primary");
+    notesCard.append(
+      DomHelpers.createSectionSubtitle("Notas"),
+      DomHelpers.createParagraph("Use este espa\xE7o para pesos, datas, cortes, estrat\xE9gia e qualquer lembrete que voc\xEA queira revisar sem procurar em outro lugar."),
+      DomHelpers.createStackedLabel("Notas", notes)
+    );
+    const noticeCard = DomHelpers.createElement("section", "leif-wall-card");
+    noticeCard.append(
+      DomHelpers.createSectionSubtitle("Edital"),
+      DomHelpers.createParagraph("Guarde o link do edital ou da p\xE1gina oficial do concurso."),
+      DomHelpers.createLabel("Nome", noticeLabel),
+      DomHelpers.createLabel("Link", noticeUrl)
+    );
+    const examCard = DomHelpers.createElement("section", "leif-wall-card");
+    examCard.append(
+      DomHelpers.createSectionSubtitle("Prova"),
+      DomHelpers.createParagraph("Deixe aqui a prova anterior, o espelho ou outro material de refer\xEAncia."),
+      DomHelpers.createLabel("Nome", examLabel),
+      DomHelpers.createLabel("Link", examUrl)
+    );
+    const referenceGrid = DomHelpers.createElement("div", "leif-wall-reference-grid");
+    referenceGrid.append(noticeCard, examCard);
+    form.append(notesCard, referenceGrid);
     form.append(
-      DomHelpers.createLabel("Edital", noticeLabel),
-      DomHelpers.createLabel("Link do edital", noticeUrl),
-      DomHelpers.createLabel("Prova", examLabel),
-      DomHelpers.createLabel("Link da prova", examUrl),
-      DomHelpers.createLabel("Notas", notes),
       DomHelpers.createButton("Salvar mural", {
         type: "submit",
-        className: "leif-primary-button"
+        className: "mod-cta leif-wall-save"
       })
     );
     return form;
   }
   renderSnapshotsCard(activeContest, data) {
-    const card = DomHelpers.createCard("Snapshots das mat\xE9rias");
+    const card = DomHelpers.createCard("Resumo das mat\xE9rias");
     if (activeContest.wall.subjectSnapshots.length === 0) {
       card.appendChild(
-        DomHelpers.createParagraph("Nenhum snapshot de mat\xE9ria cadastrado.")
+        DomHelpers.createParagraph("Ainda n\xE3o h\xE1 resumo salvo para as mat\xE9rias.")
       );
     } else {
       const subjectMap = new Map(data.subjects.map((s) => [s.id, s.name]));
@@ -4349,7 +4828,7 @@ var WallTab = class {
 };
 
 // src/ui/view/LeifView.ts
-var LeifView = class extends import_obsidian4.ItemView {
+var LeifView = class extends import_obsidian5.ItemView {
   constructor(leaf, dataStore) {
     super(leaf);
     this.dataStore = dataStore;
@@ -4408,7 +4887,7 @@ var LeifView = class extends import_obsidian4.ItemView {
     const titleGroup = DomHelpers.createElement("div", "leif-title-group");
     titleGroup.append(
       DomHelpers.createHeading("Leif"),
-      DomHelpers.createParagraph("Planejamento e acompanhamento dos estudos.")
+      DomHelpers.createParagraph("Seu plano de estudos dentro do Obsidian.")
     );
     this.headerActions = DomHelpers.createElement("div", "leif-header-actions");
     header.append(titleGroup, this.headerActions);
@@ -4450,7 +4929,7 @@ var LeifView = class extends import_obsidian4.ItemView {
     const activeContest = data.contests.find((contest) => contest.id === data.activeContestId);
     this.headerActions.innerHTML = "";
     this.headerActions.appendChild(
-      DomHelpers.createBadge(activeContest ? `Concurso ativo: ${activeContest.name}` : "Nenhum concurso ativo")
+      DomHelpers.createBadge(activeContest ? `Estudando: ${activeContest.name}` : "Sem concurso escolhido")
     );
   }
   /**
@@ -4558,7 +5037,7 @@ async function openLeifView(plugin) {
 }
 
 // src/main.ts
-var LeifPlugin = class extends import_obsidian5.Plugin {
+var LeifPlugin = class extends import_obsidian6.Plugin {
   async onload() {
     this.dataStore = new PluginDataStore(new ObsidianStorageAdapter(this));
     await this.dataStore.load();

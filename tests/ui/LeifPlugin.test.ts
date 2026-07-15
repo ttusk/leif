@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 
 import LeifPlugin from "@/main";
-import { App } from "../mocks/obsidian";
+import { App, Plugin } from "../mocks/obsidian";
 
 describe("LeifPlugin", () => {
   it("does not register an Obsidian settings tab", async () => {
@@ -12,6 +12,6 @@ describe("LeifPlugin", () => {
 
     await plugin.onload();
 
-    expect(plugin.settingTabs).toHaveLength(0);
+    expect((plugin as unknown as Plugin).settingTabs).toHaveLength(0);
   });
 });

@@ -28,6 +28,8 @@ export class SessionsTab {
   private readonly getActiveCycleSnapshotUseCase: GetActiveCycleSnapshotUseCase;
 
   private editingSessionId: string | null = null;
+  private isCreatingSession = false;
+  private pendingDeleteSessionId: string | null = null;
 
   constructor(
     private readonly dataStore: PluginDataStore,
@@ -45,15 +47,18 @@ export class SessionsTab {
 
   async render(container: HTMLElement, data: LeifPluginData): Promise<void> {
     const header = DomHelpers.createElement("div", "leif-section-header");
-    header.appendChild(DomHelpers.createSectionTitle("Sessões"));
+    header.appendChild(DomHelpers.createSectionTitle("Registros"));
     header.appendChild(
       DomHelpers.createIconButton("add", "Nova sessão", {
-        onClick: () => this.openCreateSessionModal(data)
+        onClick: async () => {
+          this.isCreatingSession = true;
+          await this.onUpdate();
+        }
       })
     );
     container.appendChild(header);
     container.appendChild(
-      DomHelpers.createParagraph("Registre sessões e gerencie o ciclo de estudos.")
+      DomHelpers.createParagraph("Anote o que você estudou. O Leif cuida do resto.")
     );
 
     const activeContest =
@@ -62,8 +67,8 @@ export class SessionsTab {
     if (!activeContest) {
       container.appendChild(
         DomHelpers.createEmptyState(
-          "Nenhum concurso ativo",
-          "Selecione um concurso para registrar sessões."
+          "Sem concurso escolhido",
+          "Escolha um concurso antes de registrar estudos."
         )
       );
       return;
@@ -80,7 +85,7 @@ export class SessionsTab {
     const recommendedItemId = snapshot.currentItemId ?? snapshot.nextItemId;
     const cycleContext = DomHelpers.createElement("div", "leif-cycle-context");
     const nowLabel = DomHelpers.createElement("span", "leif-cycle-context-label");
-    nowLabel.textContent = "Matéria recomendada: ";
+    nowLabel.textContent = "Agora: ";
     const nowValue = DomHelpers.createElement("span", "leif-cycle-context-value");
     nowValue.textContent = recommendedSubject?.name ?? "—";
     cycleContext.appendChild(nowLabel);
@@ -92,7 +97,7 @@ export class SessionsTab {
     }
     if (afterRecommendedSubject) {
       const nextInfo = DomHelpers.createElement("span", "leif-cycle-context-next");
-      nextInfo.textContent = `Depois: ${afterRecommendedSubject.name}`;
+      nextInfo.textContent = `Depois vem ${afterRecommendedSubject.name}`;
       cycleContext.appendChild(nextInfo);
     }
     container.appendChild(cycleContext);
@@ -100,21 +105,25 @@ export class SessionsTab {
     // Cycle action button
     const cycleAction = DomHelpers.createElement("div", "leif-cycle-action");
     cycleAction.appendChild(
-      DomHelpers.createButton("Finalizar ciclo atual", {
-        className: "leif-primary-button",
+      DomHelpers.createButton("Marcar como estudado", {
+        className: "mod-cta",
         icon: "refresh-cw",
         onClick: async () => {
           try {
             const result = await this.advanceCycleUseCase.execute();
-            new Notice(`Ciclo finalizado! Matéria recomendada: ${result.currentSubject?.name ?? "—"}`);
+            new Notice(`Pronto. Agora vem ${result.currentSubject?.name ?? "—"}.`);
             await this.onUpdate();
           } catch (error) {
-            DomHelpers.notifyError(error, "Não foi possível finalizar o ciclo.");
+            DomHelpers.notifyError(error, "Não consegui avançar o plano.");
           }
         }
       })
     );
     container.appendChild(cycleAction);
+
+    if (this.isCreatingSession) {
+      container.appendChild(this.renderCreateSessionForm(data));
+    }
 
     const subjects = data.subjects.filter((subject) => subject.contestId === activeContest.id);
 
@@ -130,12 +139,9 @@ export class SessionsTab {
     } else {
       const { container: tableContainer, tbody } = DomHelpers.createCrudTable([
         "Data",
-        "Matéria",
-        "Assunto",
+        "Estudo",
         "Tipo",
-        "Progresso",
-        "Acertos",
-        "Ações"
+        "Resultado"
       ]);
 
       sessions.forEach((session) => {
@@ -161,22 +167,6 @@ export class SessionsTab {
     const topicName =
       data.topics.find((topic) => topic.id === session.topicId)?.name ?? "—";
 
-    tr.appendChild(DomHelpers.createCell(new Date(session.studiedAt).toLocaleDateString("pt-BR")));
-    tr.appendChild(DomHelpers.createCell(subjectName));
-    tr.appendChild(DomHelpers.createCell(topicName));
-    tr.appendChild(DomHelpers.createCell(this.formatSessionType(session.type)));
-    tr.appendChild(
-      DomHelpers.createCell(
-        null,
-        this.renderSessionProgress(session, data)
-      )
-    );
-    tr.appendChild(
-      DomHelpers.createCell(
-        session.type === StudySessionType.QUESTIONS ? String(session.correctAnswers ?? 0) : "—"
-      )
-    );
-
     const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
     actions.appendChild(
       DomHelpers.createIconButton("edit", "Editar", {
@@ -190,25 +180,46 @@ export class SessionsTab {
       DomHelpers.createIconButton("delete", "Excluir", {
         dataset: { sessionDeleteId: session.id },
         onClick: async () => {
-          const confirmed = await DomHelpers.confirm({
-            title: "Excluir sessão",
-            message: "Excluir esta sessão?",
-            confirmLabel: "Excluir"
-          });
-          if (!confirmed) return;
-          try {
-            await this.deleteStudySessionUseCase.execute({ sessionId: session.id });
-            await this.onUpdate();
-          } catch (error) {
-            DomHelpers.notifyError(error, "Não foi possível excluir a sessão.");
-          }
+          this.pendingDeleteSessionId = session.id;
+          await this.onUpdate();
         }
       })
     );
 
-    const actionsCell = DomHelpers.createElement("td");
-    actionsCell.appendChild(actions);
-    tr.appendChild(actionsCell);
+    if (this.pendingDeleteSessionId === session.id) {
+      actions.append(
+        DomHelpers.createButton("Excluir?", {
+          dataset: { sessionConfirmDeleteId: session.id },
+          onClick: async () => {
+            try {
+              await this.deleteStudySessionUseCase.execute({ sessionId: session.id });
+              this.pendingDeleteSessionId = null;
+              await this.onUpdate();
+            } catch (error) {
+              DomHelpers.notifyError(error, "Não consegui excluir esse registro.");
+            }
+          }
+        }),
+        DomHelpers.createButton("Cancelar", {
+          onClick: async () => {
+            this.pendingDeleteSessionId = null;
+            await this.onUpdate();
+          }
+        })
+      );
+    }
+
+    const dateCell = DomHelpers.createElement("td", "leif-session-date-cell");
+    const dateContent = DomHelpers.createElement("div", "leif-topic-title-content");
+    const date = DomHelpers.createElement("span");
+    date.textContent = new Date(session.studiedAt).toLocaleDateString("pt-BR");
+    dateContent.append(date, actions);
+    dateCell.appendChild(dateContent);
+
+    tr.appendChild(dateCell);
+    tr.appendChild(DomHelpers.createCell(this.formatStudyLabel(subjectName, topicName)));
+    tr.appendChild(DomHelpers.createCell(this.formatSessionType(session.type)));
+    tr.appendChild(DomHelpers.createCell(null, this.renderSessionResult(session, data)));
 
     return tr;
   }
@@ -251,7 +262,7 @@ export class SessionsTab {
           this.editingSessionId = null;
           await this.onUpdate();
         } catch (error) {
-          DomHelpers.notifyError(error, "Não foi possível salvar.");
+          DomHelpers.notifyError(error, "Não consegui salvar.");
         }
       }
     });
@@ -271,29 +282,24 @@ export class SessionsTab {
       data.subjects.find((subject) => subject.id === session.subjectId)?.name ?? "—";
     const topicName =
       data.topics.find((topic) => topic.id === session.topicId)?.name ?? "—";
+    const resultFields = DomHelpers.createElement("div", "leif-inline-fields");
+    resultFields.append(countInput);
+    if (session.type === StudySessionType.QUESTIONS) {
+      resultFields.append(correctInput);
+    }
+    resultFields.append(actions);
 
     tr.appendChild(DomHelpers.createCell(new Date(session.studiedAt).toLocaleDateString("pt-BR")));
-    tr.appendChild(DomHelpers.createCell(subjectName));
-    tr.appendChild(DomHelpers.createCell(topicName));
+    tr.appendChild(DomHelpers.createCell(this.formatStudyLabel(subjectName, topicName)));
     tr.appendChild(DomHelpers.createCell(this.formatSessionType(session.type)));
-    tr.appendChild(DomHelpers.createCell(null, countInput));
-    tr.appendChild(
-      DomHelpers.createCell(
-        session.type === StudySessionType.QUESTIONS ? null : "—",
-        session.type === StudySessionType.QUESTIONS ? correctInput : undefined
-      )
-    );
-
-    const actionsCell = DomHelpers.createElement("td");
-    actionsCell.appendChild(actions);
-    tr.appendChild(actionsCell);
+    tr.appendChild(DomHelpers.createCell(null, resultFields));
 
     return tr;
   }
 
-  private openCreateSessionModal(data: LeifPluginData): void {
+  private renderCreateSessionForm(data: LeifPluginData): HTMLElement {
     const activeContest = data.contests.find((contest) => contest.id === data.activeContestId);
-    if (!activeContest) return;
+    if (!activeContest) return DomHelpers.createEmptyState("Sem concurso escolhido", "Escolha um concurso antes de registrar.");
 
     const subjects = data.subjects.filter((subject) => subject.contestId === activeContest.id);
 
@@ -304,7 +310,7 @@ export class SessionsTab {
         const rawCorrect = Number(correctInput.value);
 
         if (sessionType === StudySessionType.QUESTIONS && (!rawCount || rawCount <= 0)) {
-          throw new ValidationError("Informe a quantidade de questões (maior que zero).");
+          throw new ValidationError("Informe uma quantidade de questões maior que zero.");
         }
 
         const pagesOrCount = sessionType === StudySessionType.QUESTIONS ? rawCount : rawCount || undefined;
@@ -323,10 +329,10 @@ export class SessionsTab {
           correctAnswers,
           completed: true
         });
-        modal.close();
+        this.isCreatingSession = false;
         await this.onUpdate();
       } catch (error) {
-        DomHelpers.notifyError(error, "Não foi possível registrar a sessão.");
+        DomHelpers.notifyError(error, "Não consegui salvar esse registro.");
       }
     });
 
@@ -393,7 +399,7 @@ export class SessionsTab {
     syncDependentSelects();
     syncQuestionField();
 
-    const formGrid = DomHelpers.createElement("div", "leif-form-grid");
+    const formGrid = DomHelpers.createElement("div", "leif-grid leif-grid-2");
     formGrid.append(
       DomHelpers.createLabel("Matéria", subjectSelect),
       DomHelpers.createLabel("Tipo", typeSelect),
@@ -403,21 +409,48 @@ export class SessionsTab {
       correctLabel,
       DomHelpers.createLabel("Data", dateInput)
     );
-    form.appendChild(formGrid);
+    form.classList.add("leif-card");
+    form.append(
+      DomHelpers.createSectionSubtitle("Novo registro"),
+      formGrid,
+      DomHelpers.createElement("div", "leif-form-actions")
+    );
 
-    const modal = DomHelpers.createModal({
-      title: "Nova sessão",
-      content: form,
-      onSubmit: () => form.requestSubmit()
-    });
+    const actions = form.querySelector(".leif-form-actions");
+    actions?.append(
+      DomHelpers.createButton("Cancelar", {
+        onClick: async () => {
+          this.isCreatingSession = false;
+          await this.onUpdate();
+        }
+      }),
+      DomHelpers.createButton("Registrar", {
+        type: "submit",
+        className: "mod-cta"
+      })
+    );
 
-    modal.open();
+    return form;
   }
 
   private formatSessionType(type: StudySessionType): string {
     if (type === StudySessionType.QUESTIONS) return "Questões";
     if (type === StudySessionType.VIDEO) return "Vídeo";
     return "PDF";
+  }
+
+  private formatStudyLabel(subjectName: string, topicName: string): string {
+    return topicName === "—" ? subjectName : `${subjectName} · ${topicName}`;
+  }
+
+  private renderSessionResult(session: StudySession, data: LeifPluginData): HTMLElement {
+    if (session.type === StudySessionType.QUESTIONS) {
+      const result = DomHelpers.createElement("span");
+      result.textContent = `${session.correctAnswers ?? 0}/${session.pagesOrCount ?? 0} acertos`;
+      return result;
+    }
+
+    return this.renderSessionProgress(session, data);
   }
 
   private getDefaultDateValue(): string {

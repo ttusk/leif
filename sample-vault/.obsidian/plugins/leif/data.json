@@ -1,5 +1,4 @@
 {
-  "version": 1,
   "schemaVersion": 1,
   "activeContestId": "tce-sp-2026",
   "contests": [
@@ -7,9 +6,10 @@
       "id": "tce-sp-2026",
       "name": "TCE-SP Auditor 2026",
       "subjectIds": [
-        "tce-constitutional",
         "tce-portuguese",
-        "tce-external-control"
+        "tce-constitutional",
+        "tce-external-control",
+        "tce-logic"
       ],
       "wall": {
         "noticeLinks": [
@@ -29,11 +29,13 @@
         "subjectSnapshots": [
           {
             "subjectId": "tce-portuguese",
-            "weight": 5,
+            "weight": 9,
             "score": 8,
             "targetItems": [
               "tce-portuguese-item-1",
-              "tce-portuguese-item-2"
+              "tce-portuguese-item-2",
+              "tce-portuguese-item-3",
+              "tce-portuguese-item-4"
             ]
           },
           {
@@ -53,9 +55,19 @@
               "tce-external-control-item-1",
               "tce-external-control-item-2"
             ]
+          },
+          {
+            "subjectId": "tce-logic",
+            "weight": 4,
+            "score": 6.5,
+            "targetItems": [
+              "tce-logic-item-1",
+              "tce-logic-item-2",
+              "tce-logic-item-3"
+            ]
           }
         ],
-        "notes": "Priorizar Português, Constitucional e Controle Externo. Meta: 80 questões por dia."
+        "notes": "Priorizar Português, Constitucional e Controle Externo. Meta: 80 questões por dia.\n\nCheck-list manual:\n- revisar erros de Português toda sexta;\n- manter Controle Externo no ciclo mesmo quando o rendimento cair;\n- deixar Raciocínio Lógico pausado até fechar a primeira volta."
       }
     },
     {
@@ -191,33 +203,38 @@
       "id": "tce-portuguese",
       "contestId": "tce-sp-2026",
       "name": "Português",
-      "order": 2,
+      "order": 1,
       "isActive": true,
       "plannedStudyMinutes": 90,
+      "currentStage": "Revisão por questões",
       "itemIds": [
         "tce-portuguese-item-1",
-        "tce-portuguese-item-2"
+        "tce-portuguese-item-2",
+        "tce-portuguese-item-3",
+        "tce-portuguese-item-4"
       ],
       "topicIds": [
         "tce-portuguese-interpretation",
-        "tce-portuguese-syntax"
+        "tce-portuguese-syntax",
+        "tce-portuguese-crase",
+        "tce-portuguese-punctuation"
       ]
     },
     {
       "id": "tce-constitutional",
       "contestId": "tce-sp-2026",
       "name": "Direito Constitucional",
-      "order": 1,
+      "order": 2,
       "isActive": true,
       "plannedStudyMinutes": 100,
+      "currentStage": "Base teórica",
       "itemIds": [
         "tce-constitutional-item-1",
         "tce-constitutional-item-2"
       ],
       "topicIds": [
         "tce-constitutional-rights",
-        "tce-constitutional-state",
-        "tce-constitutional-topic-1781262485365"
+        "tce-constitutional-state"
       ]
     },
     {
@@ -227,6 +244,7 @@
       "order": 3,
       "isActive": true,
       "plannedStudyMinutes": 80,
+      "currentStage": "Caderno de erros",
       "itemIds": [
         "tce-external-control-item-1",
         "tce-external-control-item-2"
@@ -237,12 +255,32 @@
       ]
     },
     {
+      "id": "tce-logic",
+      "contestId": "tce-sp-2026",
+      "name": "Raciocínio Lógico",
+      "order": 4,
+      "isActive": false,
+      "plannedStudyMinutes": 45,
+      "currentStage": "Pausada até fechar Português",
+      "itemIds": [
+        "tce-logic-item-1",
+        "tce-logic-item-2",
+        "tce-logic-item-3"
+      ],
+      "topicIds": [
+        "tce-logic-propositions",
+        "tce-logic-diagrams",
+        "tce-logic-sequences"
+      ]
+    },
+    {
       "id": "sefaz-tax-law",
       "contestId": "sefaz-sp-2026",
       "name": "Legislação Tributária",
       "order": 1,
       "isActive": true,
       "plannedStudyMinutes": 120,
+      "currentStage": "Base",
       "itemIds": [
         "sefaz-tax-law-item-1",
         "sefaz-tax-law-item-2"
@@ -259,6 +297,7 @@
       "order": 2,
       "isActive": true,
       "plannedStudyMinutes": 90,
+      "currentStage": "Base",
       "itemIds": [
         "sefaz-accounting-item-1",
         "sefaz-accounting-item-2"
@@ -275,6 +314,7 @@
       "order": 3,
       "isActive": true,
       "plannedStudyMinutes": 70,
+      "currentStage": "Base",
       "itemIds": [
         "sefaz-finance-item-1",
         "sefaz-finance-item-2"
@@ -291,6 +331,7 @@
       "order": 1,
       "isActive": true,
       "plannedStudyMinutes": 100,
+      "currentStage": "Base",
       "itemIds": [
         "trt-labor-law-item-1",
         "trt-labor-law-item-2"
@@ -307,6 +348,7 @@
       "order": 2,
       "isActive": true,
       "plannedStudyMinutes": 90,
+      "currentStage": "Base",
       "itemIds": [
         "trt-labor-procedure-item-1",
         "trt-labor-procedure-item-2"
@@ -323,6 +365,7 @@
       "order": 3,
       "isActive": true,
       "plannedStudyMinutes": 70,
+      "currentStage": "Base",
       "itemIds": [
         "trt-portuguese-item-1",
         "trt-portuguese-item-2"
@@ -358,6 +401,32 @@
         "url": "https://qconcursos.example.com/tce-sintaxe",
         "solvedQuestions": 35,
         "correctAnswers": 30
+      }
+    },
+    {
+      "id": "tce-portuguese-crase",
+      "subjectId": "tce-portuguese",
+      "name": "Uso da crase",
+      "resourceReferences": [],
+      "questionNotebook": {
+        "id": "tce-portuguese-crase-notebook",
+        "name": "Tec - Crase",
+        "url": "https://tec.example.com/tce-crase",
+        "solvedQuestions": 28,
+        "correctAnswers": 22
+      }
+    },
+    {
+      "id": "tce-portuguese-punctuation",
+      "subjectId": "tce-portuguese",
+      "name": "Pontuação e sentido",
+      "resourceReferences": [],
+      "questionNotebook": {
+        "id": "tce-portuguese-punctuation-notebook",
+        "name": "QConcursos - Pontuação TCE",
+        "url": "https://qconcursos.example.com/tce-pontuacao",
+        "solvedQuestions": 30,
+        "correctAnswers": 26
       }
     },
     {
@@ -410,6 +479,45 @@
         "url": "https://estrategia.example.com/auditoria-tce",
         "solvedQuestions": 18,
         "correctAnswers": 14
+      }
+    },
+    {
+      "id": "tce-logic-propositions",
+      "subjectId": "tce-logic",
+      "name": "Conectivos e tabelas-verdade",
+      "resourceReferences": [],
+      "questionNotebook": {
+        "id": "tce-logic-propositions-notebook",
+        "name": "Tec - Lógica TCE",
+        "url": "https://tec.example.com/logica-tce",
+        "solvedQuestions": 0,
+        "correctAnswers": 0
+      }
+    },
+    {
+      "id": "tce-logic-diagrams",
+      "subjectId": "tce-logic",
+      "name": "Diagramas lógicos",
+      "resourceReferences": [],
+      "questionNotebook": {
+        "id": "tce-logic-diagrams-notebook",
+        "name": "QConcursos - Diagramas",
+        "url": "https://qconcursos.example.com/diagramas-logicos",
+        "solvedQuestions": 0,
+        "correctAnswers": 0
+      }
+    },
+    {
+      "id": "tce-logic-sequences",
+      "subjectId": "tce-logic",
+      "name": "Sequências numéricas",
+      "resourceReferences": [],
+      "questionNotebook": {
+        "id": "tce-logic-sequences-notebook",
+        "name": "Estratégia - Sequências",
+        "url": "https://estrategia.example.com/sequencias",
+        "solvedQuestions": 0,
+        "correctAnswers": 0
       }
     },
     {
@@ -567,12 +675,6 @@
         "solvedQuestions": 20,
         "correctAnswers": 16
       }
-    },
-    {
-      "id": "tce-constitutional-topic-1781262485365",
-      "subjectId": "tce-constitutional",
-      "name": "Teste",
-      "resourceReferences": []
     }
   ],
   "studyItems": [
@@ -583,7 +685,29 @@
       "order": 1,
       "weight": 3,
       "questionCount": 60,
-      "resourceReferences": [],
+      "resourceReferences": [
+        {
+          "id": "tce-portuguese-resource-1-pdf",
+          "title": "Apostila: Interpretação de textos",
+          "type": "pdf",
+          "url": "https://materiais.example.com/tce-portuguese/interpretacao-de-textos.pdf",
+          "notes": "Material principal para leitura e marcações."
+        },
+        {
+          "id": "tce-portuguese-resource-1-questions",
+          "title": "Lista de questões: Interpretação de textos",
+          "type": "link",
+          "url": "https://questoes.example.com/tce-portuguese/interpretacao-de-textos",
+          "notes": "Use depois da primeira leitura."
+        },
+        {
+          "id": "tce-portuguese-resource-1-video",
+          "title": "Aula rápida: Interpretação de textos",
+          "type": "video",
+          "url": "https://videos.example.com/tce-portuguese/interpretacao-de-textos",
+          "notes": "Revisão visual para destravar o assunto."
+        }
+      ],
       "totalPages": 110
     },
     {
@@ -593,8 +717,80 @@
       "order": 2,
       "weight": 2,
       "questionCount": 45,
-      "resourceReferences": [],
+      "resourceReferences": [
+        {
+          "id": "tce-portuguese-resource-2-pdf",
+          "title": "Apostila: Sintaxe",
+          "type": "pdf",
+          "url": "https://materiais.example.com/tce-portuguese/sintaxe.pdf",
+          "notes": "Material principal para leitura e marcações."
+        },
+        {
+          "id": "tce-portuguese-resource-2-questions",
+          "title": "Lista de questões: Sintaxe",
+          "type": "link",
+          "url": "https://questoes.example.com/tce-portuguese/sintaxe",
+          "notes": "Use depois da primeira leitura."
+        }
+      ],
       "totalPages": 85
+    },
+    {
+      "id": "tce-portuguese-item-3",
+      "subjectId": "tce-portuguese",
+      "title": "Crase",
+      "order": 3,
+      "weight": 2,
+      "questionCount": 32,
+      "resourceReferences": [
+        {
+          "id": "tce-portuguese-resource-3-pdf",
+          "title": "Apostila: Crase",
+          "type": "pdf",
+          "url": "https://materiais.example.com/tce-portuguese/crase.pdf",
+          "notes": "Material principal para leitura e marcações."
+        },
+        {
+          "id": "tce-portuguese-resource-3-questions",
+          "title": "Lista de questões: Crase",
+          "type": "link",
+          "url": "https://questoes.example.com/tce-portuguese/crase",
+          "notes": "Use depois da primeira leitura."
+        },
+        {
+          "id": "tce-portuguese-resource-3-video",
+          "title": "Aula rápida: Crase",
+          "type": "video",
+          "url": "https://videos.example.com/tce-portuguese/crase",
+          "notes": "Revisão visual para destravar o assunto."
+        }
+      ],
+      "totalPages": 48
+    },
+    {
+      "id": "tce-portuguese-item-4",
+      "subjectId": "tce-portuguese",
+      "title": "Pontuação",
+      "order": 4,
+      "weight": 2,
+      "questionCount": 38,
+      "resourceReferences": [
+        {
+          "id": "tce-portuguese-resource-4-pdf",
+          "title": "Apostila: Pontuação",
+          "type": "pdf",
+          "url": "https://materiais.example.com/tce-portuguese/pontuacao.pdf",
+          "notes": "Material principal para leitura e marcações."
+        },
+        {
+          "id": "tce-portuguese-resource-4-questions",
+          "title": "Lista de questões: Pontuação",
+          "type": "link",
+          "url": "https://questoes.example.com/tce-portuguese/pontuacao",
+          "notes": "Use depois da primeira leitura."
+        }
+      ],
+      "totalPages": 58
     },
     {
       "id": "tce-constitutional-item-1",
@@ -603,7 +799,29 @@
       "order": 1,
       "weight": 3,
       "questionCount": 50,
-      "resourceReferences": [],
+      "resourceReferences": [
+        {
+          "id": "tce-constitutional-resource-1-pdf",
+          "title": "Apostila: Direitos fundamentais",
+          "type": "pdf",
+          "url": "https://materiais.example.com/tce-constitutional/direitos-fundamentais.pdf",
+          "notes": "Material principal para leitura e marcações."
+        },
+        {
+          "id": "tce-constitutional-resource-1-questions",
+          "title": "Lista de questões: Direitos fundamentais",
+          "type": "link",
+          "url": "https://questoes.example.com/tce-constitutional/direitos-fundamentais",
+          "notes": "Use depois da primeira leitura."
+        },
+        {
+          "id": "tce-constitutional-resource-1-video",
+          "title": "Aula rápida: Direitos fundamentais",
+          "type": "video",
+          "url": "https://videos.example.com/tce-constitutional/direitos-fundamentais",
+          "notes": "Revisão visual para destravar o assunto."
+        }
+      ],
       "totalPages": 95
     },
     {
@@ -613,7 +831,22 @@
       "order": 2,
       "weight": 2,
       "questionCount": 35,
-      "resourceReferences": [],
+      "resourceReferences": [
+        {
+          "id": "tce-constitutional-resource-2-pdf",
+          "title": "Apostila: Organização do Estado",
+          "type": "pdf",
+          "url": "https://materiais.example.com/tce-constitutional/organizacao-do-estado.pdf",
+          "notes": "Material principal para leitura e marcações."
+        },
+        {
+          "id": "tce-constitutional-resource-2-questions",
+          "title": "Lista de questões: Organização do Estado",
+          "type": "link",
+          "url": "https://questoes.example.com/tce-constitutional/organizacao-do-estado",
+          "notes": "Use depois da primeira leitura."
+        }
+      ],
       "totalPages": 70
     },
     {
@@ -623,7 +856,29 @@
       "order": 1,
       "weight": 3,
       "questionCount": 45,
-      "resourceReferences": [],
+      "resourceReferences": [
+        {
+          "id": "tce-external-control-resource-1-pdf",
+          "title": "Apostila: Tribunais de Contas",
+          "type": "pdf",
+          "url": "https://materiais.example.com/tce-external-control/tribunais-de-contas.pdf",
+          "notes": "Material principal para leitura e marcações."
+        },
+        {
+          "id": "tce-external-control-resource-1-questions",
+          "title": "Lista de questões: Tribunais de Contas",
+          "type": "link",
+          "url": "https://questoes.example.com/tce-external-control/tribunais-de-contas",
+          "notes": "Use depois da primeira leitura."
+        },
+        {
+          "id": "tce-external-control-resource-1-video",
+          "title": "Aula rápida: Tribunais de Contas",
+          "type": "video",
+          "url": "https://videos.example.com/tce-external-control/tribunais-de-contas",
+          "notes": "Revisão visual para destravar o assunto."
+        }
+      ],
       "totalPages": 90
     },
     {
@@ -633,8 +888,112 @@
       "order": 2,
       "weight": 2,
       "questionCount": 30,
-      "resourceReferences": [],
+      "resourceReferences": [
+        {
+          "id": "tce-external-control-resource-2-pdf",
+          "title": "Apostila: Fiscalização contábil",
+          "type": "pdf",
+          "url": "https://materiais.example.com/tce-external-control/fiscalizacao-contabil.pdf",
+          "notes": "Material principal para leitura e marcações."
+        },
+        {
+          "id": "tce-external-control-resource-2-questions",
+          "title": "Lista de questões: Fiscalização contábil",
+          "type": "link",
+          "url": "https://questoes.example.com/tce-external-control/fiscalizacao-contabil",
+          "notes": "Use depois da primeira leitura."
+        }
+      ],
       "totalPages": 65
+    },
+    {
+      "id": "tce-logic-item-1",
+      "subjectId": "tce-logic",
+      "title": "Proposições lógicas",
+      "order": 1,
+      "weight": 2,
+      "questionCount": 30,
+      "resourceReferences": [
+        {
+          "id": "tce-logic-resource-1-pdf",
+          "title": "Apostila: Proposições lógicas",
+          "type": "pdf",
+          "url": "https://materiais.example.com/tce-logic/proposicoes-logicas.pdf",
+          "notes": "Material principal para leitura e marcações."
+        },
+        {
+          "id": "tce-logic-resource-1-questions",
+          "title": "Lista de questões: Proposições lógicas",
+          "type": "link",
+          "url": "https://questoes.example.com/tce-logic/proposicoes-logicas",
+          "notes": "Use depois da primeira leitura."
+        },
+        {
+          "id": "tce-logic-resource-1-video",
+          "title": "Aula rápida: Proposições lógicas",
+          "type": "video",
+          "url": "https://videos.example.com/tce-logic/proposicoes-logicas",
+          "notes": "Revisão visual para destravar o assunto."
+        }
+      ],
+      "totalPages": 50
+    },
+    {
+      "id": "tce-logic-item-2",
+      "subjectId": "tce-logic",
+      "title": "Diagramas lógicos",
+      "order": 2,
+      "weight": 1,
+      "questionCount": 24,
+      "resourceReferences": [
+        {
+          "id": "tce-logic-resource-2-pdf",
+          "title": "Apostila: Diagramas lógicos",
+          "type": "pdf",
+          "url": "https://materiais.example.com/tce-logic/diagramas-logicos.pdf",
+          "notes": "Material principal para leitura e marcações."
+        },
+        {
+          "id": "tce-logic-resource-2-questions",
+          "title": "Lista de questões: Diagramas lógicos",
+          "type": "link",
+          "url": "https://questoes.example.com/tce-logic/diagramas-logicos",
+          "notes": "Use depois da primeira leitura."
+        }
+      ],
+      "totalPages": 42
+    },
+    {
+      "id": "tce-logic-item-3",
+      "subjectId": "tce-logic",
+      "title": "Sequências e padrões",
+      "order": 3,
+      "weight": 1,
+      "questionCount": 20,
+      "resourceReferences": [
+        {
+          "id": "tce-logic-resource-3-pdf",
+          "title": "Apostila: Sequências e padrões",
+          "type": "pdf",
+          "url": "https://materiais.example.com/tce-logic/sequencias-e-padroes.pdf",
+          "notes": "Material principal para leitura e marcações."
+        },
+        {
+          "id": "tce-logic-resource-3-questions",
+          "title": "Lista de questões: Sequências e padrões",
+          "type": "link",
+          "url": "https://questoes.example.com/tce-logic/sequencias-e-padroes",
+          "notes": "Use depois da primeira leitura."
+        },
+        {
+          "id": "tce-logic-resource-3-video",
+          "title": "Aula rápida: Sequências e padrões",
+          "type": "video",
+          "url": "https://videos.example.com/tce-logic/sequencias-e-padroes",
+          "notes": "Revisão visual para destravar o assunto."
+        }
+      ],
+      "totalPages": 36
     },
     {
       "id": "sefaz-tax-law-item-1",
@@ -643,7 +1002,29 @@
       "order": 1,
       "weight": 4,
       "questionCount": 80,
-      "resourceReferences": [],
+      "resourceReferences": [
+        {
+          "id": "sefaz-tax-law-resource-1-pdf",
+          "title": "Apostila: ICMS paulista",
+          "type": "pdf",
+          "url": "https://materiais.example.com/sefaz-tax-law/icms-paulista.pdf",
+          "notes": "Material principal para leitura e marcações."
+        },
+        {
+          "id": "sefaz-tax-law-resource-1-questions",
+          "title": "Lista de questões: ICMS paulista",
+          "type": "link",
+          "url": "https://questoes.example.com/sefaz-tax-law/icms-paulista",
+          "notes": "Use depois da primeira leitura."
+        },
+        {
+          "id": "sefaz-tax-law-resource-1-video",
+          "title": "Aula rápida: ICMS paulista",
+          "type": "video",
+          "url": "https://videos.example.com/sefaz-tax-law/icms-paulista",
+          "notes": "Revisão visual para destravar o assunto."
+        }
+      ],
       "totalPages": 140
     },
     {
@@ -653,7 +1034,22 @@
       "order": 2,
       "weight": 3,
       "questionCount": 55,
-      "resourceReferences": [],
+      "resourceReferences": [
+        {
+          "id": "sefaz-tax-law-resource-2-pdf",
+          "title": "Apostila: Crédito tributário",
+          "type": "pdf",
+          "url": "https://materiais.example.com/sefaz-tax-law/credito-tributario.pdf",
+          "notes": "Material principal para leitura e marcações."
+        },
+        {
+          "id": "sefaz-tax-law-resource-2-questions",
+          "title": "Lista de questões: Crédito tributário",
+          "type": "link",
+          "url": "https://questoes.example.com/sefaz-tax-law/credito-tributario",
+          "notes": "Use depois da primeira leitura."
+        }
+      ],
       "totalPages": 100
     },
     {
@@ -663,7 +1059,29 @@
       "order": 1,
       "weight": 3,
       "questionCount": 60,
-      "resourceReferences": [],
+      "resourceReferences": [
+        {
+          "id": "sefaz-accounting-resource-1-pdf",
+          "title": "Apostila: Demonstrações contábeis",
+          "type": "pdf",
+          "url": "https://materiais.example.com/sefaz-accounting/demonstracoes-contabeis.pdf",
+          "notes": "Material principal para leitura e marcações."
+        },
+        {
+          "id": "sefaz-accounting-resource-1-questions",
+          "title": "Lista de questões: Demonstrações contábeis",
+          "type": "link",
+          "url": "https://questoes.example.com/sefaz-accounting/demonstracoes-contabeis",
+          "notes": "Use depois da primeira leitura."
+        },
+        {
+          "id": "sefaz-accounting-resource-1-video",
+          "title": "Aula rápida: Demonstrações contábeis",
+          "type": "video",
+          "url": "https://videos.example.com/sefaz-accounting/demonstracoes-contabeis",
+          "notes": "Revisão visual para destravar o assunto."
+        }
+      ],
       "totalPages": 120
     },
     {
@@ -673,7 +1091,22 @@
       "order": 2,
       "weight": 2,
       "questionCount": 40,
-      "resourceReferences": [],
+      "resourceReferences": [
+        {
+          "id": "sefaz-accounting-resource-2-pdf",
+          "title": "Apostila: Análise de balanços",
+          "type": "pdf",
+          "url": "https://materiais.example.com/sefaz-accounting/analise-de-balancos.pdf",
+          "notes": "Material principal para leitura e marcações."
+        },
+        {
+          "id": "sefaz-accounting-resource-2-questions",
+          "title": "Lista de questões: Análise de balanços",
+          "type": "link",
+          "url": "https://questoes.example.com/sefaz-accounting/analise-de-balancos",
+          "notes": "Use depois da primeira leitura."
+        }
+      ],
       "totalPages": 85
     },
     {
@@ -683,7 +1116,29 @@
       "order": 1,
       "weight": 3,
       "questionCount": 40,
-      "resourceReferences": [],
+      "resourceReferences": [
+        {
+          "id": "sefaz-finance-resource-1-pdf",
+          "title": "Apostila: Juros compostos",
+          "type": "pdf",
+          "url": "https://materiais.example.com/sefaz-finance/juros-compostos.pdf",
+          "notes": "Material principal para leitura e marcações."
+        },
+        {
+          "id": "sefaz-finance-resource-1-questions",
+          "title": "Lista de questões: Juros compostos",
+          "type": "link",
+          "url": "https://questoes.example.com/sefaz-finance/juros-compostos",
+          "notes": "Use depois da primeira leitura."
+        },
+        {
+          "id": "sefaz-finance-resource-1-video",
+          "title": "Aula rápida: Juros compostos",
+          "type": "video",
+          "url": "https://videos.example.com/sefaz-finance/juros-compostos",
+          "notes": "Revisão visual para destravar o assunto."
+        }
+      ],
       "totalPages": 60
     },
     {
@@ -693,7 +1148,22 @@
       "order": 2,
       "weight": 2,
       "questionCount": 35,
-      "resourceReferences": [],
+      "resourceReferences": [
+        {
+          "id": "sefaz-finance-resource-2-pdf",
+          "title": "Apostila: Sistemas de amortização",
+          "type": "pdf",
+          "url": "https://materiais.example.com/sefaz-finance/sistemas-de-amortizacao.pdf",
+          "notes": "Material principal para leitura e marcações."
+        },
+        {
+          "id": "sefaz-finance-resource-2-questions",
+          "title": "Lista de questões: Sistemas de amortização",
+          "type": "link",
+          "url": "https://questoes.example.com/sefaz-finance/sistemas-de-amortizacao",
+          "notes": "Use depois da primeira leitura."
+        }
+      ],
       "totalPages": 70
     },
     {
@@ -703,7 +1173,29 @@
       "order": 1,
       "weight": 3,
       "questionCount": 55,
-      "resourceReferences": [],
+      "resourceReferences": [
+        {
+          "id": "trt-labor-law-resource-1-pdf",
+          "title": "Apostila: Contrato de trabalho",
+          "type": "pdf",
+          "url": "https://materiais.example.com/trt-labor-law/contrato-de-trabalho.pdf",
+          "notes": "Material principal para leitura e marcações."
+        },
+        {
+          "id": "trt-labor-law-resource-1-questions",
+          "title": "Lista de questões: Contrato de trabalho",
+          "type": "link",
+          "url": "https://questoes.example.com/trt-labor-law/contrato-de-trabalho",
+          "notes": "Use depois da primeira leitura."
+        },
+        {
+          "id": "trt-labor-law-resource-1-video",
+          "title": "Aula rápida: Contrato de trabalho",
+          "type": "video",
+          "url": "https://videos.example.com/trt-labor-law/contrato-de-trabalho",
+          "notes": "Revisão visual para destravar o assunto."
+        }
+      ],
       "totalPages": 105
     },
     {
@@ -713,7 +1205,22 @@
       "order": 2,
       "weight": 3,
       "questionCount": 50,
-      "resourceReferences": [],
+      "resourceReferences": [
+        {
+          "id": "trt-labor-law-resource-2-pdf",
+          "title": "Apostila: Jornada e remuneração",
+          "type": "pdf",
+          "url": "https://materiais.example.com/trt-labor-law/jornada-e-remuneracao.pdf",
+          "notes": "Material principal para leitura e marcações."
+        },
+        {
+          "id": "trt-labor-law-resource-2-questions",
+          "title": "Lista de questões: Jornada e remuneração",
+          "type": "link",
+          "url": "https://questoes.example.com/trt-labor-law/jornada-e-remuneracao",
+          "notes": "Use depois da primeira leitura."
+        }
+      ],
       "totalPages": 90
     },
     {
@@ -723,7 +1230,29 @@
       "order": 1,
       "weight": 3,
       "questionCount": 45,
-      "resourceReferences": [],
+      "resourceReferences": [
+        {
+          "id": "trt-labor-procedure-resource-1-pdf",
+          "title": "Apostila: Recursos trabalhistas",
+          "type": "pdf",
+          "url": "https://materiais.example.com/trt-labor-procedure/recursos-trabalhistas.pdf",
+          "notes": "Material principal para leitura e marcações."
+        },
+        {
+          "id": "trt-labor-procedure-resource-1-questions",
+          "title": "Lista de questões: Recursos trabalhistas",
+          "type": "link",
+          "url": "https://questoes.example.com/trt-labor-procedure/recursos-trabalhistas",
+          "notes": "Use depois da primeira leitura."
+        },
+        {
+          "id": "trt-labor-procedure-resource-1-video",
+          "title": "Aula rápida: Recursos trabalhistas",
+          "type": "video",
+          "url": "https://videos.example.com/trt-labor-procedure/recursos-trabalhistas",
+          "notes": "Revisão visual para destravar o assunto."
+        }
+      ],
       "totalPages": 88
     },
     {
@@ -733,7 +1262,22 @@
       "order": 2,
       "weight": 2,
       "questionCount": 35,
-      "resourceReferences": [],
+      "resourceReferences": [
+        {
+          "id": "trt-labor-procedure-resource-2-pdf",
+          "title": "Apostila: Execução trabalhista",
+          "type": "pdf",
+          "url": "https://materiais.example.com/trt-labor-procedure/execucao-trabalhista.pdf",
+          "notes": "Material principal para leitura e marcações."
+        },
+        {
+          "id": "trt-labor-procedure-resource-2-questions",
+          "title": "Lista de questões: Execução trabalhista",
+          "type": "link",
+          "url": "https://questoes.example.com/trt-labor-procedure/execucao-trabalhista",
+          "notes": "Use depois da primeira leitura."
+        }
+      ],
       "totalPages": 72
     },
     {
@@ -743,7 +1287,29 @@
       "order": 1,
       "weight": 2,
       "questionCount": 30,
-      "resourceReferences": [],
+      "resourceReferences": [
+        {
+          "id": "trt-portuguese-resource-1-pdf",
+          "title": "Apostila: Redação oficial",
+          "type": "pdf",
+          "url": "https://materiais.example.com/trt-portuguese/redacao-oficial.pdf",
+          "notes": "Material principal para leitura e marcações."
+        },
+        {
+          "id": "trt-portuguese-resource-1-questions",
+          "title": "Lista de questões: Redação oficial",
+          "type": "link",
+          "url": "https://questoes.example.com/trt-portuguese/redacao-oficial",
+          "notes": "Use depois da primeira leitura."
+        },
+        {
+          "id": "trt-portuguese-resource-1-video",
+          "title": "Aula rápida: Redação oficial",
+          "type": "video",
+          "url": "https://videos.example.com/trt-portuguese/redacao-oficial",
+          "notes": "Revisão visual para destravar o assunto."
+        }
+      ],
       "totalPages": 55
     },
     {
@@ -753,7 +1319,22 @@
       "order": 2,
       "weight": 2,
       "questionCount": 35,
-      "resourceReferences": [],
+      "resourceReferences": [
+        {
+          "id": "trt-portuguese-resource-2-pdf",
+          "title": "Apostila: Pontuação",
+          "type": "pdf",
+          "url": "https://materiais.example.com/trt-portuguese/pontuacao.pdf",
+          "notes": "Material principal para leitura e marcações."
+        },
+        {
+          "id": "trt-portuguese-resource-2-questions",
+          "title": "Lista de questões: Pontuação",
+          "type": "link",
+          "url": "https://questoes.example.com/trt-portuguese/pontuacao",
+          "notes": "Use depois da primeira leitura."
+        }
+      ],
       "totalPages": 60
     }
   ],
@@ -802,6 +1383,52 @@
       "topicId": "tce-portuguese-syntax",
       "pagesOrCount": 35,
       "correctAnswers": 30,
+      "completed": true
+    },
+    {
+      "id": "tce-portuguese-session-5",
+      "contestId": "tce-sp-2026",
+      "type": "video",
+      "studiedAt": "2026-06-09T10:00:00.000Z",
+      "subjectId": "tce-portuguese",
+      "studyItemId": "tce-portuguese-item-3",
+      "topicId": "tce-portuguese-crase",
+      "pagesOrCount": 1,
+      "completed": true
+    },
+    {
+      "id": "tce-portuguese-session-6",
+      "contestId": "tce-sp-2026",
+      "type": "questions",
+      "studiedAt": "2026-06-10T10:00:00.000Z",
+      "subjectId": "tce-portuguese",
+      "studyItemId": "tce-portuguese-item-3",
+      "topicId": "tce-portuguese-crase",
+      "pagesOrCount": 28,
+      "correctAnswers": 22,
+      "completed": true
+    },
+    {
+      "id": "tce-portuguese-session-7",
+      "contestId": "tce-sp-2026",
+      "type": "pdf",
+      "studiedAt": "2026-06-11T10:00:00.000Z",
+      "subjectId": "tce-portuguese",
+      "studyItemId": "tce-portuguese-item-4",
+      "topicId": "tce-portuguese-punctuation",
+      "pagesOrCount": 58,
+      "completed": true
+    },
+    {
+      "id": "tce-portuguese-session-8",
+      "contestId": "tce-sp-2026",
+      "type": "questions",
+      "studiedAt": "2026-06-12T10:00:00.000Z",
+      "subjectId": "tce-portuguese",
+      "studyItemId": "tce-portuguese-item-4",
+      "topicId": "tce-portuguese-punctuation",
+      "pagesOrCount": 30,
+      "correctAnswers": 26,
       "completed": true
     },
     {
@@ -1170,15 +1797,6 @@
       "topicId": "trt-portuguese-punctuation",
       "pagesOrCount": 20,
       "correctAnswers": 16,
-      "completed": true
-    },
-    {
-      "id": "session-1781261087580",
-      "contestId": "tce-sp-2026",
-      "type": "video",
-      "studiedAt": "2026-06-12",
-      "subjectId": "tce-constitutional",
-      "topicId": "tce-constitutional-rights",
       "completed": true
     }
   ]

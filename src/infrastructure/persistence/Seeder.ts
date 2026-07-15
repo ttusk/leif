@@ -8,8 +8,8 @@ import { RegisterStudySessionUseCase } from "@/application/use-cases/RegisterStu
 import { SetActiveContestUseCase } from "@/application/use-cases/SetActiveContestUseCase";
 import { UpdateContestWallUseCase } from "@/application/use-cases/UpdateContestWallUseCase";
 import type { StudyItem } from "@/domain/entities/StudyItem";
+import type { ResourceReference } from "@/domain/entities/ResourceReference";
 import { StudySessionType } from "@/domain/entities/StudySession";
-import type { Subject } from "@/domain/entities/Subject";
 import type { Topic } from "@/domain/entities/Topic";
 import { wallLinkKey } from "@/domain/entities/Wall";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
@@ -44,6 +44,8 @@ interface SeedSubjectSpec {
   id: string;
   name: string;
   plannedStudyMinutes: number;
+  isActive?: boolean;
+  currentStage?: string;
   items: SeedItemSpec[];
   topics: SeedTopicSpec[];
   sessions: SeedSessionSpec[];
@@ -54,6 +56,7 @@ interface SeedItemSpec {
   weight: number;
   questionCount: number;
   totalPages: number;
+  resourceReferences?: ResourceReference[];
 }
 
 interface SeedTopicSpec {
@@ -72,6 +75,48 @@ interface SeedSessionSpec {
   correct?: number;
 }
 
+function createDemoResourceReferences(
+  subjectId: string,
+  itemIndex: number,
+  title: string
+): ResourceReference[] {
+  const slug = title
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+
+  const references: ResourceReference[] = [
+    {
+      id: `${subjectId}-resource-${itemIndex + 1}-pdf`,
+      title: `Apostila: ${title}`,
+      type: "pdf",
+      url: `https://materiais.example.com/${subjectId}/${slug}.pdf`,
+      notes: "Material principal para leitura e marcações."
+    },
+    {
+      id: `${subjectId}-resource-${itemIndex + 1}-questions`,
+      title: `Lista de questões: ${title}`,
+      type: "link",
+      url: `https://questoes.example.com/${subjectId}/${slug}`,
+      notes: "Use depois da primeira leitura."
+    }
+  ];
+
+  if (itemIndex % 2 === 0) {
+    references.push({
+      id: `${subjectId}-resource-${itemIndex + 1}-video`,
+      title: `Aula rápida: ${title}`,
+      type: "video",
+      url: `https://videos.example.com/${subjectId}/${slug}`,
+      notes: "Revisão visual para destravar o assunto."
+    });
+  }
+
+  return references;
+}
+
 const DEMO_CONTESTS: SeedContestSpec[] = [
   {
     id: "tce-sp-2026",
@@ -81,16 +126,19 @@ const DEMO_CONTESTS: SeedContestSpec[] = [
       noticeUrl: "https://www.tcesp.org.br",
       examLabel: "Prova TCE-SP 2023",
       examUrl: "https://www.tcesp.org.br",
-      notes: "Priorizar Português, Constitucional e Controle Externo. Meta: 80 questões por dia."
+      notes: "Priorizar Português, Constitucional e Controle Externo. Meta: 80 questões por dia.\n\nCheck-list manual:\n- revisar erros de Português toda sexta;\n- manter Controle Externo no ciclo mesmo quando o rendimento cair;\n- deixar Raciocínio Lógico pausado até fechar a primeira volta."
     },
     subjects: [
       {
         id: "tce-portuguese",
         name: "Português",
         plannedStudyMinutes: 90,
+        currentStage: "Revisão por questões",
         items: [
           { title: "Interpretação de textos", weight: 3, questionCount: 60, totalPages: 110 },
-          { title: "Sintaxe", weight: 2, questionCount: 45, totalPages: 85 }
+          { title: "Sintaxe", weight: 2, questionCount: 45, totalPages: 85 },
+          { title: "Crase", weight: 2, questionCount: 32, totalPages: 48 },
+          { title: "Pontuação", weight: 2, questionCount: 38, totalPages: 58 }
         ],
         topics: [
           {
@@ -104,19 +152,36 @@ const DEMO_CONTESTS: SeedContestSpec[] = [
             name: "Concordância e regência",
             notebookName: "QConcursos - Sintaxe TCE",
             notebookUrl: "https://qconcursos.example.com/tce-sintaxe"
+          },
+          {
+            id: "tce-portuguese-crase",
+            name: "Uso da crase",
+            notebookName: "Tec - Crase",
+            notebookUrl: "https://tec.example.com/tce-crase"
+          },
+          {
+            id: "tce-portuguese-punctuation",
+            name: "Pontuação e sentido",
+            notebookName: "QConcursos - Pontuação TCE",
+            notebookUrl: "https://qconcursos.example.com/tce-pontuacao"
           }
         ],
         sessions: [
           { item: 0, topic: 0, type: "pdf", date: "2026-06-01", count: 28 },
           { item: 0, topic: 0, type: StudySessionType.QUESTIONS, date: "2026-06-01", count: 40, correct: 34 },
           { item: 1, topic: 1, type: "pdf", date: "2026-06-03", count: 22 },
-          { item: 1, topic: 1, type: StudySessionType.QUESTIONS, date: "2026-06-04", count: 35, correct: 30 }
+          { item: 1, topic: 1, type: StudySessionType.QUESTIONS, date: "2026-06-04", count: 35, correct: 30 },
+          { item: 2, topic: 2, type: "video", date: "2026-06-09", count: 1 },
+          { item: 2, topic: 2, type: StudySessionType.QUESTIONS, date: "2026-06-10", count: 28, correct: 22 },
+          { item: 3, topic: 3, type: "pdf", date: "2026-06-11", count: 58 },
+          { item: 3, topic: 3, type: StudySessionType.QUESTIONS, date: "2026-06-12", count: 30, correct: 26 }
         ]
       },
       {
         id: "tce-constitutional",
         name: "Direito Constitucional",
         plannedStudyMinutes: 100,
+        currentStage: "Base teórica",
         items: [
           { title: "Direitos fundamentais", weight: 3, questionCount: 50, totalPages: 95 },
           { title: "Organização do Estado", weight: 2, questionCount: 35, totalPages: 70 }
@@ -146,6 +211,7 @@ const DEMO_CONTESTS: SeedContestSpec[] = [
         id: "tce-external-control",
         name: "Controle Externo",
         plannedStudyMinutes: 80,
+        currentStage: "Caderno de erros",
         items: [
           { title: "Tribunais de Contas", weight: 3, questionCount: 45, totalPages: 90 },
           { title: "Fiscalização contábil", weight: 2, questionCount: 30, totalPages: 65 }
@@ -170,6 +236,39 @@ const DEMO_CONTESTS: SeedContestSpec[] = [
           { item: 1, topic: 1, type: "pdf", date: "2026-06-08", count: 20 },
           { item: 1, topic: 1, type: StudySessionType.QUESTIONS, date: "2026-06-08", count: 18, correct: 14 }
         ]
+      },
+      {
+        id: "tce-logic",
+        name: "Raciocínio Lógico",
+        plannedStudyMinutes: 45,
+        isActive: false,
+        currentStage: "Pausada até fechar Português",
+        items: [
+          { title: "Proposições lógicas", weight: 2, questionCount: 30, totalPages: 50 },
+          { title: "Diagramas lógicos", weight: 1, questionCount: 24, totalPages: 42 },
+          { title: "Sequências e padrões", weight: 1, questionCount: 20, totalPages: 36 }
+        ],
+        topics: [
+          {
+            id: "tce-logic-propositions",
+            name: "Conectivos e tabelas-verdade",
+            notebookName: "Tec - Lógica TCE",
+            notebookUrl: "https://tec.example.com/logica-tce"
+          },
+          {
+            id: "tce-logic-diagrams",
+            name: "Diagramas lógicos",
+            notebookName: "QConcursos - Diagramas",
+            notebookUrl: "https://qconcursos.example.com/diagramas-logicos"
+          },
+          {
+            id: "tce-logic-sequences",
+            name: "Sequências numéricas",
+            notebookName: "Estratégia - Sequências",
+            notebookUrl: "https://estrategia.example.com/sequencias"
+          }
+        ],
+        sessions: []
       }
     ]
   },
@@ -402,7 +501,9 @@ export async function seedTceSpDemo(dataStore: PluginDataStore): Promise<SeededC
         id: subjectSpec.id,
         contestId: contest.id,
         name: subjectSpec.name,
-        plannedStudyMinutes: subjectSpec.plannedStudyMinutes
+        plannedStudyMinutes: subjectSpec.plannedStudyMinutes,
+        isActive: subjectSpec.isActive,
+        currentStage: subjectSpec.currentStage ?? "Base"
       });
 
       const items: StudyItem[] = [];
@@ -415,7 +516,12 @@ export async function seedTceSpDemo(dataStore: PluginDataStore): Promise<SeededC
             title: itemSpec.title,
             weight: itemSpec.weight,
             questionCount: itemSpec.questionCount,
-            totalPages: itemSpec.totalPages
+            totalPages: itemSpec.totalPages,
+            resourceReferences: itemSpec.resourceReferences ?? createDemoResourceReferences(
+              subject.id,
+              index,
+              itemSpec.title
+            )
           })
         );
       }

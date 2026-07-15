@@ -23,6 +23,8 @@ export class TopicsTab {
   private selectedSubjectId: string | null = null;
   private editingTopicId: string | null = null;
   private expandedTopicId: string | null = null;
+  private isCreatingTopic = false;
+  private pendingDeleteTopicId: string | null = null;
 
   constructor(
     private readonly dataStore: PluginDataStore,
@@ -37,23 +39,28 @@ export class TopicsTab {
 
   async render(container: HTMLElement, data: LeifPluginData): Promise<void> {
     const header = DomHelpers.createElement("div", "leif-section-header");
-    header.appendChild(DomHelpers.createSectionTitle("Assuntos e Questões"));
+    header.appendChild(DomHelpers.createSectionTitle("Edital"));
     header.appendChild(
       DomHelpers.createIconButton("add", "Novo assunto", {
-        onClick: () =>
-          this.openCreateTopicModal(
-            SubjectPicker.getSelectedSubject(data, this.selectedSubjectId)?.id ?? ""
-          )
+        onClick: async () => {
+          this.isCreatingTopic = true;
+          await this.onUpdate();
+        }
       })
     );
     container.appendChild(header);
+    container.appendChild(
+      DomHelpers.createParagraph(
+        "Transforme o edital em assuntos pequenos e conecte cadernos de questões quando fizer sentido."
+      )
+    );
 
     const subject = SubjectPicker.getSelectedSubject(data, this.selectedSubjectId);
     if (!subject) {
       container.appendChild(
         DomHelpers.createEmptyState(
-          "Nenhuma matéria selecionada",
-          "Cadastre matérias no concurso ativo."
+          "Sem matéria escolhida",
+          "Crie uma matéria no Plano para organizar o edital."
         )
       );
       return;
@@ -66,23 +73,25 @@ export class TopicsTab {
       })
     );
 
+    if (this.isCreatingTopic) {
+      container.appendChild(this.renderCreateTopicForm(subject.id));
+    }
+
     const topics = data.topics
       .filter((topic) => topic.subjectId === subject.id);
 
     const card = DomHelpers.createCard(`Assuntos de ${subject.name}`);
 
     if (topics.length === 0) {
-      card.appendChild(DomHelpers.createParagraph("Nenhum assunto cadastrado."));
+      card.appendChild(DomHelpers.createParagraph("Nenhum assunto cadastrado nessa matéria."));
       container.appendChild(card);
       return;
     }
 
     const { container: tableContainer, tbody } = DomHelpers.createCrudTable([
       "Assunto",
-      "Caderno",
-      "Resolv.",
-      "Acert.",
-      "Ações"
+      "Questões",
+      "Caderno"
     ]);
 
     topics.forEach((topic) => {
@@ -109,18 +118,13 @@ export class TopicsTab {
     tr.dataset.topicId = topic.id;
     const hasDetails = Boolean(topic.questionNotebook);
 
-    tr.appendChild(DomHelpers.createCell(topic.name));
-    tr.appendChild(DomHelpers.createCell(null, this.renderNotebookCell(topic)));
-    tr.appendChild(DomHelpers.createCell(String(topic.questionNotebook?.solvedQuestions ?? 0)));
-    tr.appendChild(DomHelpers.createCell(String(topic.questionNotebook?.correctAnswers ?? 0)));
-
     const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
     actions.appendChild(
       DomHelpers.createIconButton(
         this.expandedTopicId === topic.id ? "collapse" : "expand",
         this.expandedTopicId === topic.id ? "Recolher" : "Expandir",
         {
-          className: `leif-icon-button ${hasDetails ? "" : "leif-expand-button"}`,
+          className: `clickable-icon ${hasDetails ? "" : "leif-expand-button"}`,
           onClick: async () => {
             this.expandedTopicId = this.expandedTopicId === topic.id ? null : topic.id;
             await this.onUpdate();
@@ -139,25 +143,44 @@ export class TopicsTab {
     actions.appendChild(
       DomHelpers.createIconButton("delete", "Excluir", {
         onClick: async () => {
-          const confirmed = await DomHelpers.confirm({
-            title: "Excluir assunto",
-            message: `Excluir "${topic.name}"?`,
-            confirmLabel: "Excluir"
-          });
-          if (!confirmed) return;
-          try {
-            await this.deleteTopicUseCase.execute({ topicId: topic.id });
-            await this.onUpdate();
-          } catch (error) {
-            DomHelpers.notifyError(error, "Não foi possível excluir o assunto.");
-          }
+          this.pendingDeleteTopicId = topic.id;
+          await this.onUpdate();
         }
       })
     );
 
-    const actionsCell = DomHelpers.createElement("td");
-    actionsCell.appendChild(actions);
-    tr.appendChild(actionsCell);
+    if (this.pendingDeleteTopicId === topic.id) {
+      actions.append(
+        DomHelpers.createButton("Excluir?", {
+          onClick: async () => {
+            try {
+              await this.deleteTopicUseCase.execute({ topicId: topic.id });
+              this.pendingDeleteTopicId = null;
+              await this.onUpdate();
+            } catch (error) {
+              DomHelpers.notifyError(error, "Não consegui excluir esse assunto.");
+            }
+          }
+        }),
+        DomHelpers.createButton("Cancelar", {
+          onClick: async () => {
+            this.pendingDeleteTopicId = null;
+            await this.onUpdate();
+          }
+        })
+      );
+    }
+
+    const titleCell = DomHelpers.createElement("td", "leif-topic-title-cell");
+    const titleContent = DomHelpers.createElement("div", "leif-topic-title-content");
+    const title = DomHelpers.createElement("span", "leif-topic-title");
+    title.textContent = topic.name;
+    titleContent.append(title, actions);
+    titleCell.appendChild(titleContent);
+
+    tr.appendChild(titleCell);
+    tr.appendChild(DomHelpers.createCell(this.formatQuestionProgress(topic)));
+    tr.appendChild(DomHelpers.createCell(null, this.renderNotebookCell(topic)));
 
     return tr;
   }
@@ -223,7 +246,7 @@ export class TopicsTab {
           this.editingTopicId = null;
           await this.onUpdate();
         } catch (error) {
-          DomHelpers.notifyError(error, "Não foi possível salvar.");
+          DomHelpers.notifyError(error, "Não consegui salvar.");
         }
       }
     });
@@ -239,14 +262,19 @@ export class TopicsTab {
     actions.appendChild(saveButton);
     actions.appendChild(cancelButton);
 
-    tr.appendChild(DomHelpers.createCell(null, nameInput));
-    tr.appendChild(DomHelpers.createCell(null, DomHelpers.createParagraph(topic.questionNotebook?.name ?? "—")));
-    tr.appendChild(DomHelpers.createCell(null, solvedInput));
-    tr.appendChild(DomHelpers.createCell(null, correctInput));
+    const titleCell = DomHelpers.createElement("td", "leif-topic-title-cell");
+    const titleContent = DomHelpers.createElement("div", "leif-topic-title-content");
+    titleContent.append(nameInput, actions);
+    titleCell.appendChild(titleContent);
+    tr.appendChild(titleCell);
 
-    const actionsCell = DomHelpers.createElement("td");
-    actionsCell.appendChild(actions);
-    tr.appendChild(actionsCell);
+    const questionCell = DomHelpers.createElement("td");
+    const questionFields = DomHelpers.createElement("div", "leif-inline-fields");
+    questionFields.append(solvedInput, correctInput);
+    questionCell.appendChild(questionFields);
+    tr.appendChild(questionCell);
+
+    tr.appendChild(DomHelpers.createCell(null, DomHelpers.createParagraph(topic.questionNotebook?.name ?? "Sem caderno")));
 
     return tr;
   }
@@ -256,7 +284,7 @@ export class TopicsTab {
     tr.className = "leif-detail-row";
 
     const td = DomHelpers.createElement("td");
-    td.colSpan = 5;
+    td.colSpan = 3;
 
     const content = DomHelpers.createElement("div", "leif-detail-content");
 
@@ -287,7 +315,7 @@ export class TopicsTab {
         });
         await this.onUpdate();
       } catch (error) {
-        DomHelpers.notifyError(error, "Não foi possível vincular caderno.");
+        DomHelpers.notifyError(error, "Não consegui salvar esse caderno.");
       }
     });
 
@@ -309,7 +337,7 @@ export class TopicsTab {
     return tr;
   }
 
-  private openCreateTopicModal(subjectId: string): void {
+  private renderCreateTopicForm(subjectId: string): HTMLElement {
     const nameInput = DomHelpers.createInput("text", "Nome do assunto");
 
     const form = DomHelpers.createForm(async () => {
@@ -319,21 +347,45 @@ export class TopicsTab {
           subjectId,
           name: nameInput.value
         });
-        modal.close();
+        this.isCreatingTopic = false;
         await this.onUpdate();
       } catch (error) {
-        DomHelpers.notifyError(error, "Não foi possível criar o assunto.");
+        DomHelpers.notifyError(error, "Não consegui criar esse assunto.");
       }
     });
 
-    form.append(DomHelpers.createLabel("Nome", nameInput));
+    form.classList.add("leif-card");
+    form.append(
+      DomHelpers.createSectionSubtitle("Novo assunto"),
+      DomHelpers.createLabel("Nome", nameInput),
+      DomHelpers.createElement("div", "leif-form-actions")
+    );
 
-    const modal = DomHelpers.createModal({
-      title: "Novo assunto",
-      content: form,
-      onSubmit: () => form.requestSubmit()
-    });
+    const actions = form.querySelector(".leif-form-actions");
+    actions?.append(
+      DomHelpers.createButton("Cancelar", {
+        onClick: async () => {
+          this.isCreatingTopic = false;
+          await this.onUpdate();
+        }
+      }),
+      DomHelpers.createButton("Criar", {
+        type: "submit",
+        className: "mod-cta"
+      })
+    );
 
-    modal.open();
+    return form;
+  }
+
+  private formatQuestionProgress(topic: Topic): string {
+    const solved = topic.questionNotebook?.solvedQuestions ?? 0;
+    const correct = topic.questionNotebook?.correctAnswers ?? 0;
+
+    if (solved === 0) {
+      return "0 resolvidas";
+    }
+
+    return `${correct}/${solved} acertos`;
   }
 }

@@ -21,7 +21,7 @@ export class WallTab {
   async render(container: HTMLElement, data: LeifPluginData): Promise<void> {
     container.appendChild(DomHelpers.createSectionTitle("Mural"));
     container.appendChild(
-      DomHelpers.createParagraph("Centralize os links e notas principais do concurso.")
+      DomHelpers.createParagraph("Guarde links oficiais e anotações úteis do concurso ativo.")
     );
 
     const activeContest =
@@ -30,8 +30,8 @@ export class WallTab {
     if (!activeContest) {
       container.appendChild(
         DomHelpers.createEmptyState(
-          "Nenhum concurso ativo",
-          "Selecione um concurso para editar o mural."
+          "Sem concurso escolhido",
+          "Escolha um concurso para guardar links e notas."
         )
       );
       return;
@@ -66,6 +66,8 @@ export class WallTab {
       "Notas do concurso",
       activeContest.wall.notes ?? ""
     );
+    notes.rows = 8;
+    notes.classList.add("leif-wall-notes");
 
     const form = DomHelpers.createForm(async () => {
       try {
@@ -101,21 +103,44 @@ export class WallTab {
 
         await this.onUpdate();
       } catch (error) {
-        DomHelpers.notifyError(error, "Não foi possível salvar o mural.");
+        DomHelpers.notifyError(error, "Não consegui salvar o mural.");
       }
     });
 
-    form.classList.add("leif-card");
+    form.classList.add("leif-wall-form");
+
+    const notesCard = DomHelpers.createElement("section", "leif-wall-card leif-wall-primary");
+    notesCard.append(
+      DomHelpers.createSectionSubtitle("Notas"),
+      DomHelpers.createParagraph("Use este espaço para pesos, datas, cortes, estratégia e qualquer lembrete que você queira revisar sem procurar em outro lugar."),
+      DomHelpers.createStackedLabel("Notas", notes)
+    );
+
+    const noticeCard = DomHelpers.createElement("section", "leif-wall-card");
+    noticeCard.append(
+      DomHelpers.createSectionSubtitle("Edital"),
+      DomHelpers.createParagraph("Guarde o link do edital ou da página oficial do concurso."),
+      DomHelpers.createLabel("Nome", noticeLabel),
+      DomHelpers.createLabel("Link", noticeUrl)
+    );
+
+    const examCard = DomHelpers.createElement("section", "leif-wall-card");
+    examCard.append(
+      DomHelpers.createSectionSubtitle("Prova"),
+      DomHelpers.createParagraph("Deixe aqui a prova anterior, o espelho ou outro material de referência."),
+      DomHelpers.createLabel("Nome", examLabel),
+      DomHelpers.createLabel("Link", examUrl)
+    );
+
+    const referenceGrid = DomHelpers.createElement("div", "leif-wall-reference-grid");
+    referenceGrid.append(noticeCard, examCard);
+
+    form.append(notesCard, referenceGrid);
 
     form.append(
-      DomHelpers.createLabel("Edital", noticeLabel),
-      DomHelpers.createLabel("Link do edital", noticeUrl),
-      DomHelpers.createLabel("Prova", examLabel),
-      DomHelpers.createLabel("Link da prova", examUrl),
-      DomHelpers.createLabel("Notas", notes),
       DomHelpers.createButton("Salvar mural", {
         type: "submit",
-        className: "leif-primary-button"
+        className: "mod-cta leif-wall-save"
       })
     );
 
@@ -126,10 +151,10 @@ export class WallTab {
     activeContest: NonNullable<LeifPluginData["contests"][number]>,
     data: LeifPluginData
   ): HTMLElement {
-    const card = DomHelpers.createCard("Snapshots das matérias");
+    const card = DomHelpers.createCard("Resumo das matérias");
     if (activeContest.wall.subjectSnapshots.length === 0) {
       card.appendChild(
-        DomHelpers.createParagraph("Nenhum snapshot de matéria cadastrado.")
+        DomHelpers.createParagraph("Ainda não há resumo salvo para as matérias.")
       );
     } else {
       const subjectMap = new Map(data.subjects.map((s) => [s.id, s.name]));

@@ -104,7 +104,7 @@ export class LeifView extends ItemView {
     const titleGroup = DomHelpers.createElement("div", "leif-title-group");
     titleGroup.append(
       DomHelpers.createHeading("Leif"),
-      DomHelpers.createParagraph("Planejamento e acompanhamento dos estudos.")
+      DomHelpers.createParagraph("Seu plano de estudos dentro do Obsidian.")
     );
 
     this.headerActions = DomHelpers.createElement("div", "leif-header-actions");
@@ -152,7 +152,7 @@ export class LeifView extends ItemView {
     const activeContest = data.contests.find((contest) => contest.id === data.activeContestId);
     this.headerActions.innerHTML = "";
     this.headerActions.appendChild(
-      DomHelpers.createBadge(activeContest ? `Concurso ativo: ${activeContest.name}` : "Nenhum concurso ativo")
+      DomHelpers.createBadge(activeContest ? `Estudando: ${activeContest.name}` : "Sem concurso escolhido")
     );
   }
 

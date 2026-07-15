@@ -22,6 +22,7 @@ export class CycleTab {
   private readonly setSubjectActiveStateUseCase: SetSubjectActiveStateUseCase;
   private readonly updateSubjectConfigurationUseCase: UpdateSubjectConfigurationUseCase;
   private editingSubjectId: string | null = null;
+  private isCreatingSubject = false;
 
   constructor(
     private readonly dataStore: PluginDataStore,
@@ -40,16 +41,23 @@ export class CycleTab {
    */
   async render(container: HTMLElement, data: LeifPluginData): Promise<void> {
     const header = DomHelpers.createElement("div", "leif-section-header");
-    header.appendChild(DomHelpers.createSectionTitle("Ciclo e Matérias"));
+    header.appendChild(DomHelpers.createSectionTitle("Plano"));
     header.appendChild(
       DomHelpers.createIconButton("add", "Nova matéria", {
-        onClick: () => this.openCreateSubjectModal(data)
+        onClick: async () => {
+          this.isCreatingSubject = true;
+          await this.onUpdate();
+        }
       })
     );
     container.appendChild(header);
     container.appendChild(
-      DomHelpers.createParagraph("Gerencie a ordem, o status, o tempo e a etapa das matérias.")
+      DomHelpers.createParagraph("Ajuste a ordem das matérias e o tempo de cada uma.")
     );
+
+    if (this.isCreatingSubject) {
+      container.appendChild(this.renderCreateSubjectForm(data));
+    }
 
     const activeContest =
       data.contests.find((contest) => contest.id === data.activeContestId) ?? null;
@@ -60,7 +68,7 @@ export class CycleTab {
 
     if (subjects.length === 0) {
       card.appendChild(
-        DomHelpers.createParagraph("Nenhuma matéria cadastrada para o concurso ativo.")
+        DomHelpers.createParagraph("Ainda não há matérias nesse concurso.")
       );
       container.appendChild(card);
       return;
@@ -72,7 +80,7 @@ export class CycleTab {
     // Header
     const thead = DomHelpers.createElement("thead");
     const headerRow = DomHelpers.createElement("tr");
-    ["Ordem", "Matéria", "Tempo", "Etapa", "Status", "Ações"].forEach((header) => {
+    ["Ordem", "Matéria", "Tempo", "Etapa", "Ciclo", "Editar"].forEach((header) => {
       const th = DomHelpers.createElement("th");
       th.textContent = header;
       headerRow.appendChild(th);
@@ -98,12 +106,12 @@ export class CycleTab {
 
   private renderDisplayRow(
     subject: Subject,
-    _subjects: Subject[],
-    _index: number,
+    subjects: Subject[],
+    index: number,
     activeContestId: string | null
   ): HTMLElement {
     const tr = DomHelpers.createElement("tr");
-    tr.appendChild(DomHelpers.createCell(String(subject.order)));
+    tr.appendChild(this.renderOrderCell(subject, subjects, index, activeContestId));
     tr.appendChild(DomHelpers.createCell(subject.name));
     tr.appendChild(DomHelpers.createCell(`${subject.plannedStudyMinutes} min`));
     tr.appendChild(DomHelpers.createCell(subject.currentStage ?? "—"));
@@ -126,10 +134,10 @@ export class CycleTab {
       "Min",
       String(subject.plannedStudyMinutes)
     );
-    minutesInput.className = "leif-input leif-input-compact";
+    minutesInput.size = 8;
 
     const stageInput = DomHelpers.createInput("text", "Etapa", subject.currentStage ?? "");
-    stageInput.className = "leif-input leif-input-compact";
+    stageInput.size = 12;
 
     const saveButton = DomHelpers.createIconButton("save", "Salvar", {
       onClick: async () => {
@@ -142,7 +150,7 @@ export class CycleTab {
           this.editingSubjectId = null;
           await this.onUpdate();
         } catch (error) {
-          DomHelpers.notifyError(error, "Não foi possível salvar a configuração.");
+          DomHelpers.notifyError(error, "Não consegui salvar essa matéria.");
         }
       }
     });
@@ -158,36 +166,16 @@ export class CycleTab {
     controls.appendChild(saveButton);
     controls.appendChild(cancelButton);
 
-    // Reorder buttons available while editing too
-    if (index > 0) {
-      controls.appendChild(
-        DomHelpers.createIconButton("up", "Subir", {
-          onClick: async () => {
-            await this.moveSubject(subjects, index, index - 1, activeContestId);
-          }
-        })
-      );
-    }
-    if (index < subjects.length - 1) {
-      controls.appendChild(
-        DomHelpers.createIconButton("down", "Descer", {
-          onClick: async () => {
-            await this.moveSubject(subjects, index, index + 1, activeContestId);
-          }
-        })
-      );
-    }
-
-    tr.appendChild(DomHelpers.createCell(String(subject.order)));
+    tr.appendChild(this.renderOrderCell(subject, subjects, index, activeContestId));
     tr.appendChild(DomHelpers.createCell(subject.name));
     tr.appendChild(DomHelpers.createCell(null, minutesInput));
     tr.appendChild(DomHelpers.createCell(null, stageInput));
-    tr.appendChild(DomHelpers.createCell(subject.isActive ? "Ativa" : "Inativa"));
+    tr.appendChild(DomHelpers.createCell(subject.isActive ? "No ciclo" : "Pausada"));
     tr.appendChild(DomHelpers.createCell(null, controls));
     return tr;
   }
 
-  private openCreateSubjectModal(data: LeifPluginData): void {
+  private renderCreateSubjectForm(data: LeifPluginData): HTMLElement {
     const activeContestId = data.activeContestId;
     const nameInput = DomHelpers.createInput("text", "Nome da matéria");
     const minutesInput = DomHelpers.createInput("number", "Minutos planejados", "60");
@@ -203,25 +191,36 @@ export class CycleTab {
           name: nameInput.value,
           plannedStudyMinutes: Number(minutesInput.value)
         });
-        modal.close();
+        this.isCreatingSubject = false;
         await this.onUpdate();
       } catch (error) {
-        DomHelpers.notifyError(error, "Não foi possível criar a matéria.");
+        DomHelpers.notifyError(error, "Não consegui criar essa matéria.");
       }
     });
 
+    form.classList.add("leif-card");
     form.append(
+      DomHelpers.createSectionSubtitle("Nova matéria"),
       DomHelpers.createLabel("Nome", nameInput),
-      DomHelpers.createLabel("Minutos", minutesInput)
+      DomHelpers.createLabel("Minutos", minutesInput),
+      DomHelpers.createElement("div", "leif-form-actions")
     );
 
-    const modal = DomHelpers.createModal({
-      title: "Nova matéria",
-      content: form,
-      onSubmit: () => form.requestSubmit()
-    });
+    const actions = form.querySelector(".leif-form-actions");
+    actions?.append(
+      DomHelpers.createButton("Cancelar", {
+        onClick: async () => {
+          this.isCreatingSubject = false;
+          await this.onUpdate();
+        }
+      }),
+      DomHelpers.createButton("Criar", {
+        type: "submit",
+        className: "mod-cta"
+      })
+    );
 
-    modal.open();
+    return form;
   }
 
   private renderStatusCell(
@@ -230,8 +229,13 @@ export class CycleTab {
   ): HTMLElement {
     const td = DomHelpers.createElement("td", "leif-status-cell");
     const span = DomHelpers.createElement("span", subject.isActive ? "leif-status-active" : "leif-status-inactive");
-    span.textContent = subject.isActive ? "Ativa" : "Inativa";
+    span.textContent = subject.isActive ? "No ciclo" : "Pausada";
     td.appendChild(span);
+    td.setAttribute(
+      "aria-label",
+      subject.isActive ? "Clique para pausar esta matéria" : "Clique para colocar esta matéria no ciclo"
+    );
+    td.title = subject.isActive ? "Clique para pausar" : "Clique para colocar no ciclo";
 
     td.addEventListener("click", async () => {
       try {
@@ -241,10 +245,48 @@ export class CycleTab {
         });
         await this.onUpdate();
       } catch (error) {
-        DomHelpers.notifyError(error, "Não foi possível alterar o status da matéria.");
+        DomHelpers.notifyError(error, "Não consegui alterar essa matéria.");
       }
     });
 
+    return td;
+  }
+
+  private renderOrderCell(
+    subject: Subject,
+    subjects: Subject[],
+    index: number,
+    activeContestId: string | null
+  ): HTMLElement {
+    const td = DomHelpers.createElement("td", "leif-order-cell");
+    const content = DomHelpers.createElement("div", "leif-order-control");
+    const order = DomHelpers.createElement("span", "leif-order-number");
+    const buttons = DomHelpers.createElement("div", "leif-order-actions");
+
+    order.textContent = String(subject.order);
+    content.appendChild(order);
+
+    if (index > 0) {
+      buttons.appendChild(
+        DomHelpers.createIconButton("up", "Subir", {
+          onClick: async () => {
+            await this.moveSubject(subjects, index, index - 1, activeContestId);
+          }
+        })
+      );
+    }
+    if (index < subjects.length - 1) {
+      buttons.appendChild(
+        DomHelpers.createIconButton("down", "Descer", {
+          onClick: async () => {
+            await this.moveSubject(subjects, index, index + 1, activeContestId);
+          }
+        })
+      );
+    }
+
+    content.appendChild(buttons);
+    td.appendChild(content);
     return td;
   }
 
@@ -282,7 +324,7 @@ export class CycleTab {
       });
       await this.onUpdate();
     } catch (error) {
-      DomHelpers.notifyError(error, "Não foi possível reordenar as matérias.");
+      DomHelpers.notifyError(error, "Não consegui reordenar as matérias.");
     }
   }
 }

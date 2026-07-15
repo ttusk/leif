@@ -42,8 +42,10 @@ export class SubjectPicker {
       void onChange(select.value);
     });
 
-    const wrapper = DomHelpers.createElement("div", "leif-toolbar");
-    wrapper.appendChild(DomHelpers.createLabel("Matéria", select));
+    const wrapper = DomHelpers.createElement("div", "leif-subject-picker");
+    const label = DomHelpers.createElement("span", "leif-subject-picker-label");
+    label.textContent = "Matéria";
+    wrapper.append(label, select);
     return wrapper;
   }
 }

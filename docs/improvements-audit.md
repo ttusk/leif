@@ -8,12 +8,10 @@
 
 ## UI improvements
 
-### P1 — Accessibility is effectively absent
-- Zero `aria-*`, `role=`, or `tabindex` attributes in the entire `src/` tree.
-- No `:focus` styles in `styles.css` (~716 lines) — keyboard users get only browser defaults.
-- Tab bar uses `<button>` (good) but the active state is class-only; no `aria-selected`/`role="tab"`/`role="tablist"`. See `src/ui/view/LeifView.ts:135-148`.
-- Custom modal (`DomHelpers.createModal`) has no focus trap, no `role="dialog"`/`aria-modal`, no Escape-to-close, and an icon-only close button. See `src/ui/view/shared/DomHelpers.ts` (`createModal`).
-- Deletes use native blocking `confirm()` (`src/ui/view/components/ContestsTab.ts`, `SessionsTab.ts:190`, `ItemsTab.ts`, `TopicsTab.ts`) — un-styled, not Obsidian-native, awkward for keyboard/AT users.
+### P1 — Accessibility needs a fresh post-inline audit
+- The primary tab bar now uses `role="tablist"`, `role="tab"`, `aria-selected`, `aria-controls`, and keyboard navigation.
+- Creation and deletion flows now happen inline in the Leif view; the previous modal/confirm paths were removed.
+- Remaining work: audit every inline form for labels, focus order, validation messaging, and keyboard-only delete confirmation.
 
 ### P2 — Mobile/responsive not implemented
 - Only one `@media` query in the whole stylesheet; the inline-editable tables with per-cell inputs will overflow on phones. README roadmap lists "Revisar a experiência mobile" but it is not done.
@@ -27,7 +25,7 @@
 
 ### P2 — Weak input validation in the UI
 - Wall form builds links with only an `input.type="url"` HTML hint and no use-case validation (`UpdateContestWallValidator` only checks `contestId`).
-- Item create modal has no numeric bounds on `weight`/`questionCount`/`totalPages`.
+- Item create form has no numeric bounds on `weight`/`questionCount`/`totalPages`.
 - Business rule "a questions session must have count > 0" is enforced by throwing `ValidationError` from the view (`SessionsTab.ts:299-301`) — should live in the use case.
 
 ### P3 — Command-name language is inconsistent
@@ -91,7 +89,7 @@
 
 1. **P1 cascade deletes** — make `Delete*` use cases clean up parent ID arrays; add regression tests. (smallest blast radius for a correctness bug)
 2. **P1 architecture** — introduce an `EntityRepository` port in `application/ports/` and have use cases depend on the interface.
-3. **P1 a11y basics** — add focus styles, `aria-selected`/`role="tab"` on the tab bar, `role="dialog"`+focus trap+Escape on the modal, and replace `confirm()` with an Obsidian `Modal`.
+3. **P1 a11y basics** — audit inline form focus order, validation copy, and keyboard-only delete confirmation after the modal removal.
 4. **P2 tooling** — add eslint + prettier, a `lint` script, and a lint step in CI; tighten `tsconfig` flags.
 5. **P2 dead code & duplication** — either wire the three domain services into the use cases (and delete the inline copies) or remove them and their tests; extract a shared `notifyError`/`SubjectPicker`/`ID factory`.
 6. **P2 error handling** — make all use cases throw `ValidationError` for domain failures; centralize validation; add one error boundary in the view.

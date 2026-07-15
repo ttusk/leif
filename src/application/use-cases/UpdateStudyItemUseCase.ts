@@ -1,5 +1,6 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
+import type { ResourceReference } from "@/domain/entities/ResourceReference";
 import type { StudyItem } from "@/domain/entities/StudyItem";
 import { ValidationError } from "@/domain/errors/DomainErrors";
 
@@ -9,6 +10,7 @@ export interface UpdateStudyItemInput {
   weight?: number;
   questionCount?: number;
   totalPages?: number;
+  resourceReferences?: ResourceReference[];
 }
 
 /**
@@ -46,7 +48,10 @@ export class UpdateStudyItemUseCase {
       title: input.title !== undefined ? input.title.trim() : item.title,
       weight: input.weight !== undefined ? input.weight : item.weight,
       questionCount: input.questionCount !== undefined ? input.questionCount : item.questionCount,
-      totalPages: input.totalPages !== undefined ? input.totalPages : item.totalPages
+      totalPages: input.totalPages !== undefined ? input.totalPages : item.totalPages,
+      resourceReferences: input.resourceReferences !== undefined
+        ? input.resourceReferences
+        : item.resourceReferences
     }));
   }
 }

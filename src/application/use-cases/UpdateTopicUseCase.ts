@@ -1,6 +1,6 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
-import type { QuestionNotebook } from "@/domain/entities/QuestionNotebook";
+import { QuestionNotebook } from "@/domain/entities/QuestionNotebook";
 import type { Topic } from "@/domain/entities/Topic";
 import { ValidationError } from "@/domain/errors/DomainErrors";
 

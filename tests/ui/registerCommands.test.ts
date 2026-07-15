@@ -82,7 +82,7 @@ describe("registerCommands", () => {
     registerCommands(plugin as never, dataStore);
 
     await getCommand(plugin, "leif-seed-demo-data").callback();
-    expect(getLastNotice()).toBe("Leif demo data created.");
+    expect(getLastNotice()).toBe("Dados de exemplo criados.");
 
     const seededData = await dataStore.load();
     expect(seededData.contests.map((contest) => contest.id)).toEqual([
@@ -91,18 +91,21 @@ describe("registerCommands", () => {
       "trt-2-2026"
     ]);
     expect(seededData.activeContestId).toBe("tce-sp-2026");
-    expect(seededData.subjects).toHaveLength(9);
-    expect(seededData.studyItems).toHaveLength(18);
-    expect(seededData.topics).toHaveLength(18);
-    expect(seededData.studySessions).toHaveLength(36);
+    expect(seededData.subjects).toHaveLength(10);
+    expect(seededData.studyItems).toHaveLength(23);
+    expect(seededData.topics).toHaveLength(23);
+    expect(seededData.studySessions).toHaveLength(40);
     expect(seededData.topics.every((topic) => topic.questionNotebook)).toBe(true);
+    expect(seededData.studyItems.every((item) => (item.resourceReferences?.length ?? 0) > 0)).toBe(true);
+    expect(seededData.subjects.some((subject) => subject.isActive === false)).toBe(true);
+    expect(seededData.subjects.some((subject) => subject.currentStage?.trim())).toBe(true);
 
     await getCommand(plugin, "leif-switch-active-contest").callback();
-    expect(getLastNotice()).toBe("Active contest switched to: SEFAZ-SP Fiscal 2026");
+    expect(getLastNotice()).toBe("Agora estudando: SEFAZ-SP Fiscal 2026");
     expect((await dataStore.load()).activeContestId).toBe("sefaz-sp-2026");
 
     await getCommand(plugin, "leif-reset-demo-data").callback();
-    expect(getLastNotice()).toBe("Leif data reset.");
+    expect(getLastNotice()).toBe("Dados do Leif limpos.");
     await expect(dataStore.load()).resolves.toEqual(createDefaultLeifPluginData());
   });
 
@@ -114,13 +117,14 @@ describe("registerCommands", () => {
 
     await getCommand(plugin, "leif-seed-demo-data").callback();
     await getCommand(plugin, "leif-show-active-contest-wall").callback();
-    expect(getLastNotice()).toContain("TCE-SP Auditor 2026: notices 1, exams 1");
+    expect(getLastNotice()).toContain("TCE-SP Auditor 2026: 1 edital, 1 prova");
 
     await getCommand(plugin, "leif-register-demo-question-session").callback();
-    expect(getLastNotice()).toBe("Demo question session registered for: Português");
+    expect(getLastNotice()).toBe("Sessão de questões criada em Português.");
 
     await getCommand(plugin, "leif-show-summary").callback();
-    expect(getLastNotice()).toContain("Português: PDF 50, Questions 85, Accuracy 85%");
+    expect(getLastNotice()).toContain("Português: PDF 108, questões 143, acerto 84%");
+    expect(getLastNotice()).toContain("Raciocínio Lógico: PDF 0, questões 0, acerto sem dados");
   });
 
   it("shows, reorders, toggles and updates active contest subjects, and registers a demo video session", async () => {
@@ -132,21 +136,21 @@ describe("registerCommands", () => {
     await getCommand(plugin, "leif-seed-demo-data").callback();
 
     await getCommand(plugin, "leif-show-active-subjects").callback();
-    expect(getLastNotice()).toContain("1. Português [active] 90m");
+    expect(getLastNotice()).toContain("1. Português [ativa] 90m");
 
     await getCommand(plugin, "leif-reorder-active-subjects").callback();
-    expect(getLastNotice()).toBe("Active contest subjects reordered.");
+    expect(getLastNotice()).toBe("Matérias reordenadas.");
 
     await getCommand(plugin, "leif-show-active-subjects").callback();
-    expect(getLastNotice()).toContain("1. Controle Externo [active] 80m");
+    expect(getLastNotice()).toContain("1. Raciocínio Lógico [inativa] 45m");
 
     await getCommand(plugin, "leif-toggle-first-subject-active").callback();
-    expect(getLastNotice()).toBe("Subject Controle Externo is now inactive.");
+    expect(getLastNotice()).toBe("Raciocínio Lógico agora está ativa.");
 
     await getCommand(plugin, "leif-update-first-subject-config").callback();
-    expect(getLastNotice()).toBe("Subject Controle Externo updated to 95 minutes and stage Review.");
+    expect(getLastNotice()).toBe("Raciocínio Lógico: 60 min, etapa Revisão.");
 
     await getCommand(plugin, "leif-register-demo-video-session").callback();
-    expect(getLastNotice()).toBe("Demo video session registered for: Controle Externo");
+    expect(getLastNotice()).toBe("Sessão de vídeo criada em Raciocínio Lógico.");
   });
 });

@@ -48,7 +48,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
       const data = await dataStore.load();
       const activeContest = data.contests.find((contest) => contest.id === data.activeContestId);
 
-      new Notice(activeContest ? `Active contest: ${activeContest.name}` : "No active contest configured.");
+      new Notice(activeContest ? `Concurso escolhido: ${activeContest.name}` : "Nenhum concurso escolhido.");
     }
   });
 
@@ -59,12 +59,12 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
       const data = await dataStore.load();
 
       if (data.contests.length > 0) {
-        new Notice("Leif already has data. Demo seed skipped.");
+        new Notice("O Leif já tem dados. Mantive tudo como está.");
         return;
       }
 
       await seedTceSpDemo(dataStore);
-      new Notice("Leif demo data created.");
+      new Notice("Dados de exemplo criados.");
     }
   });
 
@@ -75,7 +75,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
       const data = await dataStore.load();
 
       if (data.contests.length === 0) {
-        new Notice("At least two contests are required to switch the active contest.");
+        new Notice("Cadastre pelo menos dois concursos para alternar.");
         return;
       }
 
@@ -84,7 +84,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
           ...data,
           activeContestId: null
         });
-        new Notice("Active contest switched to: none");
+        new Notice("Nenhum concurso escolhido agora.");
         return;
       }
 
@@ -92,7 +92,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
       const nextContest = data.contests[(currentIndex + 1 + data.contests.length) % data.contests.length];
 
       await setActiveContest.execute({ contestId: nextContest.id });
-      new Notice(`Active contest switched to: ${nextContest.name}`);
+      new Notice(`Agora estudando: ${nextContest.name}`);
     }
   });
 
@@ -103,15 +103,15 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
       const subjects = await listSubjectsForActiveContest.execute();
 
       if (subjects.length === 0) {
-        new Notice("No subjects found for the active contest.");
+        new Notice("Nenhuma matéria encontrada nesse concurso.");
         return;
       }
 
       new Notice(
         subjects
           .map((subject) => {
-            const stage = subject.currentStage ?? "no stage";
-            const state = subject.isActive ? "active" : "inactive";
+            const stage = subject.currentStage ?? "sem etapa";
+            const state = subject.isActive ? "ativa" : "inativa";
             return `${subject.order}. ${subject.name} [${state}] ${subject.plannedStudyMinutes}m (${stage})`;
           })
           .join(" | ")
@@ -127,7 +127,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
       const subjects = await listSubjectsForActiveContest.execute();
 
       if (!data.activeContestId || subjects.length < 2) {
-        new Notice("At least two subjects are required to reorder the active contest.");
+        new Notice("Cadastre pelo menos duas matérias para reordenar.");
         return;
       }
 
@@ -136,7 +136,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
         subjectIdsInOrder: subjects.map((subject) => subject.id).reverse()
       });
 
-      new Notice("Active contest subjects reordered.");
+      new Notice("Matérias reordenadas.");
     }
   });
 
@@ -148,7 +148,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
       const subject = subjects[0];
 
       if (!subject) {
-        new Notice("No subject found for the active contest.");
+        new Notice("Nenhuma matéria encontrada nesse concurso.");
         return;
       }
 
@@ -157,7 +157,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
         isActive: !subject.isActive
       });
 
-      new Notice(`Subject ${updatedSubject.name} is now ${updatedSubject.isActive ? "active" : "inactive"}.`);
+      new Notice(`${updatedSubject.name} agora está ${updatedSubject.isActive ? "ativa" : "inativa"}.`);
     }
   });
 
@@ -169,18 +169,18 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
       const subject = subjects[0];
 
       if (!subject) {
-        new Notice("No subject found for the active contest.");
+        new Notice("Nenhuma matéria encontrada nesse concurso.");
         return;
       }
 
       const updatedSubject = await updateSubjectConfiguration.execute({
         subjectId: subject.id,
         plannedStudyMinutes: subject.plannedStudyMinutes + 15,
-        currentStage: "Review"
+        currentStage: "Revisão"
       });
 
       new Notice(
-        `Subject ${updatedSubject.name} updated to ${updatedSubject.plannedStudyMinutes} minutes and stage ${updatedSubject.currentStage}.`
+        `${updatedSubject.name}: ${updatedSubject.plannedStudyMinutes} min, etapa ${updatedSubject.currentStage}.`
       );
     }
   });
@@ -191,8 +191,8 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
     callback: () =>
       DomHelpers.runGuarded(async () => {
         const state = await advanceCycle.execute();
-        new Notice(`Current subject: ${state.currentSubjectId ?? "none"}`);
-      }, "Could not advance cycle.")
+        new Notice(`Matéria atual: ${state.currentSubjectId ?? "nenhuma"}`);
+      }, "Não consegui avançar o ciclo.")
   });
 
   plugin.addCommand({
@@ -203,15 +203,15 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
         const snapshot = await getActiveCycleSnapshot.execute();
         const data = await dataStore.load();
         const itemMap = new Map(data.studyItems.map((item) => [item.id, item.title]));
-        const currentLabel = snapshot.currentSubject?.name ?? "none";
-        const nextLabel = snapshot.nextSubject?.name ?? "none";
-        const currentItemLabel = snapshot.currentItemId ? itemMap.get(snapshot.currentItemId) ?? snapshot.currentItemId : "none";
-        const nextItemLabel = snapshot.nextItemId ? itemMap.get(snapshot.nextItemId) ?? snapshot.nextItemId : "none";
+        const currentLabel = snapshot.currentSubject?.name ?? "nenhuma";
+        const nextLabel = snapshot.nextSubject?.name ?? "nenhuma";
+        const currentItemLabel = snapshot.currentItemId ? itemMap.get(snapshot.currentItemId) ?? snapshot.currentItemId : "nenhum";
+        const nextItemLabel = snapshot.nextItemId ? itemMap.get(snapshot.nextItemId) ?? snapshot.nextItemId : "nenhum";
 
         new Notice(
-          `Current: ${currentLabel} | Next: ${nextLabel} | Current item: ${currentItemLabel} | Next item: ${nextItemLabel}`
+          `Agora: ${currentLabel} | Depois: ${nextLabel} | Item atual: ${currentItemLabel} | Próximo item: ${nextItemLabel}`
         );
-      }, "Could not read cycle snapshot.")
+      }, "Não consegui ler o ciclo.")
   });
 
   plugin.addCommand({
@@ -222,12 +222,12 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
       const activeContest = data.contests.find((contest) => contest.id === data.activeContestId);
 
       if (!activeContest) {
-        new Notice("No active contest configured.");
+        new Notice("Nenhum concurso escolhido.");
         return;
       }
 
       new Notice(
-        `${activeContest.name}: notices ${activeContest.wall.noticeLinks.length}, exams ${activeContest.wall.examLinks.length}, notes ${activeContest.wall.notes ?? "none"}`
+        `${activeContest.name}: ${activeContest.wall.noticeLinks.length} edital, ${activeContest.wall.examLinks.length} prova, notas: ${activeContest.wall.notes ?? "nenhuma"}`
       );
     }
   });
@@ -240,7 +240,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
         const summary = await getActiveContestSummary.execute();
 
         if (summary.subjectSummaries.length === 0) {
-          new Notice("No subject summary available for the active contest.");
+          new Notice("Ainda não há resumo das matérias nesse concurso.");
           return;
         }
 
@@ -248,15 +248,15 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
           .map((subjectSummary) => {
             const accuracy =
               subjectSummary.questionAccuracy === null
-                ? "n/a"
+                ? "sem dados"
                 : `${Math.round(subjectSummary.questionAccuracy * 100)}%`;
 
-            return `${subjectSummary.subjectName}: PDF ${subjectSummary.pdfProgressCount}, Questions ${subjectSummary.questionProgressCount}, Accuracy ${accuracy}`;
+            return `${subjectSummary.subjectName}: PDF ${subjectSummary.pdfProgressCount}, questões ${subjectSummary.questionProgressCount}, acerto ${accuracy}`;
           })
           .join(" | ");
 
         new Notice(message);
-      }, "Could not load active contest summary.")
+      }, "Não consegui carregar o resumo.")
   });
 
   plugin.addCommand({
@@ -266,7 +266,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
       const data = await dataStore.load();
 
       if (!data.activeContestId) {
-        new Notice("No active contest configured.");
+        new Notice("Nenhum concurso escolhido.");
         return;
       }
 
@@ -276,7 +276,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
         data.subjects.find((subject) => subject.contestId === data.activeContestId);
 
       if (!activeSubject) {
-        new Notice("No subject available for the active contest.");
+        new Notice("Nenhuma matéria disponível nesse concurso.");
         return;
       }
 
@@ -294,7 +294,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
         completed: true
       });
 
-      new Notice(`Demo question session registered for: ${activeSubject.name}`);
+      new Notice(`Sessão de questões criada em ${activeSubject.name}.`);
     }
   });
 
@@ -305,14 +305,14 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
       const data = await dataStore.load();
 
       if (!data.activeContestId) {
-        new Notice("No active contest configured.");
+        new Notice("Nenhum concurso escolhido.");
         return;
       }
 
       const activeSubject = (await listSubjectsForActiveContest.execute())[0];
 
       if (!activeSubject) {
-        new Notice("No subject available for the active contest.");
+        new Notice("Nenhuma matéria disponível nesse concurso.");
         return;
       }
 
@@ -326,7 +326,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
         completed: true
       });
 
-      new Notice(`Demo video session registered for: ${activeSubject.name}`);
+      new Notice(`Sessão de vídeo criada em ${activeSubject.name}.`);
     }
   });
 
@@ -335,7 +335,7 @@ export function registerCommands(plugin: Plugin, dataStore: PluginDataStore): vo
     name: t("command.resetPluginData"),
     callback: async () => {
       await dataStore.save(createDefaultLeifPluginData());
-      new Notice("Leif data reset.");
+      new Notice("Dados do Leif limpos.");
     }
   });
 }

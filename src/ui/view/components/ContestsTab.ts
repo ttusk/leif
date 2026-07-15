@@ -1,3 +1,4 @@
+import { Notice } from "obsidian";
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import { CreateContestUseCase } from "@/application/use-cases/CreateContestUseCase";
 import { DeleteContestUseCase } from "@/application/use-cases/DeleteContestUseCase";
@@ -18,6 +19,8 @@ export class ContestsTab {
   private readonly deleteContestUseCase: DeleteContestUseCase;
 
   private editingContestId: string | null = null;
+  private isCreatingContest = false;
+  private pendingDeleteContestId: string | null = null;
 
   constructor(
     private readonly dataStore: PluginDataStore,
@@ -35,48 +38,45 @@ export class ContestsTab {
     header.appendChild(DomHelpers.createSectionTitle("Concursos"));
     header.appendChild(
       DomHelpers.createIconButton("add", "Novo concurso", {
-        onClick: () => this.openCreateContestModal()
+        onClick: async () => {
+          this.isCreatingContest = true;
+          await this.onUpdate();
+        }
       })
     );
     container.appendChild(header);
     container.appendChild(
-      DomHelpers.createParagraph("Cadastre concursos e defina qual deles está ativo.")
+      DomHelpers.createParagraph("Escolha qual concurso está na mesa agora.")
     );
 
-    const contestsCard = DomHelpers.createCard("Lista de concursos");
-    if (data.contests.length === 0) {
-      contestsCard.appendChild(DomHelpers.createParagraph("Nenhum concurso cadastrado."));
+    if (this.isCreatingContest) {
+      container.appendChild(this.renderCreateContestForm());
     }
 
-    const { container: tableContainer, tbody } = DomHelpers.createCrudTable([
-      "Concurso",
-      "ID",
-      "Notas",
-      "Status",
-      "Ações"
-    ]);
+    const contestsCard = DomHelpers.createCard("Seus concursos");
+    if (data.contests.length === 0) {
+      contestsCard.appendChild(DomHelpers.createParagraph("Nenhum concurso por aqui ainda."));
+    }
+
+    const list = DomHelpers.createElement("div", "leif-contest-list");
 
     data.contests.forEach((contest) => {
       const isEditing = this.editingContestId === contest.id;
       if (isEditing) {
-        tbody.appendChild(this.renderEditableRow(contest, data));
+        list.appendChild(this.renderEditableCard(contest, data));
       } else {
-        tbody.appendChild(this.renderDisplayRow(contest, data));
+        list.appendChild(this.renderDisplayCard(contest, data));
       }
     });
 
-    contestsCard.appendChild(tableContainer);
+    contestsCard.appendChild(list);
     container.appendChild(contestsCard);
   }
 
-  private renderDisplayRow(contest: Contest, data: LeifPluginData): HTMLElement {
-    const tr = DomHelpers.createElement("tr");
+  private renderDisplayCard(contest: Contest, data: LeifPluginData): HTMLElement {
+    const card = DomHelpers.createElement("section", "leif-contest-card");
+    card.dataset.contestCardId = contest.id;
     const isActive = data.activeContestId === contest.id;
-
-    tr.appendChild(DomHelpers.createCell(contest.name));
-    tr.appendChild(DomHelpers.createCell(contest.id));
-    tr.appendChild(DomHelpers.createCell(contest.wall.notes ?? "—"));
-    tr.appendChild(DomHelpers.createCell(isActive ? "Ativo" : "Inativo"));
 
     const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
 
@@ -87,9 +87,10 @@ export class ContestsTab {
           onClick: async () => {
             try {
               await this.setActiveContestUseCase.execute({ contestId: contest.id });
+              new Notice(`${contest.name} agora é o concurso ativo.`);
               await this.onUpdate();
             } catch (error) {
-              DomHelpers.notifyError(error, "Não foi possível ativar o concurso.");
+              DomHelpers.notifyError(error, "Não consegui escolher esse concurso.");
             }
           }
         })
@@ -108,39 +109,62 @@ export class ContestsTab {
     actions.appendChild(
       DomHelpers.createIconButton("delete", "Excluir", {
         onClick: async () => {
-          const confirmed = await DomHelpers.confirm({
-            title: "Excluir concurso",
-            message: `Excluir "${contest.name}"?`,
-            confirmLabel: "Excluir"
-          });
-          if (!confirmed) return;
-          try {
-            await this.deleteContestUseCase.execute({ contestId: contest.id });
-            await this.onUpdate();
-          } catch (error) {
-            DomHelpers.notifyError(error, "Não foi possível excluir o concurso.");
-          }
+          this.pendingDeleteContestId = contest.id;
+          await this.onUpdate();
         }
       })
     );
 
-    const actionsCell = DomHelpers.createElement("td");
-    actionsCell.appendChild(actions);
-    tr.appendChild(actionsCell);
+    if (this.pendingDeleteContestId === contest.id) {
+      actions.append(
+        DomHelpers.createButton("Excluir?", {
+          dataset: { contestDeleteId: contest.id },
+          onClick: async () => {
+            try {
+              await this.deleteContestUseCase.execute({ contestId: contest.id });
+              this.pendingDeleteContestId = null;
+              await this.onUpdate();
+            } catch (error) {
+              DomHelpers.notifyError(error, "Não consegui excluir esse concurso.");
+            }
+          }
+        }),
+        DomHelpers.createButton("Cancelar", {
+          onClick: async () => {
+            this.pendingDeleteContestId = null;
+            await this.onUpdate();
+          }
+        })
+      );
+    }
 
-    return tr;
+    const header = DomHelpers.createElement("div", "leif-contest-card-header");
+    const titleGroup = DomHelpers.createElement("div", "leif-contest-card-title-group");
+    const title = DomHelpers.createElement("strong", "leif-contest-card-title");
+    title.textContent = contest.name;
+    const status = DomHelpers.createElement("span", isActive ? "leif-status-active" : "leif-status-inactive");
+    status.textContent = isActive ? "Estudando agora" : "Guardado";
+    titleGroup.append(title, status);
+    header.append(titleGroup, actions);
+
+    const notes = DomHelpers.createParagraph(contest.wall.notes?.trim() || "Sem notas ainda.");
+    const meta = DomHelpers.createElement("div", "leif-contest-meta");
+    meta.append(this.renderMetaChip("ID", contest.id));
+
+    card.append(header, notes, meta);
+    return card;
   }
 
-  private renderEditableRow(contest: Contest, data: LeifPluginData): HTMLElement {
-    const tr = DomHelpers.createElement("tr");
-    tr.className = "leif-editing-row";
+  private renderEditableCard(contest: Contest, data: LeifPluginData): HTMLElement {
+    const card = DomHelpers.createElement("section", "leif-contest-card is-editing");
+    card.dataset.contestCardId = contest.id;
 
     const nameInput = DomHelpers.createTextarea("Nome", contest.name);
     nameInput.rows = 1;
-    nameInput.className = "leif-textarea leif-textarea-inline";
+    nameInput.cols = 24;
     const notesInput = DomHelpers.createTextarea("Notas", contest.wall.notes ?? "");
     notesInput.rows = 2;
-    notesInput.className = "leif-textarea leif-textarea-inline leif-textarea-notes";
+    notesInput.cols = 32;
 
     const saveButton = DomHelpers.createIconButton("save", "Salvar", {
       onClick: async () => {
@@ -153,7 +177,7 @@ export class ContestsTab {
           this.editingContestId = null;
           await this.onUpdate();
         } catch (error) {
-          DomHelpers.notifyError(error, "Não foi possível salvar.");
+          DomHelpers.notifyError(error, "Não consegui salvar.");
         }
       }
     });
@@ -169,19 +193,26 @@ export class ContestsTab {
     actions.appendChild(saveButton);
     actions.appendChild(cancelButton);
 
-    tr.appendChild(DomHelpers.createCell(null, nameInput));
-    tr.appendChild(DomHelpers.createCell(contest.id));
-    tr.appendChild(DomHelpers.createCell(null, notesInput));
-    tr.appendChild(DomHelpers.createCell(data.activeContestId === contest.id ? "Ativo" : "Inativo"));
+    const fields = DomHelpers.createElement("div", "leif-grid leif-grid-2");
+    fields.append(
+      DomHelpers.createLabel("Nome", nameInput),
+      DomHelpers.createLabel("Notas", notesInput)
+    );
 
-    const actionsCell = DomHelpers.createElement("td");
-    actionsCell.appendChild(actions);
-    tr.appendChild(actionsCell);
+    const status = DomHelpers.createElement("span", data.activeContestId === contest.id ? "leif-status-active" : "leif-status-inactive");
+    status.textContent = data.activeContestId === contest.id ? "Estudando agora" : "Guardado";
 
-    return tr;
+    card.append(
+      DomHelpers.createSectionSubtitle("Editar concurso"),
+      fields,
+      status,
+      actions
+    );
+
+    return card;
   }
 
-  private openCreateContestModal(): void {
+  private renderCreateContestForm(): HTMLElement {
     const idInput = DomHelpers.createInput("text", "ID do concurso");
     const nameInput = DomHelpers.createInput("text", "Nome do concurso");
 
@@ -191,24 +222,45 @@ export class ContestsTab {
           id: idInput.value.trim(),
           name: nameInput.value.trim()
         });
-        modal.close();
+        this.isCreatingContest = false;
         await this.onUpdate();
       } catch (error) {
-        DomHelpers.notifyError(error, "Não foi possível criar o concurso.");
+        DomHelpers.notifyError(error, "Não consegui criar esse concurso.");
       }
     });
 
+    form.classList.add("leif-card");
     form.append(
+      DomHelpers.createSectionSubtitle("Novo concurso"),
       DomHelpers.createLabel("ID", idInput),
-      DomHelpers.createLabel("Nome", nameInput)
+      DomHelpers.createLabel("Nome", nameInput),
+      DomHelpers.createElement("div", "leif-form-actions")
     );
 
-    const modal = DomHelpers.createModal({
-      title: "Novo concurso",
-      content: form,
-      onSubmit: () => form.requestSubmit()
-    });
+    const actions = form.querySelector(".leif-form-actions");
+    actions?.append(
+      DomHelpers.createButton("Cancelar", {
+        onClick: async () => {
+          this.isCreatingContest = false;
+          await this.onUpdate();
+        }
+      }),
+      DomHelpers.createButton("Criar", {
+        type: "submit",
+        className: "mod-cta"
+      })
+    );
 
-    modal.open();
+    return form;
+  }
+
+  private renderMetaChip(label: string, value: string): HTMLElement {
+    const chip = DomHelpers.createElement("span", "leif-next-activity-chip");
+    const labelEl = DomHelpers.createElement("span", "leif-next-activity-chip-label");
+    labelEl.textContent = `${label}:`;
+    const valueEl = DomHelpers.createElement("span", "leif-next-activity-chip-value");
+    valueEl.textContent = value;
+    chip.append(labelEl, valueEl);
+    return chip;
   }
 }
