@@ -14,7 +14,7 @@ import { createId } from "@/application/Id";
 
 /**
  * Cycle tab component - manages subjects, order, status, time and stage.
- * Inline editing: clicking the pencil icon on a row transforms the row into an editable form.
+ * Inline editing: clicking the pencil icon on a card transforms the card into an editable form.
  */
 export class CycleTab {
   private readonly createSubjectUseCase: CreateSubjectUseCase;
@@ -75,60 +75,84 @@ export class CycleTab {
       return;
     }
 
-    const tableWrapper = DomHelpers.createElement("div", "leif-table-wrapper");
-    const table = DomHelpers.createElement("table", "leif-table");
+    const list = DomHelpers.createElement("div", "leif-cycle-card-list");
+    const activeMinutes = subjects
+      .filter((subject) => subject.isActive)
+      .reduce((total, subject) => total + subject.plannedStudyMinutes, 0);
+    const summary = DomHelpers.createElement("div", "leif-cycle-summary");
+    summary.append(
+      this.renderSummaryChip("Matérias", String(subjects.length)),
+      this.renderSummaryChip("No ciclo", String(subjects.filter((subject) => subject.isActive).length)),
+      this.renderSummaryChip("Tempo total", `${activeMinutes} min`)
+    );
+    card.appendChild(summary);
 
-    // Header
-    const thead = DomHelpers.createElement("thead");
-    const headerRow = DomHelpers.createElement("tr");
-    ["Ordem", "Matéria", "Tempo", "Etapa", "Ciclo", "Ações"].forEach((header) => {
-      const th = DomHelpers.createElement("th");
-      th.textContent = header;
-      headerRow.appendChild(th);
-    });
-    thead.appendChild(headerRow);
-    table.appendChild(thead);
-
-    // Body
-    const tbody = DomHelpers.createElement("tbody");
     subjects.forEach((subject, index) => {
       const isEditing = this.editingSubjectId === subject.id;
-      const tr = isEditing
-        ? this.renderEditableRow(subject, subjects, index, data.activeContestId)
-        : this.renderDisplayRow(subject, subjects, index, data.activeContestId);
-      tbody.appendChild(tr);
+      const subjectCard = isEditing
+        ? this.renderEditableCard(subject)
+        : this.renderDisplayCard(subject, subjects, index, data.activeContestId);
+      list.appendChild(subjectCard);
     });
-    table.appendChild(tbody);
-    tableWrapper.appendChild(table);
-    card.appendChild(tableWrapper);
+    card.appendChild(list);
 
     container.appendChild(card);
   }
 
-  private renderDisplayRow(
+  private renderDisplayCard(
     subject: Subject,
     subjects: Subject[],
     index: number,
     activeContestId: string | null
   ): HTMLElement {
-    const tr = DomHelpers.createElement("tr");
-    tr.appendChild(this.renderOrderCell(subject, subjects, index, activeContestId));
-    tr.appendChild(DomHelpers.createCell(subject.name));
-    tr.appendChild(DomHelpers.createCell(`${subject.plannedStudyMinutes} min`));
-    tr.appendChild(DomHelpers.createCell(subject.currentStage ?? "—"));
-    tr.appendChild(this.renderStatusCell(subject));
-    tr.appendChild(DomHelpers.createCell(null, this.renderEditCell(subject)));
-    return tr;
+    const card = DomHelpers.createElement("section", "leif-cycle-card");
+    card.dataset.subjectId = subject.id;
+    if (!subject.isActive) {
+      card.classList.add("is-paused");
+    }
+
+    const header = DomHelpers.createElement("div", "leif-cycle-card-header");
+    const titleGroup = DomHelpers.createElement("div", "leif-cycle-card-title-group");
+    const order = DomHelpers.createElement("span", "leif-cycle-card-order");
+    order.textContent = String(subject.order);
+    const title = DomHelpers.createElement("strong", "leif-cycle-card-title");
+    title.textContent = subject.name;
+    const status = DomHelpers.createElement("span", subject.isActive ? "leif-status-active" : "leif-status-inactive");
+    status.textContent = subject.isActive ? "No ciclo" : "Pausada";
+    titleGroup.append(order, title, status);
+
+    const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
+    actions.append(
+      this.renderMoveButton("up", "Subir", async () => {
+        await this.moveSubject(subjects, index, index - 1, activeContestId);
+      }, index === 0),
+      this.renderMoveButton("down", "Descer", async () => {
+        await this.moveSubject(subjects, index, index + 1, activeContestId);
+      }, index === subjects.length - 1),
+      this.renderCycleToggleButton(subject),
+      DomHelpers.createIconButton("edit", "Editar", {
+        onClick: async () => {
+          this.editingSubjectId = subject.id;
+          await this.onUpdate();
+        }
+      })
+    );
+
+    header.append(titleGroup, actions);
+
+    const meta = DomHelpers.createElement("div", "leif-cycle-card-meta");
+    meta.append(
+      DomHelpers.createKeyValueRow("Tempo", `${subject.plannedStudyMinutes} min`),
+      DomHelpers.createKeyValueRow("Etapa", subject.currentStage ?? "—")
+    );
+
+    card.append(header, meta);
+    return card;
   }
 
-  private renderEditableRow(
-    subject: Subject,
-    subjects: Subject[],
-    index: number,
-    activeContestId: string | null
-  ): HTMLElement {
-    const tr = DomHelpers.createElement("tr");
-    tr.className = "leif-editing-row";
+  private renderEditableCard(subject: Subject): HTMLElement {
+    const card = DomHelpers.createElement("section", "leif-cycle-card is-editing");
+    card.dataset.subjectId = subject.id;
 
     const minutesInput = DomHelpers.createInput(
       "number",
@@ -167,13 +191,23 @@ export class CycleTab {
     controls.appendChild(saveButton);
     controls.appendChild(cancelButton);
 
-    tr.appendChild(this.renderOrderCell(subject, subjects, index, activeContestId));
-    tr.appendChild(DomHelpers.createCell(subject.name));
-    tr.appendChild(DomHelpers.createCell(null, minutesInput));
-    tr.appendChild(DomHelpers.createCell(null, stageInput));
-    tr.appendChild(DomHelpers.createCell(subject.isActive ? "No ciclo" : "Pausada"));
-    tr.appendChild(DomHelpers.createCell(null, controls));
-    return tr;
+    const header = DomHelpers.createElement("div", "leif-cycle-card-header");
+    const titleGroup = DomHelpers.createElement("div", "leif-cycle-card-title-group");
+    const order = DomHelpers.createElement("span", "leif-cycle-card-order");
+    order.textContent = String(subject.order);
+    const title = DomHelpers.createElement("strong", "leif-cycle-card-title");
+    title.textContent = subject.name;
+    titleGroup.append(order, title);
+    header.append(titleGroup, controls);
+
+    const fields = DomHelpers.createElement("div", "leif-cycle-edit-form");
+    fields.append(
+      DomHelpers.createStackedLabel("Tempo em minutos", minutesInput),
+      DomHelpers.createStackedLabel("Etapa", stageInput)
+    );
+
+    card.append(header, fields);
+    return card;
   }
 
   private renderCreateSubjectForm(data: LeifPluginData): HTMLElement {
@@ -224,11 +258,7 @@ export class CycleTab {
     return form;
   }
 
-  private renderStatusCell(subject: Subject): HTMLElement {
-    const td = DomHelpers.createElement("td", "leif-status-cell");
-    const wrapper = DomHelpers.createElement("div", "leif-cycle-status-control");
-    const status = DomHelpers.createElement("span", subject.isActive ? "leif-status-active" : "leif-status-inactive");
-    status.textContent = subject.isActive ? "No ciclo" : "Pausada";
+  private renderCycleToggleButton(subject: Subject): HTMLButtonElement {
     const button = DomHelpers.createButton(subject.isActive ? "Pausar" : "Ativar", {
       dataset: { subjectCycleToggleId: subject.id },
       onClick: async () => {
@@ -249,61 +279,30 @@ export class CycleTab {
       "aria-label",
       subject.isActive ? `Pausar ${subject.name} no ciclo` : `Ativar ${subject.name} no ciclo`
     );
-    wrapper.append(status, button);
-    td.appendChild(wrapper);
-
-    return td;
+    return button;
   }
 
-  private renderOrderCell(
-    subject: Subject,
-    subjects: Subject[],
-    index: number,
-    activeContestId: string | null
-  ): HTMLElement {
-    const td = DomHelpers.createElement("td", "leif-order-cell");
-    const content = DomHelpers.createElement("div", "leif-order-control");
-    const order = DomHelpers.createElement("span", "leif-order-number");
-    const buttons = DomHelpers.createElement("div", "leif-order-actions");
-
-    order.textContent = String(subject.order);
-    content.appendChild(order);
-
-    if (index > 0) {
-      buttons.appendChild(
-        DomHelpers.createIconButton("up", "Subir", {
-          onClick: async () => {
-            await this.moveSubject(subjects, index, index - 1, activeContestId);
-          }
-        })
-      );
-    }
-    if (index < subjects.length - 1) {
-      buttons.appendChild(
-        DomHelpers.createIconButton("down", "Descer", {
-          onClick: async () => {
-            await this.moveSubject(subjects, index, index + 1, activeContestId);
-          }
-        })
-      );
-    }
-
-    content.appendChild(buttons);
-    td.appendChild(content);
-    return td;
+  private renderMoveButton(
+    icon: string,
+    label: string,
+    onClick: () => Promise<void>,
+    disabled: boolean
+  ): HTMLButtonElement {
+    const button = disabled
+      ? DomHelpers.createIconButton(icon, label)
+      : DomHelpers.createIconButton(icon, label, { onClick });
+    button.disabled = disabled;
+    return button;
   }
 
-  private renderEditCell(subject: Subject): HTMLElement {
-    const cell = DomHelpers.createElement("div", "leif-edit-cell");
-    cell.appendChild(
-      DomHelpers.createIconButton("edit", "Editar", {
-        onClick: async () => {
-          this.editingSubjectId = subject.id;
-          await this.onUpdate();
-        }
-      })
-    );
-    return cell;
+  private renderSummaryChip(label: string, value: string): HTMLElement {
+    const chip = DomHelpers.createElement("span", "leif-next-activity-chip");
+    const labelEl = DomHelpers.createElement("span", "leif-next-activity-chip-label");
+    labelEl.textContent = `${label}:`;
+    const valueEl = DomHelpers.createElement("span", "leif-next-activity-chip-value");
+    valueEl.textContent = value;
+    chip.append(labelEl, valueEl);
+    return chip;
   }
 
   private async moveSubject(

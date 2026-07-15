@@ -291,7 +291,7 @@ describe("LeifView", () => {
     expect(leaf.containerEl.textContent).toContain("SEFAZ");
   });
 
-  it("shows cycle status and reorder controls directly in the plan tab", async () => {
+  it("shows cycle subjects as scannable cards with status and reorder controls", async () => {
     const dataStore = new InMemoryPluginDataStore();
     await seedUiData(dataStore);
 
@@ -305,20 +305,18 @@ describe("LeifView", () => {
     planTabButton.click();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    const statusCells = Array.from(leaf.containerEl.querySelectorAll(".leif-status-cell"));
-    const headerTexts = Array.from(leaf.containerEl.querySelectorAll("table.leif-table thead th"))
-      .map((header) => header.textContent?.trim() ?? "");
-    const orderCells = Array.from(leaf.containerEl.querySelectorAll<HTMLTableCellElement>("td.leif-order-cell"));
-    const upButtons = orderCells
-      .flatMap((cell) => Array.from(cell.querySelectorAll<HTMLButtonElement>("button[aria-label='Subir']")));
-    const downButtons = orderCells
-      .flatMap((cell) => Array.from(cell.querySelectorAll<HTMLButtonElement>("button[aria-label='Descer']")));
-    const upButton = upButtons[0];
-    const downButton = downButtons[0];
+    const cycleCards = Array.from(leaf.containerEl.querySelectorAll<HTMLElement>(".leif-cycle-card"));
+    const upButton = leaf.containerEl.querySelector<HTMLButtonElement>(".leif-cycle-card button[aria-label='Subir']");
+    const downButton = leaf.containerEl.querySelector<HTMLButtonElement>(".leif-cycle-card button[aria-label='Descer']");
 
-    expect(headerTexts).toEqual(["Ordem", "Matéria", "Tempo", "Etapa", "Ciclo", "Ações"]);
-    expect(statusCells.some((cell) => cell.textContent?.includes("No ciclo"))).toBe(true);
-    expect(statusCells[0]?.querySelector("button")?.textContent).toMatch(/Pausar|Ativar/);
+    expect(leaf.containerEl.querySelector("table.leif-table")).toBeNull();
+    expect(cycleCards.length).toBeGreaterThanOrEqual(2);
+    expect(cycleCards[0]?.querySelector(".leif-cycle-card-order")?.textContent).toContain("1");
+    expect(cycleCards[0]?.querySelector(".leif-cycle-card-title")?.textContent).toBeTruthy();
+    expect(cycleCards[0]?.textContent).toContain("No ciclo");
+    expect(cycleCards[0]?.textContent).toContain("Tempo");
+    expect(cycleCards[0]?.textContent).toContain("Etapa");
+    expect(cycleCards[0]?.querySelector("button[data-subject-cycle-toggle-id]")?.textContent).toMatch(/Pausar|Ativar/);
     expect(upButton).not.toBeNull();
     expect(downButton).not.toBeNull();
   });
@@ -338,7 +336,7 @@ describe("LeifView", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     const toggleButton = leaf.containerEl.querySelector<HTMLButtonElement>(
-      "td.leif-status-cell button[data-subject-cycle-toggle-id='subject-1']"
+      ".leif-cycle-card button[data-subject-cycle-toggle-id='subject-1']"
     );
 
     if (!toggleButton) {
