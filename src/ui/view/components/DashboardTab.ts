@@ -65,6 +65,10 @@ export class DashboardTab {
     container.appendChild(
       DomHelpers.createParagraph("O que estudar agora e como o dia está andando.")
     );
+    const examPlanPanel = this.renderExamPlanPanel(activeContest);
+    if (examPlanPanel) {
+      container.appendChild(examPlanPanel);
+    }
     container.appendChild(
       this.renderNextActivityPanel({
         subjectName: recommendedSubject?.name ?? "Sem matéria ativa",
@@ -127,6 +131,39 @@ export class DashboardTab {
     container.appendChild(subjectSummaryCard);
   }
 
+  private renderExamPlanPanel(contest: NonNullable<LeifPluginData["contests"][number]>): HTMLElement | null {
+    const plan = contest.examPlan;
+    if (!plan?.examDate && !plan?.board && plan?.weeklyStudyHours === undefined && plan?.weeklyQuestionGoal === undefined) {
+      return null;
+    }
+
+    const panel = DomHelpers.createElement("section", "leif-next-activity leif-exam-plan");
+    const intro = DomHelpers.createElement("div", "leif-next-activity-intro");
+    const label = DomHelpers.createElement("span", "leif-next-activity-label");
+    label.textContent = "Prova";
+    const title = DomHelpers.createElement("strong", "leif-next-activity-subject");
+    title.textContent = plan?.examDate
+      ? `Prova em ${this.formatDaysUntilExam(plan.examDate)}`
+      : "Planejamento da prova";
+    const details = DomHelpers.createElement("span", "leif-next-activity-item");
+    details.textContent = plan?.examDate ? this.formatDate(plan.examDate) : "Data ainda não definida";
+    intro.append(label, title, details);
+
+    const meta = DomHelpers.createElement("div", "leif-next-activity-meta");
+    if (plan?.board) {
+      meta.appendChild(this.renderActivityMeta("Banca", plan.board));
+    }
+    if (plan?.weeklyStudyHours !== undefined) {
+      meta.appendChild(this.renderActivityMeta("Carga", `${plan.weeklyStudyHours} h/semana`));
+    }
+    if (plan?.weeklyQuestionGoal !== undefined) {
+      meta.appendChild(this.renderActivityMeta("Meta", `${plan.weeklyQuestionGoal} questões/semana`));
+    }
+
+    panel.append(intro, meta);
+    return panel;
+  }
+
   private renderNextActivityPanel(activity: {
     subjectName: string;
     itemName: string;
@@ -186,6 +223,36 @@ export class DashboardTab {
     valueEl.textContent = value;
     item.append(labelEl, valueEl);
     return item;
+  }
+
+  private formatDaysUntilExam(examDate: string): string {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const [year, month, day] = examDate.split("-").map(Number);
+
+    if (!year || !month || !day) {
+      return "data indefinida";
+    }
+
+    const target = new Date(year, month - 1, day);
+    const days = Math.ceil((target.getTime() - today.getTime()) / 86400000);
+
+    if (days < 0) {
+      return "data já passou";
+    }
+    if (days === 0) {
+      return "hoje";
+    }
+
+    return `${days} dias`;
+  }
+
+  private formatDate(value: string): string {
+    const [year, month, day] = value.split("-").map(Number);
+    if (!year || !month || !day) {
+      return value;
+    }
+    return new Date(year, month - 1, day).toLocaleDateString("pt-BR");
   }
 
   private findFollowingActiveSubject(

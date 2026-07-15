@@ -6,7 +6,9 @@ import { CreateTopicUseCase } from "@/application/use-cases/CreateTopicUseCase";
 import { LinkQuestionNotebookUseCase } from "@/application/use-cases/LinkQuestionNotebookUseCase";
 import { RegisterStudySessionUseCase } from "@/application/use-cases/RegisterStudySessionUseCase";
 import { SetActiveContestUseCase } from "@/application/use-cases/SetActiveContestUseCase";
+import { UpdateContestUseCase } from "@/application/use-cases/UpdateContestUseCase";
 import { UpdateContestWallUseCase } from "@/application/use-cases/UpdateContestWallUseCase";
+import type { ContestExamPlan } from "@/domain/entities/Contest";
 import type { StudyItem } from "@/domain/entities/StudyItem";
 import type { ResourceReference } from "@/domain/entities/ResourceReference";
 import { StudySessionType } from "@/domain/entities/StudySession";
@@ -37,6 +39,7 @@ interface SeedContestSpec {
     examUrl: string;
     notes: string;
   };
+  examPlan?: ContestExamPlan;
   subjects: SeedSubjectSpec[];
 }
 
@@ -127,6 +130,12 @@ const DEMO_CONTESTS: SeedContestSpec[] = [
       examLabel: "Prova TCE-SP 2023",
       examUrl: "https://www.tcesp.org.br",
       notes: "Priorizar Português, Constitucional e Controle Externo. Meta: 80 questões por dia.\n\nCheck-list manual:\n- revisar erros de Português toda sexta;\n- manter Controle Externo no ciclo mesmo quando o rendimento cair;\n- deixar Raciocínio Lógico pausado até fechar a primeira volta."
+    },
+    examPlan: {
+      examDate: "2027-03-21",
+      board: "FGV",
+      weeklyStudyHours: 20,
+      weeklyQuestionGoal: 300
     },
     subjects: [
       {
@@ -486,6 +495,7 @@ export async function seedTceSpDemo(dataStore: PluginDataStore): Promise<SeededC
   const createItem = new CreateStudyItemUseCase(dataStore, repositoryFactory);
   const createTopic = new CreateTopicUseCase(dataStore, repositoryFactory);
   const linkNotebook = new LinkQuestionNotebookUseCase(dataStore, repositoryFactory);
+  const updateContest = new UpdateContestUseCase(dataStore, repositoryFactory);
   const updateWall = new UpdateContestWallUseCase(dataStore, repositoryFactory);
   const registerSession = new RegisterStudySessionUseCase(dataStore, repositoryFactory);
   const setActive = new SetActiveContestUseCase(dataStore, repositoryFactory);
@@ -494,6 +504,9 @@ export async function seedTceSpDemo(dataStore: PluginDataStore): Promise<SeededC
 
   for (const contestSpec of DEMO_CONTESTS) {
     const contest = await createContest.execute({ id: contestSpec.id, name: contestSpec.name });
+    if (contestSpec.examPlan) {
+      await updateContest.execute({ contestId: contest.id, examPlan: contestSpec.examPlan });
+    }
     const seededSubjects: SeededSubject[] = [];
 
     for (const subjectSpec of contestSpec.subjects) {

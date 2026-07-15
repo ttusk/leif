@@ -5,6 +5,7 @@ import { CreateContestUseCase } from "@/application/use-cases/CreateContestUseCa
 import { CreateSubjectUseCase } from "@/application/use-cases/CreateSubjectUseCase";
 import { ListSubjectsForActiveContestUseCase } from "@/application/use-cases/ListSubjectsForActiveContestUseCase";
 import { SetActiveContestUseCase } from "@/application/use-cases/SetActiveContestUseCase";
+import { UpdateContestUseCase } from "@/application/use-cases/UpdateContestUseCase";
 import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
 import { PluginDataStore } from "@/infrastructure/persistence/PluginDataStore";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
@@ -75,5 +76,33 @@ describe("Contest management", () => {
     await setActiveContest.execute({ contestId: "contest-2" });
 
     await expect(listSubjects.execute()).resolves.toMatchObject([{ id: "subject-2", contestId: "contest-2" }]);
+  });
+
+  it("stores optional exam planning metadata for a contest", async () => {
+    const store = createStore();
+    const factory = new EntityRepositoryFactory(store);
+    const createContest = new CreateContestUseCase(store, factory);
+    const updateContest = new UpdateContestUseCase(store, factory);
+
+    await createContest.execute({ id: "contest-1", name: "TRT" });
+
+    await updateContest.execute({
+      contestId: "contest-1",
+      examPlan: {
+        examDate: "2027-03-21",
+        board: "FGV",
+        weeklyStudyHours: 20,
+        weeklyQuestionGoal: 300
+      }
+    });
+
+    const data = await store.load();
+
+    expect(data.contests[0]?.examPlan).toEqual({
+      examDate: "2027-03-21",
+      board: "FGV",
+      weeklyStudyHours: 20,
+      weeklyQuestionGoal: 300
+    });
   });
 });

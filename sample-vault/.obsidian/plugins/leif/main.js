@@ -966,11 +966,12 @@ function wallLinkKey(contestId, kind) {
 
 // src/domain/entities/Contest.ts
 var Contest = class {
-  constructor(id, name, subjectIds = [], wall = new Wall()) {
+  constructor(id, name, subjectIds = [], wall = new Wall(), examPlan) {
     this.id = id;
     this.name = name;
     this.subjectIds = subjectIds;
     this.wall = wall;
+    this.examPlan = examPlan;
     if (!id?.trim()) throw new ValidationError("Contest ID is required");
     if (!name?.trim()) throw new ValidationError("Contest name is required");
   }
@@ -1764,6 +1765,43 @@ var LinkQuestionNotebookUseCase = class {
   }
 };
 
+// src/application/use-cases/UpdateContestUseCase.ts
+var UpdateContestUseCase = class {
+  constructor(dataStore, repositoryFactory) {
+    this.dataStore = dataStore;
+    this.contestRepository = repositoryFactory.for("contests");
+  }
+  async execute(input) {
+    return await this.contestRepository.update(input.contestId, (contest) => ({
+      ...contest,
+      name: input.name ?? contest.name,
+      wall: {
+        ...contest.wall,
+        notes: input.notes ?? contest.wall.notes
+      },
+      examPlan: input.examPlan !== void 0 ? this.normalizeExamPlan(input.examPlan) : contest.examPlan
+    }));
+  }
+  normalizeExamPlan(examPlan) {
+    const next = {};
+    const examDate = examPlan.examDate?.trim();
+    const board = examPlan.board?.trim();
+    if (examDate) {
+      next.examDate = examDate;
+    }
+    if (board) {
+      next.board = board;
+    }
+    if (examPlan.weeklyStudyHours !== void 0 && Number.isFinite(examPlan.weeklyStudyHours)) {
+      next.weeklyStudyHours = examPlan.weeklyStudyHours;
+    }
+    if (examPlan.weeklyQuestionGoal !== void 0 && Number.isFinite(examPlan.weeklyQuestionGoal)) {
+      next.weeklyQuestionGoal = examPlan.weeklyQuestionGoal;
+    }
+    return Object.keys(next).length > 0 ? next : void 0;
+  }
+};
+
 // src/infrastructure/persistence/Seeder.ts
 function createDemoResourceReferences(subjectId, itemIndex, title) {
   const slug = title.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
@@ -1804,6 +1842,12 @@ var DEMO_CONTESTS = [
       examLabel: "Prova TCE-SP 2023",
       examUrl: "https://www.tcesp.org.br",
       notes: "Priorizar Portugu\xEAs, Constitucional e Controle Externo. Meta: 80 quest\xF5es por dia.\n\nCheck-list manual:\n- revisar erros de Portugu\xEAs toda sexta;\n- manter Controle Externo no ciclo mesmo quando o rendimento cair;\n- deixar Racioc\xEDnio L\xF3gico pausado at\xE9 fechar a primeira volta."
+    },
+    examPlan: {
+      examDate: "2027-03-21",
+      board: "FGV",
+      weeklyStudyHours: 20,
+      weeklyQuestionGoal: 300
     },
     subjects: [
       {
@@ -2157,12 +2201,16 @@ async function seedTceSpDemo(dataStore) {
   const createItem = new CreateStudyItemUseCase(dataStore, repositoryFactory);
   const createTopic = new CreateTopicUseCase(dataStore, repositoryFactory);
   const linkNotebook = new LinkQuestionNotebookUseCase(dataStore, repositoryFactory);
+  const updateContest = new UpdateContestUseCase(dataStore, repositoryFactory);
   const updateWall = new UpdateContestWallUseCase(dataStore, repositoryFactory);
   const registerSession = new RegisterStudySessionUseCase(dataStore, repositoryFactory);
   const setActive = new SetActiveContestUseCase(dataStore, repositoryFactory);
   const seededContests = [];
   for (const contestSpec of DEMO_CONTESTS) {
     const contest = await createContest.execute({ id: contestSpec.id, name: contestSpec.name });
+    if (contestSpec.examPlan) {
+      await updateContest.execute({ contestId: contest.id, examPlan: contestSpec.examPlan });
+    }
     const seededSubjects = [];
     for (const subjectSpec of contestSpec.subjects) {
       const subject = await createSubject.execute({
@@ -2547,24 +2595,6 @@ var DeleteContestUseCase = class {
   }
 };
 
-// src/application/use-cases/UpdateContestUseCase.ts
-var UpdateContestUseCase = class {
-  constructor(dataStore, repositoryFactory) {
-    this.dataStore = dataStore;
-    this.contestRepository = repositoryFactory.for("contests");
-  }
-  async execute(input) {
-    return await this.contestRepository.update(input.contestId, (contest) => ({
-      ...contest,
-      name: input.name ?? contest.name,
-      wall: {
-        ...contest.wall,
-        notes: input.notes ?? contest.wall.notes
-      }
-    }));
-  }
-};
-
 // src/ui/view/components/ContestsTab.ts
 var ContestsTab = class {
   constructor(dataStore, onUpdate) {
@@ -2683,6 +2713,18 @@ var ContestsTab = class {
     const notes = DomHelpers.createParagraph(contest.wall.notes?.trim() || "Sem notas ainda.");
     const meta = DomHelpers.createElement("div", "leif-contest-meta");
     meta.append(this.renderMetaChip("ID", contest.id));
+    if (contest.examPlan?.examDate) {
+      meta.append(this.renderMetaChip("Prova", contest.examPlan.examDate));
+    }
+    if (contest.examPlan?.board) {
+      meta.append(this.renderMetaChip("Banca", contest.examPlan.board));
+    }
+    if (contest.examPlan?.weeklyStudyHours !== void 0) {
+      meta.append(this.renderMetaChip("Carga", `${contest.examPlan.weeklyStudyHours} h/semana`));
+    }
+    if (contest.examPlan?.weeklyQuestionGoal !== void 0) {
+      meta.append(this.renderMetaChip("Meta", `${contest.examPlan.weeklyQuestionGoal} quest\xF5es/semana`));
+    }
     card.append(header, notes, meta);
     return card;
   }
@@ -2691,6 +2733,18 @@ var ContestsTab = class {
     card.dataset.contestCardId = contest.id;
     const nameInput = DomHelpers.createInput("text", "Nome do concurso", contest.name);
     const notesInput = DomHelpers.createTextarea("Notas do concurso", contest.wall.notes ?? "");
+    const examDateInput = DomHelpers.createInput("date", "Data da prova", contest.examPlan?.examDate ?? "");
+    const boardInput = DomHelpers.createInput("text", "Banca", contest.examPlan?.board ?? "");
+    const weeklyStudyHoursInput = DomHelpers.createInput(
+      "number",
+      "Horas por semana",
+      contest.examPlan?.weeklyStudyHours !== void 0 ? String(contest.examPlan.weeklyStudyHours) : ""
+    );
+    const weeklyQuestionGoalInput = DomHelpers.createInput(
+      "number",
+      "Quest\xF5es por semana",
+      contest.examPlan?.weeklyQuestionGoal !== void 0 ? String(contest.examPlan.weeklyQuestionGoal) : ""
+    );
     notesInput.rows = 4;
     const saveButton = DomHelpers.createIconButton("save", "Salvar", {
       onClick: async () => {
@@ -2698,7 +2752,13 @@ var ContestsTab = class {
           await this.updateContestUseCase.execute({
             contestId: contest.id,
             name: nameInput.value,
-            notes: notesInput.value
+            notes: notesInput.value,
+            examPlan: {
+              examDate: examDateInput.value,
+              board: boardInput.value,
+              weeklyStudyHours: this.readOptionalNumber(weeklyStudyHoursInput.value),
+              weeklyQuestionGoal: this.readOptionalNumber(weeklyQuestionGoalInput.value)
+            }
           });
           this.editingContestId = null;
           await this.onUpdate();
@@ -2719,7 +2779,11 @@ var ContestsTab = class {
     const fields = DomHelpers.createElement("div", "leif-contest-edit-form");
     fields.append(
       DomHelpers.createStackedLabel("Nome", nameInput),
-      DomHelpers.createStackedLabel("Notas", notesInput)
+      DomHelpers.createStackedLabel("Notas", notesInput),
+      DomHelpers.createStackedLabel("Data da prova", examDateInput),
+      DomHelpers.createStackedLabel("Banca", boardInput),
+      DomHelpers.createStackedLabel("Horas por semana", weeklyStudyHoursInput),
+      DomHelpers.createStackedLabel("Quest\xF5es por semana", weeklyQuestionGoalInput)
     );
     const status = DomHelpers.createElement("span", data.activeContestId === contest.id ? "leif-status-active" : "leif-status-inactive");
     status.textContent = data.activeContestId === contest.id ? "Estudando agora" : "Guardado";
@@ -2776,6 +2840,12 @@ var ContestsTab = class {
     valueEl.textContent = value;
     chip.append(labelEl, valueEl);
     return chip;
+  }
+  readOptionalNumber(value) {
+    if (!value.trim()) {
+      return void 0;
+    }
+    return Number(value);
   }
 };
 
@@ -3145,6 +3215,10 @@ var DashboardTab = class {
     container.appendChild(
       DomHelpers.createParagraph("O que estudar agora e como o dia est\xE1 andando.")
     );
+    const examPlanPanel = this.renderExamPlanPanel(activeContest);
+    if (examPlanPanel) {
+      container.appendChild(examPlanPanel);
+    }
     container.appendChild(
       this.renderNextActivityPanel({
         subjectName: recommendedSubject?.name ?? "Sem mat\xE9ria ativa",
@@ -3195,6 +3269,33 @@ var DashboardTab = class {
     }
     container.appendChild(subjectSummaryCard);
   }
+  renderExamPlanPanel(contest) {
+    const plan = contest.examPlan;
+    if (!plan?.examDate && !plan?.board && plan?.weeklyStudyHours === void 0 && plan?.weeklyQuestionGoal === void 0) {
+      return null;
+    }
+    const panel = DomHelpers.createElement("section", "leif-next-activity leif-exam-plan");
+    const intro = DomHelpers.createElement("div", "leif-next-activity-intro");
+    const label = DomHelpers.createElement("span", "leif-next-activity-label");
+    label.textContent = "Prova";
+    const title = DomHelpers.createElement("strong", "leif-next-activity-subject");
+    title.textContent = plan?.examDate ? `Prova em ${this.formatDaysUntilExam(plan.examDate)}` : "Planejamento da prova";
+    const details = DomHelpers.createElement("span", "leif-next-activity-item");
+    details.textContent = plan?.examDate ? this.formatDate(plan.examDate) : "Data ainda n\xE3o definida";
+    intro.append(label, title, details);
+    const meta = DomHelpers.createElement("div", "leif-next-activity-meta");
+    if (plan?.board) {
+      meta.appendChild(this.renderActivityMeta("Banca", plan.board));
+    }
+    if (plan?.weeklyStudyHours !== void 0) {
+      meta.appendChild(this.renderActivityMeta("Carga", `${plan.weeklyStudyHours} h/semana`));
+    }
+    if (plan?.weeklyQuestionGoal !== void 0) {
+      meta.appendChild(this.renderActivityMeta("Meta", `${plan.weeklyQuestionGoal} quest\xF5es/semana`));
+    }
+    panel.append(intro, meta);
+    return panel;
+  }
   renderNextActivityPanel(activity) {
     const panel = DomHelpers.createElement("section", "leif-next-activity");
     const intro = DomHelpers.createElement("div", "leif-next-activity-intro");
@@ -3240,6 +3341,30 @@ var DashboardTab = class {
     valueEl.textContent = value;
     item.append(labelEl, valueEl);
     return item;
+  }
+  formatDaysUntilExam(examDate) {
+    const now = /* @__PURE__ */ new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const [year, month, day] = examDate.split("-").map(Number);
+    if (!year || !month || !day) {
+      return "data indefinida";
+    }
+    const target = new Date(year, month - 1, day);
+    const days = Math.ceil((target.getTime() - today.getTime()) / 864e5);
+    if (days < 0) {
+      return "data j\xE1 passou";
+    }
+    if (days === 0) {
+      return "hoje";
+    }
+    return `${days} dias`;
+  }
+  formatDate(value) {
+    const [year, month, day] = value.split("-").map(Number);
+    if (!year || !month || !day) {
+      return value;
+    }
+    return new Date(year, month - 1, day).toLocaleDateString("pt-BR");
   }
   findFollowingActiveSubject(data, contestId, subjectId) {
     if (!subjectId) return null;

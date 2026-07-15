@@ -608,6 +608,80 @@ describe("LeifView", () => {
     expect(editingCard?.textContent).toMatch(/(Estudando agora|Guardado)/);
   });
 
+  it("edits exam planning metadata and surfaces it on the dashboard", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiData(dataStore);
+    const data = await dataStore.load();
+    const activeContestId = data.activeContestId;
+
+    const { leaf } = await openLeifView(dataStore);
+    const contestsTabButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='contests']");
+
+    if (!contestsTabButton || !activeContestId) {
+      throw new Error("Contests tab button or active contest was not rendered.");
+    }
+
+    contestsTabButton.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const activeContestCard = leaf.containerEl.querySelector<HTMLElement>(
+      `[data-contest-card-id='${activeContestId}']`
+    );
+    const editButton = activeContestCard?.querySelector<HTMLButtonElement>("button[title='Editar']");
+
+    if (!editButton) {
+      throw new Error("Active contest edit button was not rendered.");
+    }
+
+    editButton.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const editingCard = leaf.containerEl.querySelector<HTMLElement>(
+      `[data-contest-card-id='${activeContestId}'].is-editing`
+    );
+    const examDateInput = editingCard?.querySelector<HTMLInputElement>("input[placeholder='Data da prova']");
+    const boardInput = editingCard?.querySelector<HTMLInputElement>("input[placeholder='Banca']");
+    const weeklyHoursInput = editingCard?.querySelector<HTMLInputElement>("input[placeholder='Horas por semana']");
+    const questionGoalInput = editingCard?.querySelector<HTMLInputElement>("input[placeholder='Questões por semana']");
+    const saveButton = editingCard?.querySelector<HTMLButtonElement>("button[title='Salvar']");
+
+    if (!examDateInput || !boardInput || !weeklyHoursInput || !questionGoalInput || !saveButton) {
+      throw new Error("Exam planning controls were not rendered.");
+    }
+
+    examDateInput.value = "2027-03-21";
+    boardInput.value = "FGV";
+    weeklyHoursInput.value = "20";
+    questionGoalInput.value = "300";
+    saveButton.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const updatedData = await dataStore.load();
+    expect(updatedData.contests.find((contest) => contest.id === activeContestId)?.examPlan).toMatchObject({
+      examDate: "2027-03-21",
+      board: "FGV",
+      weeklyStudyHours: 20,
+      weeklyQuestionGoal: 300
+    });
+
+    const todayTabButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='dashboard']");
+
+    if (!todayTabButton) {
+      throw new Error("Dashboard tab button was not rendered.");
+    }
+
+    todayTabButton.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const examPanel = leaf.containerEl.querySelector<HTMLElement>(".leif-exam-plan");
+    expect(examPanel?.textContent).toContain("Prova");
+    expect(examPanel?.textContent).toContain("FGV");
+    expect(examPanel?.textContent).toContain("20 h/semana");
+    expect(examPanel?.textContent).toContain("300 questões/semana");
+    expect(examPanel?.textContent).toContain("dias");
+  });
+
   it("formats session history dates with day, month and year", async () => {
     const dataStore = new InMemoryPluginDataStore();
     const factory = await seedUiData(dataStore);

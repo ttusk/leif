@@ -150,6 +150,18 @@ export class ContestsTab {
     const notes = DomHelpers.createParagraph(contest.wall.notes?.trim() || "Sem notas ainda.");
     const meta = DomHelpers.createElement("div", "leif-contest-meta");
     meta.append(this.renderMetaChip("ID", contest.id));
+    if (contest.examPlan?.examDate) {
+      meta.append(this.renderMetaChip("Prova", contest.examPlan.examDate));
+    }
+    if (contest.examPlan?.board) {
+      meta.append(this.renderMetaChip("Banca", contest.examPlan.board));
+    }
+    if (contest.examPlan?.weeklyStudyHours !== undefined) {
+      meta.append(this.renderMetaChip("Carga", `${contest.examPlan.weeklyStudyHours} h/semana`));
+    }
+    if (contest.examPlan?.weeklyQuestionGoal !== undefined) {
+      meta.append(this.renderMetaChip("Meta", `${contest.examPlan.weeklyQuestionGoal} questões/semana`));
+    }
 
     card.append(header, notes, meta);
     return card;
@@ -161,6 +173,18 @@ export class ContestsTab {
 
     const nameInput = DomHelpers.createInput("text", "Nome do concurso", contest.name);
     const notesInput = DomHelpers.createTextarea("Notas do concurso", contest.wall.notes ?? "");
+    const examDateInput = DomHelpers.createInput("date", "Data da prova", contest.examPlan?.examDate ?? "");
+    const boardInput = DomHelpers.createInput("text", "Banca", contest.examPlan?.board ?? "");
+    const weeklyStudyHoursInput = DomHelpers.createInput(
+      "number",
+      "Horas por semana",
+      contest.examPlan?.weeklyStudyHours !== undefined ? String(contest.examPlan.weeklyStudyHours) : ""
+    );
+    const weeklyQuestionGoalInput = DomHelpers.createInput(
+      "number",
+      "Questões por semana",
+      contest.examPlan?.weeklyQuestionGoal !== undefined ? String(contest.examPlan.weeklyQuestionGoal) : ""
+    );
     notesInput.rows = 4;
 
     const saveButton = DomHelpers.createIconButton("save", "Salvar", {
@@ -169,7 +193,13 @@ export class ContestsTab {
           await this.updateContestUseCase.execute({
             contestId: contest.id,
             name: nameInput.value,
-            notes: notesInput.value
+            notes: notesInput.value,
+            examPlan: {
+              examDate: examDateInput.value,
+              board: boardInput.value,
+              weeklyStudyHours: this.readOptionalNumber(weeklyStudyHoursInput.value),
+              weeklyQuestionGoal: this.readOptionalNumber(weeklyQuestionGoalInput.value)
+            }
           });
           this.editingContestId = null;
           await this.onUpdate();
@@ -193,7 +223,11 @@ export class ContestsTab {
     const fields = DomHelpers.createElement("div", "leif-contest-edit-form");
     fields.append(
       DomHelpers.createStackedLabel("Nome", nameInput),
-      DomHelpers.createStackedLabel("Notas", notesInput)
+      DomHelpers.createStackedLabel("Notas", notesInput),
+      DomHelpers.createStackedLabel("Data da prova", examDateInput),
+      DomHelpers.createStackedLabel("Banca", boardInput),
+      DomHelpers.createStackedLabel("Horas por semana", weeklyStudyHoursInput),
+      DomHelpers.createStackedLabel("Questões por semana", weeklyQuestionGoalInput)
     );
 
     const status = DomHelpers.createElement("span", data.activeContestId === contest.id ? "leif-status-active" : "leif-status-inactive");
@@ -259,5 +293,12 @@ export class ContestsTab {
     valueEl.textContent = value;
     chip.append(labelEl, valueEl);
     return chip;
+  }
+
+  private readOptionalNumber(value: string): number | undefined {
+    if (!value.trim()) {
+      return undefined;
+    }
+    return Number(value);
   }
 }
