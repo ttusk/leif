@@ -297,10 +297,10 @@ export class SessionsTab {
       );
     }
 
-    tr.appendChild(DomHelpers.createCell(null, DomHelpers.createMetric("Data", new Date(session.studiedAt).toLocaleDateString("pt-BR"))));
-    tr.appendChild(DomHelpers.createCell(null, DomHelpers.createMetric("Estudo", this.formatStudyLabel(subjectName, topicName))));
-    tr.appendChild(DomHelpers.createCell(null, DomHelpers.createMetric("Tipo", this.formatSessionType(session.type))));
-    tr.appendChild(DomHelpers.createCell(null, DomHelpers.createMetric("Resultado", this.renderSessionResult(session, data))));
+    tr.appendChild(DomHelpers.createCell(new Date(session.studiedAt).toLocaleDateString("pt-BR")));
+    tr.appendChild(DomHelpers.createCell(this.formatStudyLabel(subjectName, topicName)));
+    tr.appendChild(DomHelpers.createCell(this.formatSessionType(session.type)));
+    tr.appendChild(DomHelpers.createCell(null, this.renderSessionResult(session, data)));
     const actionsCell = DomHelpers.createCell(null, actions);
     actionsCell.classList.add("leif-actions-cell");
     tr.appendChild(actionsCell);

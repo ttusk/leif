@@ -226,16 +226,12 @@ export class DomHelpers {
   /**
    * Creates a compact label/value metric for scannable list rows.
    */
-  static createMetric(label: string, value: string | HTMLElement): HTMLElement {
-    const metric = this.createElement("div", "leif-metric leif-field-card");
+  static createMetric(label: string, value: string): HTMLElement {
+    const metric = this.createElement("div", "leif-metric");
     const labelEl = this.createElement("span", "leif-metric-label");
     labelEl.textContent = label;
     const valueEl = this.createElement("span", "leif-metric-value");
-    if (typeof value === "string") {
-      valueEl.textContent = value;
-    } else {
-      valueEl.appendChild(value);
-    }
+    valueEl.textContent = value;
     metric.append(labelEl, valueEl);
     return metric;
   }

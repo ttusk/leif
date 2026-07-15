@@ -275,13 +275,6 @@
   min-width: 0;
 }
 
-.leif-field-card {
-  padding: var(--size-2-2) var(--size-2-3);
-  border: 1px solid var(--leif-border);
-  border-radius: var(--leif-radius);
-  background: var(--background-primary-alt);
-}
-
 .leif-metric-label {
   color: var(--text-muted);
   font-size: 12px;
@@ -979,9 +972,9 @@
 .leif-table th,
 .leif-table td {
   border-top: 1px solid var(--leif-border);
-  padding: var(--size-2-3);
+  padding: var(--size-2-2) var(--size-2-3);
   text-align: left;
-  vertical-align: middle;
+  vertical-align: top;
   overflow-wrap: anywhere;
 }
 
@@ -1001,14 +994,6 @@
   top: 0;
   z-index: 1;
   box-shadow: 0 1px 0 var(--leif-border);
-}
-
-.leif-table .leif-field-card {
-  min-height: 42px;
-}
-
-.leif-table .leif-metric-value {
-  font-weight: 500;
 }
 
 /* Progress bars */
