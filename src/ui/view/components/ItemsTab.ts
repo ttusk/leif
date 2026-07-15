@@ -355,19 +355,19 @@ export class ItemsTab {
         const materialInfo = DomHelpers.createElement("div", "leif-material-info");
         const type = DomHelpers.createElement("span", "leif-material-type");
         type.textContent = this.formatResourceType(ref.type);
-        const title = DomHelpers.createElement("span", "leif-material-title");
-        title.textContent = ref.title;
-        materialInfo.append(type, title);
-        row.appendChild(materialInfo);
         if (ref.url) {
-          const link = DomHelpers.createElement("a");
-          link.href = ref.url;
-          link.className = "leif-material-open-link";
-          link.textContent = "Abrir";
-          link.target = "_blank";
-          link.rel = "noopener";
-          row.appendChild(link);
+          const title = DomHelpers.createElement("a", "leif-material-title");
+          title.href = ref.url;
+          title.textContent = ref.title;
+          title.target = "_blank";
+          title.rel = "noopener noreferrer";
+          materialInfo.append(type, title);
+        } else {
+          const title = DomHelpers.createElement("span", "leif-material-title");
+          title.textContent = ref.title;
+          materialInfo.append(type, title);
         }
+        row.appendChild(materialInfo);
         list.appendChild(row);
       });
       content.appendChild(list);

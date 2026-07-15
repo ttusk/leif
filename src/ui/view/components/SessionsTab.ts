@@ -154,7 +154,8 @@ export class SessionsTab {
         "Data",
         "Estudo",
         "Tipo",
-        "Resultado"
+        "Resultado",
+        "Ações"
       ]);
 
       sessions.forEach((session) => {
@@ -296,17 +297,13 @@ export class SessionsTab {
       );
     }
 
-    const dateCell = DomHelpers.createElement("td", "leif-session-date-cell");
-    const dateContent = DomHelpers.createElement("div", "leif-topic-title-content");
-    const date = DomHelpers.createElement("span");
-    date.textContent = new Date(session.studiedAt).toLocaleDateString("pt-BR");
-    dateContent.append(date, actions);
-    dateCell.appendChild(dateContent);
-
-    tr.appendChild(dateCell);
+    tr.appendChild(DomHelpers.createCell(new Date(session.studiedAt).toLocaleDateString("pt-BR")));
     tr.appendChild(DomHelpers.createCell(this.formatStudyLabel(subjectName, topicName)));
     tr.appendChild(DomHelpers.createCell(this.formatSessionType(session.type)));
     tr.appendChild(DomHelpers.createCell(null, this.renderSessionResult(session, data)));
+    const actionsCell = DomHelpers.createCell(null, actions);
+    actionsCell.classList.add("leif-actions-cell");
+    tr.appendChild(actionsCell);
 
     return tr;
   }
@@ -335,7 +332,8 @@ export class SessionsTab {
     tr.className = "leif-editing-row";
     tr.dataset.sessionId = session.id;
 
-    const countInput = DomHelpers.createCompactInput("number", "Qtd", String(session.pagesOrCount ?? 0));
+    const countLabel = session.type === StudySessionType.QUESTIONS ? "Questões resolvidas" : "Páginas/quantidade";
+    const countInput = DomHelpers.createCompactInput("number", countLabel, String(session.pagesOrCount ?? 0));
     const correctInput = DomHelpers.createCompactInput("number", "Acertos", String(session.correctAnswers ?? 0));
 
     const saveButton = DomHelpers.createIconButton("save", "Salvar", {
@@ -369,17 +367,19 @@ export class SessionsTab {
       data.subjects.find((subject) => subject.id === session.subjectId)?.name ?? "—";
     const topicName =
       data.topics.find((topic) => topic.id === session.topicId)?.name ?? "—";
-    const resultFields = DomHelpers.createElement("div", "leif-inline-fields");
-    resultFields.append(countInput);
+    const resultFields = DomHelpers.createElement("div", "leif-session-result-editor");
+    resultFields.append(DomHelpers.createStackedLabel(countLabel, countInput));
     if (session.type === StudySessionType.QUESTIONS) {
-      resultFields.append(correctInput);
+      resultFields.append(DomHelpers.createStackedLabel("Acertos", correctInput));
     }
-    resultFields.append(actions);
 
     tr.appendChild(DomHelpers.createCell(new Date(session.studiedAt).toLocaleDateString("pt-BR")));
     tr.appendChild(DomHelpers.createCell(this.formatStudyLabel(subjectName, topicName)));
     tr.appendChild(DomHelpers.createCell(this.formatSessionType(session.type)));
     tr.appendChild(DomHelpers.createCell(null, resultFields));
+    const actionsCell = DomHelpers.createCell(null, actions);
+    actionsCell.classList.add("leif-actions-cell");
+    tr.appendChild(actionsCell);
 
     return tr;
   }

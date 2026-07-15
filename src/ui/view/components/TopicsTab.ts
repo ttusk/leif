@@ -1,7 +1,6 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import { CreateTopicUseCase } from "@/application/use-cases/CreateTopicUseCase";
 import { DeleteTopicUseCase } from "@/application/use-cases/DeleteTopicUseCase";
-import { LinkQuestionNotebookUseCase } from "@/application/use-cases/LinkQuestionNotebookUseCase";
 import { UpdateTopicUseCase } from "@/application/use-cases/UpdateTopicUseCase";
 import type { Topic } from "@/domain/entities/Topic";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
@@ -16,7 +15,6 @@ import { createId } from "@/application/Id";
  */
 export class TopicsTab {
   private readonly createTopicUseCase: CreateTopicUseCase;
-  private readonly linkQuestionNotebookUseCase: LinkQuestionNotebookUseCase;
   private readonly deleteTopicUseCase: DeleteTopicUseCase;
   private readonly updateTopicUseCase: UpdateTopicUseCase;
 
@@ -33,7 +31,6 @@ export class TopicsTab {
     const repositoryFactory = new EntityRepositoryFactory(dataStore);
     this.createTopicUseCase = new CreateTopicUseCase(dataStore, repositoryFactory);
     this.deleteTopicUseCase = new DeleteTopicUseCase(dataStore, repositoryFactory);
-    this.linkQuestionNotebookUseCase = new LinkQuestionNotebookUseCase(dataStore, repositoryFactory);
     this.updateTopicUseCase = new UpdateTopicUseCase(dataStore, repositoryFactory);
   }
 
@@ -91,7 +88,8 @@ export class TopicsTab {
     const { container: tableContainer, tbody } = DomHelpers.createCrudTable([
       "Assunto",
       "Questões",
-      "Caderno"
+      "Caderno",
+      "Ações"
     ]);
 
     topics.forEach((topic) => {
@@ -99,13 +97,13 @@ export class TopicsTab {
       const isExpanded = this.expandedTopicId === topic.id;
 
       if (isEditing) {
-        tbody.appendChild(this.renderEditableRow(topic, data));
+        tbody.appendChild(this.renderEditableRow(topic));
       } else {
-        tbody.appendChild(this.renderDisplayRow(topic, data));
+        tbody.appendChild(this.renderDisplayRow(topic));
       }
 
       if (isExpanded && !isEditing) {
-        tbody.appendChild(this.renderDetailRow(topic, data));
+        tbody.appendChild(this.renderDetailRow(topic));
       }
     });
 
@@ -113,7 +111,7 @@ export class TopicsTab {
     container.appendChild(card);
   }
 
-  private renderDisplayRow(topic: Topic, data: LeifPluginData): HTMLElement {
+  private renderDisplayRow(topic: Topic): HTMLElement {
     const tr = DomHelpers.createElement("tr");
     tr.dataset.topicId = topic.id;
     const hasDetails = Boolean(topic.questionNotebook);
@@ -172,15 +170,16 @@ export class TopicsTab {
     }
 
     const titleCell = DomHelpers.createElement("td", "leif-topic-title-cell");
-    const titleContent = DomHelpers.createElement("div", "leif-topic-title-content");
     const title = DomHelpers.createElement("span", "leif-topic-title");
     title.textContent = topic.name;
-    titleContent.append(title, actions);
-    titleCell.appendChild(titleContent);
+    titleCell.appendChild(title);
 
     tr.appendChild(titleCell);
     tr.appendChild(DomHelpers.createCell(this.formatQuestionProgress(topic)));
     tr.appendChild(DomHelpers.createCell(null, this.renderNotebookCell(topic)));
+    const actionsCell = DomHelpers.createCell(null, actions);
+    actionsCell.classList.add("leif-actions-cell");
+    tr.appendChild(actionsCell);
 
     return tr;
   }
@@ -210,15 +209,18 @@ export class TopicsTab {
     return link;
   }
 
-  private renderEditableRow(topic: Topic, data: LeifPluginData): HTMLElement {
+  private renderEditableRow(topic: Topic): HTMLElement {
     const tr = DomHelpers.createElement("tr");
     tr.className = "leif-editing-row";
     tr.dataset.topicId = topic.id;
 
-    const nameInput = DomHelpers.createCompactInput("text", "Nome", topic.name);
+    const nameInput = DomHelpers.createInput("text", "Nome do assunto", topic.name);
+    nameInput.classList.add("leif-topic-name-input");
+    const notebookNameInput = DomHelpers.createInput("text", "Nome do caderno", topic.questionNotebook?.name ?? "");
+    const notebookUrlInput = DomHelpers.createInput("url", "URL do caderno", topic.questionNotebook?.url ?? "");
     const solvedInput = DomHelpers.createCompactInput(
       "number",
-      "Resolv.",
+      "Questões resolvidas",
       String(topic.questionNotebook?.solvedQuestions ?? 0)
     );
     const correctInput = DomHelpers.createCompactInput(
@@ -230,14 +232,19 @@ export class TopicsTab {
     const saveButton = DomHelpers.createIconButton("save", "Salvar", {
       onClick: async () => {
         try {
+          const shouldSaveNotebook =
+            Boolean(topic.questionNotebook) ||
+            Boolean(notebookNameInput.value.trim()) ||
+            Boolean(notebookUrlInput.value.trim());
+
           await this.updateTopicUseCase.execute({
             topicId: topic.id,
             name: nameInput.value,
-            questionNotebook: topic.questionNotebook
+            questionNotebook: shouldSaveNotebook
               ? {
-                  id: topic.questionNotebook.id,
-                  name: topic.questionNotebook.name,
-                  url: topic.questionNotebook.url,
+                  id: topic.questionNotebook?.id ?? `${topic.id}-notebook`,
+                  name: notebookNameInput.value,
+                  url: notebookUrlInput.value,
                   solvedQuestions: Number(solvedInput.value),
                   correctAnswers: Number(correctInput.value)
                 }
@@ -263,73 +270,74 @@ export class TopicsTab {
     actions.appendChild(cancelButton);
 
     const titleCell = DomHelpers.createElement("td", "leif-topic-title-cell");
-    const titleContent = DomHelpers.createElement("div", "leif-topic-title-content");
-    titleContent.append(nameInput, actions);
-    titleCell.appendChild(titleContent);
+    titleCell.appendChild(nameInput);
     tr.appendChild(titleCell);
 
     const questionCell = DomHelpers.createElement("td");
-    const questionFields = DomHelpers.createElement("div", "leif-inline-fields");
-    questionFields.append(solvedInput, correctInput);
+    const questionFields = DomHelpers.createElement("div", "leif-topic-question-editor");
+    questionFields.append(
+      DomHelpers.createStackedLabel("Questões resolvidas", solvedInput),
+      DomHelpers.createStackedLabel("Acertos", correctInput)
+    );
     questionCell.appendChild(questionFields);
     tr.appendChild(questionCell);
 
-    tr.appendChild(DomHelpers.createCell(null, DomHelpers.createParagraph(topic.questionNotebook?.name ?? "Sem caderno")));
+    const notebookEditor = DomHelpers.createElement("div", "leif-topic-notebook-editor leif-topic-notebook-editor-stacked");
+    notebookEditor.append(
+      DomHelpers.createStrong("Caderno de questões"),
+      DomHelpers.createStackedLabel("Nome", notebookNameInput),
+      DomHelpers.createStackedLabel("URL", notebookUrlInput)
+    );
+
+    tr.appendChild(DomHelpers.createCell(null, notebookEditor));
+    const actionsCell = DomHelpers.createCell(null, actions);
+    actionsCell.classList.add("leif-actions-cell");
+    tr.appendChild(actionsCell);
 
     return tr;
   }
 
-  private renderDetailRow(topic: Topic, data: LeifPluginData): HTMLElement {
+  private renderDetailRow(topic: Topic): HTMLElement {
     const tr = DomHelpers.createElement("tr");
     tr.className = "leif-detail-row";
 
     const td = DomHelpers.createElement("td");
-    td.colSpan = 3;
+    td.colSpan = 4;
 
-    const content = DomHelpers.createElement("div", "leif-detail-content");
+    const content = DomHelpers.createElement("div", "leif-detail-content leif-topic-detail");
+    const notebook = topic.questionNotebook;
+    content.appendChild(DomHelpers.createSectionSubtitle("Caderno de questões"));
 
-    const notebookName = DomHelpers.createInput("text", "Caderno", topic.questionNotebook?.name ?? "");
-    const notebookUrl = DomHelpers.createInput("url", "URL", topic.questionNotebook?.url ?? "");
-    const notebookSolved = DomHelpers.createInput(
-      "number",
-      "Resolv.",
-      String(topic.questionNotebook?.solvedQuestions ?? 0)
-    );
-    const notebookCorrect = DomHelpers.createInput(
-      "number",
-      "Acert.",
-      String(topic.questionNotebook?.correctAnswers ?? 0)
-    );
+    if (!notebook) {
+      content.appendChild(DomHelpers.createParagraph("Nenhum caderno conectado ainda."));
+    } else {
+      const list = DomHelpers.createElement("div", "leif-detail-list");
+      const row = DomHelpers.createElement("div", "leif-detail-list-item");
+      const info = DomHelpers.createElement("div", "leif-material-info");
+      const title = DomHelpers.createElement("span", "leif-material-title");
+      title.textContent = notebook.name;
+      const stats = DomHelpers.createElement("span", "leif-material-type");
+      stats.textContent = this.formatQuestionProgress(topic);
+      info.append(stats, title);
+      row.appendChild(info);
 
-    const notebookForm = DomHelpers.createForm(async () => {
-      try {
-        await this.linkQuestionNotebookUseCase.execute({
-          topicId: topic.id,
-          questionNotebook: {
-            id: topic.questionNotebook?.id ?? `${topic.id}-notebook`,
-            name: notebookName.value,
-            url: notebookUrl.value,
-            solvedQuestions: Number(notebookSolved.value),
-            correctAnswers: Number(notebookCorrect.value)
-          }
+      if (notebook.url) {
+        const link = DomHelpers.createElement("a", "leif-material-open-link");
+        link.href = notebook.url;
+        link.textContent = "Abrir";
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.dataset.topicNotebookUrl = topic.id;
+        link.addEventListener("click", (event) => {
+          event.preventDefault();
+          window.open(notebook.url, "_blank", "noopener");
         });
-        await this.onUpdate();
-      } catch (error) {
-        DomHelpers.notifyError(error, "Não consegui salvar esse caderno.");
+        row.appendChild(link);
       }
-    });
 
-    notebookForm.className = "leif-detail-form";
-    notebookForm.dataset.topicNotebookForm = topic.id;
-    notebookForm.append(
-      DomHelpers.createLabel("Caderno", notebookName),
-      DomHelpers.createLabel("URL", notebookUrl),
-      DomHelpers.createLabel("Resolv.", notebookSolved),
-      DomHelpers.createLabel("Acert.", notebookCorrect),
-      DomHelpers.createIconButton("save", "Salvar", { onClick: () => notebookForm.requestSubmit() })
-    );
-
-    content.appendChild(notebookForm);
+      list.appendChild(row);
+      content.appendChild(list);
+    }
 
     td.appendChild(content);
     tr.appendChild(td);
@@ -339,6 +347,7 @@ export class TopicsTab {
 
   private renderCreateTopicForm(subjectId: string): HTMLElement {
     const nameInput = DomHelpers.createInput("text", "Nome do assunto");
+    nameInput.classList.add("leif-topic-name-input");
 
     const form = DomHelpers.createForm(async () => {
       try {

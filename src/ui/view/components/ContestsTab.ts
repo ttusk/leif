@@ -159,12 +159,9 @@ export class ContestsTab {
     const card = DomHelpers.createElement("section", "leif-contest-card is-editing");
     card.dataset.contestCardId = contest.id;
 
-    const nameInput = DomHelpers.createTextarea("Nome", contest.name);
-    nameInput.rows = 1;
-    nameInput.cols = 24;
-    const notesInput = DomHelpers.createTextarea("Notas", contest.wall.notes ?? "");
-    notesInput.rows = 2;
-    notesInput.cols = 32;
+    const nameInput = DomHelpers.createInput("text", "Nome do concurso", contest.name);
+    const notesInput = DomHelpers.createTextarea("Notas do concurso", contest.wall.notes ?? "");
+    notesInput.rows = 4;
 
     const saveButton = DomHelpers.createIconButton("save", "Salvar", {
       onClick: async () => {
@@ -193,10 +190,10 @@ export class ContestsTab {
     actions.appendChild(saveButton);
     actions.appendChild(cancelButton);
 
-    const fields = DomHelpers.createElement("div", "leif-grid leif-grid-2");
+    const fields = DomHelpers.createElement("div", "leif-contest-edit-form");
     fields.append(
-      DomHelpers.createLabel("Nome", nameInput),
-      DomHelpers.createLabel("Notas", notesInput)
+      DomHelpers.createStackedLabel("Nome", nameInput),
+      DomHelpers.createStackedLabel("Notas", notesInput)
     );
 
     const status = DomHelpers.createElement("span", data.activeContestId === contest.id ? "leif-status-active" : "leif-status-inactive");

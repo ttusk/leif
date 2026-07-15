@@ -23,7 +23,7 @@ __export(main_exports, {
   default: () => LeifPlugin
 });
 module.exports = __toCommonJS(main_exports);
-var import_obsidian6 = require("obsidian");
+var import_obsidian7 = require("obsidian");
 
 // src/domain/types/LeifPluginData.ts
 function createDefaultLeifPluginData() {
@@ -2518,7 +2518,7 @@ function registerCommands(plugin, dataStore) {
 }
 
 // src/ui/view/LeifView.ts
-var import_obsidian5 = require("obsidian");
+var import_obsidian6 = require("obsidian");
 
 // src/ui/view/components/ContestsTab.ts
 var import_obsidian3 = require("obsidian");
@@ -2689,12 +2689,9 @@ var ContestsTab = class {
   renderEditableCard(contest, data) {
     const card = DomHelpers.createElement("section", "leif-contest-card is-editing");
     card.dataset.contestCardId = contest.id;
-    const nameInput = DomHelpers.createTextarea("Nome", contest.name);
-    nameInput.rows = 1;
-    nameInput.cols = 24;
-    const notesInput = DomHelpers.createTextarea("Notas", contest.wall.notes ?? "");
-    notesInput.rows = 2;
-    notesInput.cols = 32;
+    const nameInput = DomHelpers.createInput("text", "Nome do concurso", contest.name);
+    const notesInput = DomHelpers.createTextarea("Notas do concurso", contest.wall.notes ?? "");
+    notesInput.rows = 4;
     const saveButton = DomHelpers.createIconButton("save", "Salvar", {
       onClick: async () => {
         try {
@@ -2719,10 +2716,10 @@ var ContestsTab = class {
     const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
     actions.appendChild(saveButton);
     actions.appendChild(cancelButton);
-    const fields = DomHelpers.createElement("div", "leif-grid leif-grid-2");
+    const fields = DomHelpers.createElement("div", "leif-contest-edit-form");
     fields.append(
-      DomHelpers.createLabel("Nome", nameInput),
-      DomHelpers.createLabel("Notas", notesInput)
+      DomHelpers.createStackedLabel("Nome", nameInput),
+      DomHelpers.createStackedLabel("Notas", notesInput)
     );
     const status = DomHelpers.createElement("span", data.activeContestId === contest.id ? "leif-status-active" : "leif-status-inactive");
     status.textContent = data.activeContestId === contest.id ? "Estudando agora" : "Guardado";
@@ -2783,6 +2780,7 @@ var ContestsTab = class {
 };
 
 // src/ui/view/components/CycleTab.ts
+var import_obsidian4 = require("obsidian");
 var CycleTab = class {
   constructor(dataStore, onUpdate) {
     this.dataStore = dataStore;
@@ -2833,7 +2831,7 @@ var CycleTab = class {
     const table = DomHelpers.createElement("table", "leif-table");
     const thead = DomHelpers.createElement("thead");
     const headerRow = DomHelpers.createElement("tr");
-    ["Ordem", "Mat\xE9ria", "Tempo", "Etapa", "Ciclo", "Editar"].forEach((header2) => {
+    ["Ordem", "Mat\xE9ria", "Tempo", "Etapa", "Ciclo", "A\xE7\xF5es"].forEach((header2) => {
       const th = DomHelpers.createElement("th");
       th.textContent = header2;
       headerRow.appendChild(th);
@@ -2857,7 +2855,7 @@ var CycleTab = class {
     tr.appendChild(DomHelpers.createCell(subject.name));
     tr.appendChild(DomHelpers.createCell(`${subject.plannedStudyMinutes} min`));
     tr.appendChild(DomHelpers.createCell(subject.currentStage ?? "\u2014"));
-    tr.appendChild(this.renderStatusCell(subject, activeContestId));
+    tr.appendChild(this.renderStatusCell(subject));
     tr.appendChild(DomHelpers.createCell(null, this.renderEditCell(subject)));
     return tr;
   }
@@ -2947,27 +2945,33 @@ var CycleTab = class {
     );
     return form;
   }
-  renderStatusCell(subject, activeContestId) {
+  renderStatusCell(subject) {
     const td = DomHelpers.createElement("td", "leif-status-cell");
-    const span = DomHelpers.createElement("span", subject.isActive ? "leif-status-active" : "leif-status-inactive");
-    span.textContent = subject.isActive ? "No ciclo" : "Pausada";
-    td.appendChild(span);
-    td.setAttribute(
-      "aria-label",
-      subject.isActive ? "Clique para pausar esta mat\xE9ria" : "Clique para colocar esta mat\xE9ria no ciclo"
-    );
-    td.title = subject.isActive ? "Clique para pausar" : "Clique para colocar no ciclo";
-    td.addEventListener("click", async () => {
-      try {
-        await this.setSubjectActiveStateUseCase.execute({
-          subjectId: subject.id,
-          isActive: !subject.isActive
-        });
-        await this.onUpdate();
-      } catch (error) {
-        DomHelpers.notifyError(error, "N\xE3o consegui alterar essa mat\xE9ria.");
+    const wrapper = DomHelpers.createElement("div", "leif-cycle-status-control");
+    const status = DomHelpers.createElement("span", subject.isActive ? "leif-status-active" : "leif-status-inactive");
+    status.textContent = subject.isActive ? "No ciclo" : "Pausada";
+    const button = DomHelpers.createButton(subject.isActive ? "Pausar" : "Ativar", {
+      dataset: { subjectCycleToggleId: subject.id },
+      onClick: async () => {
+        try {
+          const nextState = !subject.isActive;
+          await this.setSubjectActiveStateUseCase.execute({
+            subjectId: subject.id,
+            isActive: nextState
+          });
+          new import_obsidian4.Notice(nextState ? `${subject.name} voltou para o ciclo.` : `${subject.name} saiu do ciclo.`);
+          await this.onUpdate();
+        } catch (error) {
+          DomHelpers.notifyError(error, "N\xE3o consegui alterar essa mat\xE9ria.");
+        }
       }
     });
+    button.setAttribute(
+      "aria-label",
+      subject.isActive ? `Pausar ${subject.name} no ciclo` : `Ativar ${subject.name} no ciclo`
+    );
+    wrapper.append(status, button);
+    td.appendChild(wrapper);
     return td;
   }
   renderOrderCell(subject, subjects, index, activeContestId) {
@@ -3699,19 +3703,19 @@ var ItemsTab = class {
         const materialInfo = DomHelpers.createElement("div", "leif-material-info");
         const type = DomHelpers.createElement("span", "leif-material-type");
         type.textContent = this.formatResourceType(ref.type);
-        const title = DomHelpers.createElement("span", "leif-material-title");
-        title.textContent = ref.title;
-        materialInfo.append(type, title);
-        row.appendChild(materialInfo);
         if (ref.url) {
-          const link = DomHelpers.createElement("a");
-          link.href = ref.url;
-          link.className = "leif-material-open-link";
-          link.textContent = "Abrir";
-          link.target = "_blank";
-          link.rel = "noopener";
-          row.appendChild(link);
+          const title = DomHelpers.createElement("a", "leif-material-title");
+          title.href = ref.url;
+          title.textContent = ref.title;
+          title.target = "_blank";
+          title.rel = "noopener noreferrer";
+          materialInfo.append(type, title);
+        } else {
+          const title = DomHelpers.createElement("span", "leif-material-title");
+          title.textContent = ref.title;
+          materialInfo.append(type, title);
         }
+        row.appendChild(materialInfo);
         list.appendChild(row);
       });
       content.appendChild(list);
@@ -3891,7 +3895,7 @@ var ItemsTab = class {
 };
 
 // src/ui/view/components/SessionsTab.ts
-var import_obsidian4 = require("obsidian");
+var import_obsidian5 = require("obsidian");
 
 // src/application/use-cases/DeleteStudySessionUseCase.ts
 var DeleteStudySessionUseCase = class {
@@ -4038,7 +4042,7 @@ var SessionsTab = class {
         onClick: async () => {
           try {
             const result = await this.advanceCycleUseCase.execute();
-            new import_obsidian4.Notice(`Pronto. Agora vem ${result.currentSubject?.name ?? "\u2014"}.`);
+            new import_obsidian5.Notice(`Pronto. Agora vem ${result.currentSubject?.name ?? "\u2014"}.`);
             await this.onUpdate();
           } catch (error) {
             DomHelpers.notifyError(error, "N\xE3o consegui avan\xE7ar o plano.");
@@ -4068,7 +4072,8 @@ var SessionsTab = class {
         "Data",
         "Estudo",
         "Tipo",
-        "Resultado"
+        "Resultado",
+        "A\xE7\xF5es"
       ]);
       sessions.forEach((session) => {
         const isEditing = this.editingSessionId === session.id;
@@ -4193,16 +4198,13 @@ var SessionsTab = class {
         })
       );
     }
-    const dateCell = DomHelpers.createElement("td", "leif-session-date-cell");
-    const dateContent = DomHelpers.createElement("div", "leif-topic-title-content");
-    const date = DomHelpers.createElement("span");
-    date.textContent = new Date(session.studiedAt).toLocaleDateString("pt-BR");
-    dateContent.append(date, actions);
-    dateCell.appendChild(dateContent);
-    tr.appendChild(dateCell);
+    tr.appendChild(DomHelpers.createCell(new Date(session.studiedAt).toLocaleDateString("pt-BR")));
     tr.appendChild(DomHelpers.createCell(this.formatStudyLabel(subjectName, topicName)));
     tr.appendChild(DomHelpers.createCell(this.formatSessionType(session.type)));
     tr.appendChild(DomHelpers.createCell(null, this.renderSessionResult(session, data)));
+    const actionsCell = DomHelpers.createCell(null, actions);
+    actionsCell.classList.add("leif-actions-cell");
+    tr.appendChild(actionsCell);
     return tr;
   }
   renderSessionProgress(session, data) {
@@ -4224,7 +4226,8 @@ var SessionsTab = class {
     const tr = DomHelpers.createElement("tr");
     tr.className = "leif-editing-row";
     tr.dataset.sessionId = session.id;
-    const countInput = DomHelpers.createCompactInput("number", "Qtd", String(session.pagesOrCount ?? 0));
+    const countLabel = session.type === StudySessionType.QUESTIONS ? "Quest\xF5es resolvidas" : "P\xE1ginas/quantidade";
+    const countInput = DomHelpers.createCompactInput("number", countLabel, String(session.pagesOrCount ?? 0));
     const correctInput = DomHelpers.createCompactInput("number", "Acertos", String(session.correctAnswers ?? 0));
     const saveButton = DomHelpers.createIconButton("save", "Salvar", {
       onClick: async () => {
@@ -4252,16 +4255,18 @@ var SessionsTab = class {
     actions.appendChild(cancelButton);
     const subjectName = data.subjects.find((subject) => subject.id === session.subjectId)?.name ?? "\u2014";
     const topicName = data.topics.find((topic) => topic.id === session.topicId)?.name ?? "\u2014";
-    const resultFields = DomHelpers.createElement("div", "leif-inline-fields");
-    resultFields.append(countInput);
+    const resultFields = DomHelpers.createElement("div", "leif-session-result-editor");
+    resultFields.append(DomHelpers.createStackedLabel(countLabel, countInput));
     if (session.type === StudySessionType.QUESTIONS) {
-      resultFields.append(correctInput);
+      resultFields.append(DomHelpers.createStackedLabel("Acertos", correctInput));
     }
-    resultFields.append(actions);
     tr.appendChild(DomHelpers.createCell(new Date(session.studiedAt).toLocaleDateString("pt-BR")));
     tr.appendChild(DomHelpers.createCell(this.formatStudyLabel(subjectName, topicName)));
     tr.appendChild(DomHelpers.createCell(this.formatSessionType(session.type)));
     tr.appendChild(DomHelpers.createCell(null, resultFields));
+    const actionsCell = DomHelpers.createCell(null, actions);
+    actionsCell.classList.add("leif-actions-cell");
+    tr.appendChild(actionsCell);
     return tr;
   }
   renderCreateSessionForm(data) {
@@ -4485,7 +4490,6 @@ var TopicsTab = class {
     const repositoryFactory = new EntityRepositoryFactory(dataStore);
     this.createTopicUseCase = new CreateTopicUseCase(dataStore, repositoryFactory);
     this.deleteTopicUseCase = new DeleteTopicUseCase(dataStore, repositoryFactory);
-    this.linkQuestionNotebookUseCase = new LinkQuestionNotebookUseCase(dataStore, repositoryFactory);
     this.updateTopicUseCase = new UpdateTopicUseCase(dataStore, repositoryFactory);
   }
   async render(container, data) {
@@ -4534,24 +4538,25 @@ var TopicsTab = class {
     const { container: tableContainer, tbody } = DomHelpers.createCrudTable([
       "Assunto",
       "Quest\xF5es",
-      "Caderno"
+      "Caderno",
+      "A\xE7\xF5es"
     ]);
     topics.forEach((topic) => {
       const isEditing = this.editingTopicId === topic.id;
       const isExpanded = this.expandedTopicId === topic.id;
       if (isEditing) {
-        tbody.appendChild(this.renderEditableRow(topic, data));
+        tbody.appendChild(this.renderEditableRow(topic));
       } else {
-        tbody.appendChild(this.renderDisplayRow(topic, data));
+        tbody.appendChild(this.renderDisplayRow(topic));
       }
       if (isExpanded && !isEditing) {
-        tbody.appendChild(this.renderDetailRow(topic, data));
+        tbody.appendChild(this.renderDetailRow(topic));
       }
     });
     card.appendChild(tableContainer);
     container.appendChild(card);
   }
-  renderDisplayRow(topic, data) {
+  renderDisplayRow(topic) {
     const tr = DomHelpers.createElement("tr");
     tr.dataset.topicId = topic.id;
     const hasDetails = Boolean(topic.questionNotebook);
@@ -4607,14 +4612,15 @@ var TopicsTab = class {
       );
     }
     const titleCell = DomHelpers.createElement("td", "leif-topic-title-cell");
-    const titleContent = DomHelpers.createElement("div", "leif-topic-title-content");
     const title = DomHelpers.createElement("span", "leif-topic-title");
     title.textContent = topic.name;
-    titleContent.append(title, actions);
-    titleCell.appendChild(titleContent);
+    titleCell.appendChild(title);
     tr.appendChild(titleCell);
     tr.appendChild(DomHelpers.createCell(this.formatQuestionProgress(topic)));
     tr.appendChild(DomHelpers.createCell(null, this.renderNotebookCell(topic)));
+    const actionsCell = DomHelpers.createCell(null, actions);
+    actionsCell.classList.add("leif-actions-cell");
+    tr.appendChild(actionsCell);
     return tr;
   }
   renderNotebookCell(topic) {
@@ -4637,14 +4643,17 @@ var TopicsTab = class {
     });
     return link;
   }
-  renderEditableRow(topic, data) {
+  renderEditableRow(topic) {
     const tr = DomHelpers.createElement("tr");
     tr.className = "leif-editing-row";
     tr.dataset.topicId = topic.id;
-    const nameInput = DomHelpers.createCompactInput("text", "Nome", topic.name);
+    const nameInput = DomHelpers.createInput("text", "Nome do assunto", topic.name);
+    nameInput.classList.add("leif-topic-name-input");
+    const notebookNameInput = DomHelpers.createInput("text", "Nome do caderno", topic.questionNotebook?.name ?? "");
+    const notebookUrlInput = DomHelpers.createInput("url", "URL do caderno", topic.questionNotebook?.url ?? "");
     const solvedInput = DomHelpers.createCompactInput(
       "number",
-      "Resolv.",
+      "Quest\xF5es resolvidas",
       String(topic.questionNotebook?.solvedQuestions ?? 0)
     );
     const correctInput = DomHelpers.createCompactInput(
@@ -4655,13 +4664,14 @@ var TopicsTab = class {
     const saveButton = DomHelpers.createIconButton("save", "Salvar", {
       onClick: async () => {
         try {
+          const shouldSaveNotebook = Boolean(topic.questionNotebook) || Boolean(notebookNameInput.value.trim()) || Boolean(notebookUrlInput.value.trim());
           await this.updateTopicUseCase.execute({
             topicId: topic.id,
             name: nameInput.value,
-            questionNotebook: topic.questionNotebook ? {
-              id: topic.questionNotebook.id,
-              name: topic.questionNotebook.name,
-              url: topic.questionNotebook.url,
+            questionNotebook: shouldSaveNotebook ? {
+              id: topic.questionNotebook?.id ?? `${topic.id}-notebook`,
+              name: notebookNameInput.value,
+              url: notebookUrlInput.value,
               solvedQuestions: Number(solvedInput.value),
               correctAnswers: Number(correctInput.value)
             } : void 0
@@ -4683,69 +4693,71 @@ var TopicsTab = class {
     actions.appendChild(saveButton);
     actions.appendChild(cancelButton);
     const titleCell = DomHelpers.createElement("td", "leif-topic-title-cell");
-    const titleContent = DomHelpers.createElement("div", "leif-topic-title-content");
-    titleContent.append(nameInput, actions);
-    titleCell.appendChild(titleContent);
+    titleCell.appendChild(nameInput);
     tr.appendChild(titleCell);
     const questionCell = DomHelpers.createElement("td");
-    const questionFields = DomHelpers.createElement("div", "leif-inline-fields");
-    questionFields.append(solvedInput, correctInput);
+    const questionFields = DomHelpers.createElement("div", "leif-topic-question-editor");
+    questionFields.append(
+      DomHelpers.createStackedLabel("Quest\xF5es resolvidas", solvedInput),
+      DomHelpers.createStackedLabel("Acertos", correctInput)
+    );
     questionCell.appendChild(questionFields);
     tr.appendChild(questionCell);
-    tr.appendChild(DomHelpers.createCell(null, DomHelpers.createParagraph(topic.questionNotebook?.name ?? "Sem caderno")));
+    const notebookEditor = DomHelpers.createElement("div", "leif-topic-notebook-editor leif-topic-notebook-editor-stacked");
+    notebookEditor.append(
+      DomHelpers.createStrong("Caderno de quest\xF5es"),
+      DomHelpers.createStackedLabel("Nome", notebookNameInput),
+      DomHelpers.createStackedLabel("URL", notebookUrlInput)
+    );
+    tr.appendChild(DomHelpers.createCell(null, notebookEditor));
+    const actionsCell = DomHelpers.createCell(null, actions);
+    actionsCell.classList.add("leif-actions-cell");
+    tr.appendChild(actionsCell);
     return tr;
   }
-  renderDetailRow(topic, data) {
+  renderDetailRow(topic) {
     const tr = DomHelpers.createElement("tr");
     tr.className = "leif-detail-row";
     const td = DomHelpers.createElement("td");
-    td.colSpan = 3;
-    const content = DomHelpers.createElement("div", "leif-detail-content");
-    const notebookName = DomHelpers.createInput("text", "Caderno", topic.questionNotebook?.name ?? "");
-    const notebookUrl = DomHelpers.createInput("url", "URL", topic.questionNotebook?.url ?? "");
-    const notebookSolved = DomHelpers.createInput(
-      "number",
-      "Resolv.",
-      String(topic.questionNotebook?.solvedQuestions ?? 0)
-    );
-    const notebookCorrect = DomHelpers.createInput(
-      "number",
-      "Acert.",
-      String(topic.questionNotebook?.correctAnswers ?? 0)
-    );
-    const notebookForm = DomHelpers.createForm(async () => {
-      try {
-        await this.linkQuestionNotebookUseCase.execute({
-          topicId: topic.id,
-          questionNotebook: {
-            id: topic.questionNotebook?.id ?? `${topic.id}-notebook`,
-            name: notebookName.value,
-            url: notebookUrl.value,
-            solvedQuestions: Number(notebookSolved.value),
-            correctAnswers: Number(notebookCorrect.value)
-          }
+    td.colSpan = 4;
+    const content = DomHelpers.createElement("div", "leif-detail-content leif-topic-detail");
+    const notebook = topic.questionNotebook;
+    content.appendChild(DomHelpers.createSectionSubtitle("Caderno de quest\xF5es"));
+    if (!notebook) {
+      content.appendChild(DomHelpers.createParagraph("Nenhum caderno conectado ainda."));
+    } else {
+      const list = DomHelpers.createElement("div", "leif-detail-list");
+      const row = DomHelpers.createElement("div", "leif-detail-list-item");
+      const info = DomHelpers.createElement("div", "leif-material-info");
+      const title = DomHelpers.createElement("span", "leif-material-title");
+      title.textContent = notebook.name;
+      const stats = DomHelpers.createElement("span", "leif-material-type");
+      stats.textContent = this.formatQuestionProgress(topic);
+      info.append(stats, title);
+      row.appendChild(info);
+      if (notebook.url) {
+        const link = DomHelpers.createElement("a", "leif-material-open-link");
+        link.href = notebook.url;
+        link.textContent = "Abrir";
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.dataset.topicNotebookUrl = topic.id;
+        link.addEventListener("click", (event) => {
+          event.preventDefault();
+          window.open(notebook.url, "_blank", "noopener");
         });
-        await this.onUpdate();
-      } catch (error) {
-        DomHelpers.notifyError(error, "N\xE3o consegui salvar esse caderno.");
+        row.appendChild(link);
       }
-    });
-    notebookForm.className = "leif-detail-form";
-    notebookForm.dataset.topicNotebookForm = topic.id;
-    notebookForm.append(
-      DomHelpers.createLabel("Caderno", notebookName),
-      DomHelpers.createLabel("URL", notebookUrl),
-      DomHelpers.createLabel("Resolv.", notebookSolved),
-      DomHelpers.createLabel("Acert.", notebookCorrect),
-      DomHelpers.createIconButton("save", "Salvar", { onClick: () => notebookForm.requestSubmit() })
-    );
-    content.appendChild(notebookForm);
+      list.appendChild(row);
+      content.appendChild(list);
+    }
     td.appendChild(content);
     tr.appendChild(td);
     return tr;
   }
   renderCreateTopicForm(subjectId) {
     const nameInput = DomHelpers.createInput("text", "Nome do assunto");
+    nameInput.classList.add("leif-topic-name-input");
     const form = DomHelpers.createForm(async () => {
       try {
         await this.createTopicUseCase.execute({
@@ -4930,7 +4942,7 @@ var WallTab = class {
 };
 
 // src/ui/view/LeifView.ts
-var LeifView = class extends import_obsidian5.ItemView {
+var LeifView = class extends import_obsidian6.ItemView {
   constructor(leaf, dataStore) {
     super(leaf);
     this.dataStore = dataStore;
@@ -5139,7 +5151,7 @@ async function openLeifView(plugin) {
 }
 
 // src/main.ts
-var LeifPlugin = class extends import_obsidian6.Plugin {
+var LeifPlugin = class extends import_obsidian7.Plugin {
   async onload() {
     this.dataStore = new PluginDataStore(new ObsidianStorageAdapter(this));
     await this.dataStore.load();

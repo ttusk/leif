@@ -1,3 +1,4 @@
+import { Notice } from "obsidian";
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import { CreateSubjectUseCase } from "@/application/use-cases/CreateSubjectUseCase";
 import { ListSubjectsForActiveContestUseCase } from "@/application/use-cases/ListSubjectsForActiveContestUseCase";
@@ -80,7 +81,7 @@ export class CycleTab {
     // Header
     const thead = DomHelpers.createElement("thead");
     const headerRow = DomHelpers.createElement("tr");
-    ["Ordem", "Matéria", "Tempo", "Etapa", "Ciclo", "Editar"].forEach((header) => {
+    ["Ordem", "Matéria", "Tempo", "Etapa", "Ciclo", "Ações"].forEach((header) => {
       const th = DomHelpers.createElement("th");
       th.textContent = header;
       headerRow.appendChild(th);
@@ -115,7 +116,7 @@ export class CycleTab {
     tr.appendChild(DomHelpers.createCell(subject.name));
     tr.appendChild(DomHelpers.createCell(`${subject.plannedStudyMinutes} min`));
     tr.appendChild(DomHelpers.createCell(subject.currentStage ?? "—"));
-    tr.appendChild(this.renderStatusCell(subject, activeContestId));
+    tr.appendChild(this.renderStatusCell(subject));
     tr.appendChild(DomHelpers.createCell(null, this.renderEditCell(subject)));
     return tr;
   }
@@ -223,31 +224,33 @@ export class CycleTab {
     return form;
   }
 
-  private renderStatusCell(
-    subject: Subject,
-    activeContestId: string | null
-  ): HTMLElement {
+  private renderStatusCell(subject: Subject): HTMLElement {
     const td = DomHelpers.createElement("td", "leif-status-cell");
-    const span = DomHelpers.createElement("span", subject.isActive ? "leif-status-active" : "leif-status-inactive");
-    span.textContent = subject.isActive ? "No ciclo" : "Pausada";
-    td.appendChild(span);
-    td.setAttribute(
-      "aria-label",
-      subject.isActive ? "Clique para pausar esta matéria" : "Clique para colocar esta matéria no ciclo"
-    );
-    td.title = subject.isActive ? "Clique para pausar" : "Clique para colocar no ciclo";
-
-    td.addEventListener("click", async () => {
-      try {
-        await this.setSubjectActiveStateUseCase.execute({
-          subjectId: subject.id,
-          isActive: !subject.isActive
-        });
-        await this.onUpdate();
-      } catch (error) {
-        DomHelpers.notifyError(error, "Não consegui alterar essa matéria.");
+    const wrapper = DomHelpers.createElement("div", "leif-cycle-status-control");
+    const status = DomHelpers.createElement("span", subject.isActive ? "leif-status-active" : "leif-status-inactive");
+    status.textContent = subject.isActive ? "No ciclo" : "Pausada";
+    const button = DomHelpers.createButton(subject.isActive ? "Pausar" : "Ativar", {
+      dataset: { subjectCycleToggleId: subject.id },
+      onClick: async () => {
+        try {
+          const nextState = !subject.isActive;
+          await this.setSubjectActiveStateUseCase.execute({
+            subjectId: subject.id,
+            isActive: nextState
+          });
+          new Notice(nextState ? `${subject.name} voltou para o ciclo.` : `${subject.name} saiu do ciclo.`);
+          await this.onUpdate();
+        } catch (error) {
+          DomHelpers.notifyError(error, "Não consegui alterar essa matéria.");
+        }
       }
     });
+    button.setAttribute(
+      "aria-label",
+      subject.isActive ? `Pausar ${subject.name} no ciclo` : `Ativar ${subject.name} no ciclo`
+    );
+    wrapper.append(status, button);
+    td.appendChild(wrapper);
 
     return td;
   }
