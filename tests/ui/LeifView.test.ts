@@ -386,6 +386,73 @@ describe("LeifView", () => {
     expect(questionsRow?.querySelector("td.leif-session-date-cell button[title='Excluir']")).not.toBeNull();
   });
 
+  it("filters session history by subject, type and period", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    const factory = await seedUiData(dataStore);
+    const registerStudySession = new RegisterStudySessionUseCase(dataStore, factory);
+
+    await registerStudySession.execute({
+      id: "session-video-constitutional",
+      contestId: "contest-1",
+      subjectId: "subject-2",
+      type: "video",
+      studiedAt: "2026-06-13T20:00:00.000Z",
+      pagesOrCount: 1,
+      completed: true
+    });
+    await registerStudySession.execute({
+      id: "session-questions-portuguese",
+      contestId: "contest-1",
+      subjectId: "subject-1",
+      type: "questions",
+      studiedAt: "2026-06-20T20:00:00.000Z",
+      pagesOrCount: 20,
+      correctAnswers: 15,
+      completed: true
+    });
+
+    const { leaf } = await openLeifView(dataStore);
+    const sessionsTabButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='sessions']");
+
+    if (!sessionsTabButton) {
+      throw new Error("Sessions tab button was not rendered.");
+    }
+
+    sessionsTabButton.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const setFilter = async (name: string, value: string): Promise<void> => {
+      const control = leaf.containerEl.querySelector<HTMLInputElement | HTMLSelectElement>(
+        `[data-session-filter='${name}']`
+      );
+
+      if (!control) {
+        throw new Error(`${name} filter was not rendered.`);
+      }
+
+      control.value = value;
+      control.dispatchEvent(new Event("change"));
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    };
+
+    expect(leaf.containerEl.querySelector(".leif-session-filters")).not.toBeNull();
+
+    await setFilter("subject", "subject-2");
+    expect(leaf.containerEl.querySelector("tr[data-session-id='session-video-constitutional']")).not.toBeNull();
+    expect(leaf.containerEl.querySelector("tr[data-session-id='session-1']")).toBeNull();
+
+    await setFilter("subject", "");
+    await setFilter("type", "questions");
+    expect(leaf.containerEl.querySelector("tr[data-session-id='session-questions-portuguese']")).not.toBeNull();
+    expect(leaf.containerEl.querySelector("tr[data-session-id='session-video-constitutional']")).toBeNull();
+
+    await setFilter("type", "");
+    await setFilter("from", "2026-06-14");
+    await setFilter("to", "2026-06-30");
+    expect(leaf.containerEl.querySelector("tr[data-session-id='session-questions-portuguese']")).not.toBeNull();
+    expect(leaf.containerEl.querySelector("tr[data-session-id='session-video-constitutional']")).toBeNull();
+  });
+
   it("keeps contest actions next to the contest name", async () => {
     const dataStore = new InMemoryPluginDataStore();
     await seedUiData(dataStore);

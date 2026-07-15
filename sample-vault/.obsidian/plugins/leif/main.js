@@ -3969,6 +3969,10 @@ var SessionsTab = class {
     this.editingSessionId = null;
     this.isCreatingSession = false;
     this.pendingDeleteSessionId = null;
+    this.historySubjectFilter = "";
+    this.historyTypeFilter = "";
+    this.historyFromFilter = "";
+    this.historyToFilter = "";
     const repositoryFactory = new EntityRepositoryFactory(dataStore);
     this.registerStudySessionUseCase = new RegisterStudySessionUseCase(dataStore, repositoryFactory);
     this.deleteStudySessionUseCase = new DeleteStudySessionUseCase(dataStore, repositoryFactory);
@@ -4047,10 +4051,18 @@ var SessionsTab = class {
       container.appendChild(this.renderCreateSessionForm(data));
     }
     const subjects = data.subjects.filter((subject) => subject.contestId === activeContest.id);
-    const recentSessions = DomHelpers.createCard("Hist\xF3rico recente");
-    const sessions = data.studySessions.filter((session) => session.contestId === activeContest.id).slice().reverse().slice(0, 10);
+    const recentSessions = DomHelpers.createCard("Hist\xF3rico de sess\xF5es");
+    const allSessions = data.studySessions.filter((session) => session.contestId === activeContest.id).slice().reverse();
+    const sessions = this.filterSessions(allSessions);
+    if (allSessions.length > 0) {
+      recentSessions.appendChild(this.renderHistoryFilters(subjects));
+    }
     if (sessions.length === 0) {
-      recentSessions.appendChild(DomHelpers.createParagraph("Nenhuma sess\xE3o registrada."));
+      recentSessions.appendChild(
+        DomHelpers.createParagraph(
+          allSessions.length === 0 ? "Nenhuma sess\xE3o registrada." : "Nenhuma sess\xE3o encontrada com esses filtros."
+        )
+      );
     } else {
       const { container: tableContainer, tbody } = DomHelpers.createCrudTable([
         "Data",
@@ -4069,6 +4081,72 @@ var SessionsTab = class {
       recentSessions.appendChild(tableContainer);
     }
     container.appendChild(recentSessions);
+  }
+  renderHistoryFilters(subjects) {
+    const subjectSelect = DomHelpers.createSelect(
+      [
+        ["", "Todas"],
+        ...subjects.map((subject) => [subject.id, subject.name])
+      ],
+      this.historySubjectFilter
+    );
+    const typeSelect = DomHelpers.createSelect(
+      [
+        ["", "Todos"],
+        [StudySessionType.PDF, "PDF"],
+        [StudySessionType.VIDEO, "V\xEDdeo"],
+        [StudySessionType.QUESTIONS, "Quest\xF5es"]
+      ],
+      this.historyTypeFilter
+    );
+    const fromInput = DomHelpers.createInput("date", "De", this.historyFromFilter);
+    const toInput = DomHelpers.createInput("date", "At\xE9", this.historyToFilter);
+    subjectSelect.dataset.sessionFilter = "subject";
+    typeSelect.dataset.sessionFilter = "type";
+    fromInput.dataset.sessionFilter = "from";
+    toInput.dataset.sessionFilter = "to";
+    subjectSelect.addEventListener("change", async () => {
+      this.historySubjectFilter = subjectSelect.value;
+      await this.onUpdate();
+    });
+    typeSelect.addEventListener("change", async () => {
+      this.historyTypeFilter = typeSelect.value;
+      await this.onUpdate();
+    });
+    fromInput.addEventListener("change", async () => {
+      this.historyFromFilter = fromInput.value;
+      await this.onUpdate();
+    });
+    toInput.addEventListener("change", async () => {
+      this.historyToFilter = toInput.value;
+      await this.onUpdate();
+    });
+    const filters = DomHelpers.createElement("div", "leif-session-filters");
+    filters.append(
+      DomHelpers.createStackedLabel("Mat\xE9ria", subjectSelect),
+      DomHelpers.createStackedLabel("Tipo", typeSelect),
+      DomHelpers.createStackedLabel("De", fromInput),
+      DomHelpers.createStackedLabel("At\xE9", toInput)
+    );
+    return filters;
+  }
+  filterSessions(sessions) {
+    return sessions.filter((session) => {
+      if (this.historySubjectFilter && session.subjectId !== this.historySubjectFilter) {
+        return false;
+      }
+      if (this.historyTypeFilter && session.type !== this.historyTypeFilter) {
+        return false;
+      }
+      const sessionDate = session.studiedAt.slice(0, 10);
+      if (this.historyFromFilter && sessionDate < this.historyFromFilter) {
+        return false;
+      }
+      if (this.historyToFilter && sessionDate > this.historyToFilter) {
+        return false;
+      }
+      return true;
+    });
   }
   renderDisplayRow(session, data) {
     const tr = DomHelpers.createElement("tr");
