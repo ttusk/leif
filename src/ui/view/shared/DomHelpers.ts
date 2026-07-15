@@ -224,6 +224,19 @@ export class DomHelpers {
   }
 
   /**
+   * Creates a compact label/value metric for scannable list rows.
+   */
+  static createMetric(label: string, value: string): HTMLElement {
+    const metric = this.createElement("div", "leif-metric");
+    const labelEl = this.createElement("span", "leif-metric-label");
+    labelEl.textContent = label;
+    const valueEl = this.createElement("span", "leif-metric-value");
+    valueEl.textContent = value;
+    metric.append(labelEl, valueEl);
+    return metric;
+  }
+
+  /**
    * Creates a table with headers and rows.
    * @param headers - Column headers
    * @param rows - Array of row data (each row is an array of cell content)

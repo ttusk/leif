@@ -139,8 +139,8 @@ export class CycleTab {
 
     const meta = DomHelpers.createElement("div", "leif-cycle-card-meta");
     meta.append(
-      this.renderCycleMetric("Tempo", `${subject.plannedStudyMinutes} min`),
-      this.renderCycleMetric("Etapa", subject.currentStage ?? "—")
+      DomHelpers.createMetric("Tempo", `${subject.plannedStudyMinutes} min`),
+      DomHelpers.createMetric("Etapa", subject.currentStage ?? "—")
     );
 
     card.append(titleGroup, meta, actions);
@@ -300,16 +300,6 @@ export class CycleTab {
     valueEl.textContent = value;
     chip.append(labelEl, valueEl);
     return chip;
-  }
-
-  private renderCycleMetric(label: string, value: string): HTMLElement {
-    const metric = DomHelpers.createElement("div", "leif-cycle-metric");
-    const labelEl = DomHelpers.createElement("span", "leif-cycle-metric-label");
-    labelEl.textContent = label;
-    const valueEl = DomHelpers.createElement("span", "leif-cycle-metric-value");
-    valueEl.textContent = value;
-    metric.append(labelEl, valueEl);
-    return metric;
   }
 
   private async moveSubject(

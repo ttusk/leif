@@ -313,7 +313,7 @@ describe("LeifView", () => {
     expect(cycleCards.length).toBeGreaterThanOrEqual(2);
     expect(cycleCards[0]?.querySelector(".leif-cycle-card-order")?.textContent).toContain("1");
     expect(cycleCards[0]?.querySelector(".leif-cycle-card-title")?.textContent).toBeTruthy();
-    expect(cycleCards[0]?.querySelectorAll(".leif-cycle-metric").length).toBe(2);
+    expect(cycleCards[0]?.querySelectorAll(".leif-metric").length).toBe(2);
     expect(cycleCards[0]?.querySelector(".leif-key-value")).toBeNull();
     expect(cycleCards[0]?.textContent).toContain("No ciclo");
     expect(cycleCards[0]?.textContent).toContain("Tempo");
@@ -510,6 +510,35 @@ describe("LeifView", () => {
   it("organizes the wall into clear edital, prova and notes sections", async () => {
     const dataStore = new InMemoryPluginDataStore();
     await seedUiData(dataStore);
+    const data = await dataStore.load();
+    const activeContest = data.contests.find((contest) => contest.id === data.activeContestId);
+    const subject = data.subjects[0];
+    const item = data.studyItems[0];
+
+    if (!activeContest || !subject || !item) {
+      throw new Error("Seed data was not created.");
+    }
+
+    const updateContestWall = new UpdateContestWallUseCase(
+      dataStore,
+      new EntityRepositoryFactory(dataStore)
+    );
+    await updateContestWall.execute({
+      contestId: activeContest.id,
+      wall: {
+        noticeLinks: activeContest.wall.noticeLinks,
+        examLinks: activeContest.wall.examLinks,
+        notes: activeContest.wall.notes,
+        subjectSnapshots: [
+          {
+            subjectId: subject.id,
+            weight: 2,
+            score: 8,
+            targetItems: [item.id]
+          }
+        ]
+      }
+    });
 
     const { leaf } = await openLeifView(dataStore);
     const wallTabButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='wall']");
@@ -531,6 +560,9 @@ describe("LeifView", () => {
     expect(leaf.containerEl.querySelector(".leif-wall-links")).toBeNull();
     expect(leaf.containerEl.querySelector(".leif-wall-card-wide")).toBeNull();
     expect(leaf.containerEl.querySelector("button.leif-wall-save")).not.toBeNull();
+    expect(leaf.containerEl.querySelector(".leif-wall-snapshot-card")).not.toBeNull();
+    expect(leaf.containerEl.querySelector(".leif-wall-snapshot-card .leif-metric")).not.toBeNull();
+    expect(leaf.containerEl.querySelector(".leif-wall-snapshot-list table.leif-table")).toBeNull();
     expect(leaf.containerEl.textContent).toContain("Salvar mural");
   });
 

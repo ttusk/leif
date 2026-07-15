@@ -159,17 +159,28 @@ export class WallTab {
     } else {
       const subjectMap = new Map(data.subjects.map((s) => [s.id, s.name]));
       const itemMap = new Map(data.studyItems.map((item) => [item.id, item.title]));
-      card.appendChild(
-        DomHelpers.createTable(
-          ["Matéria", "Peso", "Pontuação", "Itens alvo"],
-          activeContest.wall.subjectSnapshots.map((snapshot) => [
-            subjectMap.get(snapshot.subjectId) ?? snapshot.subjectId,
-            snapshot.weight !== undefined ? String(snapshot.weight) : "—",
-            snapshot.score !== undefined ? String(snapshot.score) : "—",
+      const list = DomHelpers.createElement("div", "leif-wall-snapshot-list");
+      activeContest.wall.subjectSnapshots.forEach((snapshot) => {
+        const row = DomHelpers.createElement("section", "leif-wall-snapshot-card");
+        const titleGroup = DomHelpers.createElement("div", "leif-wall-snapshot-title-group");
+        const title = DomHelpers.createElement("strong", "leif-wall-snapshot-title");
+        title.textContent = subjectMap.get(snapshot.subjectId) ?? snapshot.subjectId;
+        titleGroup.appendChild(title);
+
+        const metrics = DomHelpers.createElement("div", "leif-wall-snapshot-meta");
+        metrics.append(
+          DomHelpers.createMetric("Peso", snapshot.weight !== undefined ? String(snapshot.weight) : "—"),
+          DomHelpers.createMetric("Pontuação", snapshot.score !== undefined ? String(snapshot.score) : "—"),
+          DomHelpers.createMetric(
+            "Itens alvo",
             snapshot.targetItems?.map((itemId) => itemMap.get(itemId) ?? itemId).join(", ") ?? "—"
-          ])
-        )
-      );
+          )
+        );
+
+        row.append(titleGroup, metrics);
+        list.appendChild(row);
+      });
+      card.appendChild(list);
     }
     return card;
   }

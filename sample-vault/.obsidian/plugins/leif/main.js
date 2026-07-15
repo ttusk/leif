@@ -446,6 +446,18 @@ var DomHelpers = class {
     return row;
   }
   /**
+   * Creates a compact label/value metric for scannable list rows.
+   */
+  static createMetric(label, value) {
+    const metric = this.createElement("div", "leif-metric");
+    const labelEl = this.createElement("span", "leif-metric-label");
+    labelEl.textContent = label;
+    const valueEl = this.createElement("span", "leif-metric-value");
+    valueEl.textContent = value;
+    metric.append(labelEl, valueEl);
+    return metric;
+  }
+  /**
    * Creates a table with headers and rows.
    * @param headers - Column headers
    * @param rows - Array of row data (each row is an array of cell content)
@@ -2702,30 +2714,29 @@ var ContestsTab = class {
         })
       );
     }
-    const header = DomHelpers.createElement("div", "leif-contest-card-header");
     const titleGroup = DomHelpers.createElement("div", "leif-contest-card-title-group");
     const title = DomHelpers.createElement("strong", "leif-contest-card-title");
     title.textContent = contest.name;
     const status = DomHelpers.createElement("span", isActive ? "leif-status-active" : "leif-status-inactive");
     status.textContent = isActive ? "Estudando agora" : "Guardado";
     titleGroup.append(title, status);
-    header.append(titleGroup, actions);
     const notes = DomHelpers.createParagraph(contest.wall.notes?.trim() || "Sem notas ainda.");
+    notes.classList.add("leif-contest-notes");
     const meta = DomHelpers.createElement("div", "leif-contest-meta");
-    meta.append(this.renderMetaChip("ID", contest.id));
+    meta.append(DomHelpers.createMetric("ID", contest.id));
     if (contest.examPlan?.examDate) {
-      meta.append(this.renderMetaChip("Prova", contest.examPlan.examDate));
+      meta.append(DomHelpers.createMetric("Prova", contest.examPlan.examDate));
     }
     if (contest.examPlan?.board) {
-      meta.append(this.renderMetaChip("Banca", contest.examPlan.board));
+      meta.append(DomHelpers.createMetric("Banca", contest.examPlan.board));
     }
     if (contest.examPlan?.weeklyStudyHours !== void 0) {
-      meta.append(this.renderMetaChip("Carga", `${contest.examPlan.weeklyStudyHours} h/semana`));
+      meta.append(DomHelpers.createMetric("Carga", `${contest.examPlan.weeklyStudyHours} h/semana`));
     }
     if (contest.examPlan?.weeklyQuestionGoal !== void 0) {
-      meta.append(this.renderMetaChip("Meta", `${contest.examPlan.weeklyQuestionGoal} quest\xF5es/semana`));
+      meta.append(DomHelpers.createMetric("Meta", `${contest.examPlan.weeklyQuestionGoal} quest\xF5es/semana`));
     }
-    card.append(header, notes, meta);
+    card.append(titleGroup, meta, actions, notes);
     return card;
   }
   renderEditableCard(contest, data) {
@@ -2832,15 +2843,6 @@ var ContestsTab = class {
     );
     return form;
   }
-  renderMetaChip(label, value) {
-    const chip = DomHelpers.createElement("span", "leif-next-activity-chip");
-    const labelEl = DomHelpers.createElement("span", "leif-next-activity-chip-label");
-    labelEl.textContent = `${label}:`;
-    const valueEl = DomHelpers.createElement("span", "leif-next-activity-chip-value");
-    valueEl.textContent = value;
-    chip.append(labelEl, valueEl);
-    return chip;
-  }
   readOptionalNumber(value) {
     if (!value.trim()) {
       return void 0;
@@ -2946,8 +2948,8 @@ var CycleTab = class {
     );
     const meta = DomHelpers.createElement("div", "leif-cycle-card-meta");
     meta.append(
-      this.renderCycleMetric("Tempo", `${subject.plannedStudyMinutes} min`),
-      this.renderCycleMetric("Etapa", subject.currentStage ?? "\u2014")
+      DomHelpers.createMetric("Tempo", `${subject.plannedStudyMinutes} min`),
+      DomHelpers.createMetric("Etapa", subject.currentStage ?? "\u2014")
     );
     card.append(titleGroup, meta, actions);
     return card;
@@ -3082,15 +3084,6 @@ var CycleTab = class {
     valueEl.textContent = value;
     chip.append(labelEl, valueEl);
     return chip;
-  }
-  renderCycleMetric(label, value) {
-    const metric = DomHelpers.createElement("div", "leif-cycle-metric");
-    const labelEl = DomHelpers.createElement("span", "leif-cycle-metric-label");
-    labelEl.textContent = label;
-    const valueEl = DomHelpers.createElement("span", "leif-cycle-metric-value");
-    valueEl.textContent = value;
-    metric.append(labelEl, valueEl);
-    return metric;
   }
   async moveSubject(subjects, sourceIndex, targetIndex, activeContestId) {
     try {
@@ -3341,13 +3334,7 @@ var DashboardTab = class {
     return panel;
   }
   renderActivityMeta(label, value) {
-    const item = DomHelpers.createElement("span", "leif-next-activity-chip");
-    const labelEl = DomHelpers.createElement("span", "leif-next-activity-chip-label");
-    labelEl.textContent = `${label}:`;
-    const valueEl = DomHelpers.createElement("span", "leif-next-activity-chip-value");
-    valueEl.textContent = value;
-    item.append(labelEl, valueEl);
-    return item;
+    return DomHelpers.createMetric(label, value);
   }
   formatDaysUntilExam(examDate) {
     const now = /* @__PURE__ */ new Date();
@@ -5057,17 +5044,26 @@ var WallTab = class {
     } else {
       const subjectMap = new Map(data.subjects.map((s) => [s.id, s.name]));
       const itemMap = new Map(data.studyItems.map((item) => [item.id, item.title]));
-      card.appendChild(
-        DomHelpers.createTable(
-          ["Mat\xE9ria", "Peso", "Pontua\xE7\xE3o", "Itens alvo"],
-          activeContest.wall.subjectSnapshots.map((snapshot) => [
-            subjectMap.get(snapshot.subjectId) ?? snapshot.subjectId,
-            snapshot.weight !== void 0 ? String(snapshot.weight) : "\u2014",
-            snapshot.score !== void 0 ? String(snapshot.score) : "\u2014",
+      const list = DomHelpers.createElement("div", "leif-wall-snapshot-list");
+      activeContest.wall.subjectSnapshots.forEach((snapshot) => {
+        const row = DomHelpers.createElement("section", "leif-wall-snapshot-card");
+        const titleGroup = DomHelpers.createElement("div", "leif-wall-snapshot-title-group");
+        const title = DomHelpers.createElement("strong", "leif-wall-snapshot-title");
+        title.textContent = subjectMap.get(snapshot.subjectId) ?? snapshot.subjectId;
+        titleGroup.appendChild(title);
+        const metrics = DomHelpers.createElement("div", "leif-wall-snapshot-meta");
+        metrics.append(
+          DomHelpers.createMetric("Peso", snapshot.weight !== void 0 ? String(snapshot.weight) : "\u2014"),
+          DomHelpers.createMetric("Pontua\xE7\xE3o", snapshot.score !== void 0 ? String(snapshot.score) : "\u2014"),
+          DomHelpers.createMetric(
+            "Itens alvo",
             snapshot.targetItems?.map((itemId) => itemMap.get(itemId) ?? itemId).join(", ") ?? "\u2014"
-          ])
-        )
-      );
+          )
+        );
+        row.append(titleGroup, metrics);
+        list.appendChild(row);
+      });
+      card.appendChild(list);
     }
     return card;
   }

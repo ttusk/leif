@@ -138,32 +138,31 @@ export class ContestsTab {
       );
     }
 
-    const header = DomHelpers.createElement("div", "leif-contest-card-header");
     const titleGroup = DomHelpers.createElement("div", "leif-contest-card-title-group");
     const title = DomHelpers.createElement("strong", "leif-contest-card-title");
     title.textContent = contest.name;
     const status = DomHelpers.createElement("span", isActive ? "leif-status-active" : "leif-status-inactive");
     status.textContent = isActive ? "Estudando agora" : "Guardado";
     titleGroup.append(title, status);
-    header.append(titleGroup, actions);
 
     const notes = DomHelpers.createParagraph(contest.wall.notes?.trim() || "Sem notas ainda.");
+    notes.classList.add("leif-contest-notes");
     const meta = DomHelpers.createElement("div", "leif-contest-meta");
-    meta.append(this.renderMetaChip("ID", contest.id));
+    meta.append(DomHelpers.createMetric("ID", contest.id));
     if (contest.examPlan?.examDate) {
-      meta.append(this.renderMetaChip("Prova", contest.examPlan.examDate));
+      meta.append(DomHelpers.createMetric("Prova", contest.examPlan.examDate));
     }
     if (contest.examPlan?.board) {
-      meta.append(this.renderMetaChip("Banca", contest.examPlan.board));
+      meta.append(DomHelpers.createMetric("Banca", contest.examPlan.board));
     }
     if (contest.examPlan?.weeklyStudyHours !== undefined) {
-      meta.append(this.renderMetaChip("Carga", `${contest.examPlan.weeklyStudyHours} h/semana`));
+      meta.append(DomHelpers.createMetric("Carga", `${contest.examPlan.weeklyStudyHours} h/semana`));
     }
     if (contest.examPlan?.weeklyQuestionGoal !== undefined) {
-      meta.append(this.renderMetaChip("Meta", `${contest.examPlan.weeklyQuestionGoal} questões/semana`));
+      meta.append(DomHelpers.createMetric("Meta", `${contest.examPlan.weeklyQuestionGoal} questões/semana`));
     }
 
-    card.append(header, notes, meta);
+    card.append(titleGroup, meta, actions, notes);
     return card;
   }
 
@@ -283,16 +282,6 @@ export class ContestsTab {
     );
 
     return form;
-  }
-
-  private renderMetaChip(label: string, value: string): HTMLElement {
-    const chip = DomHelpers.createElement("span", "leif-next-activity-chip");
-    const labelEl = DomHelpers.createElement("span", "leif-next-activity-chip-label");
-    labelEl.textContent = `${label}:`;
-    const valueEl = DomHelpers.createElement("span", "leif-next-activity-chip-value");
-    valueEl.textContent = value;
-    chip.append(labelEl, valueEl);
-    return chip;
   }
 
   private readOptionalNumber(value: string): number | undefined {

@@ -216,13 +216,7 @@ export class DashboardTab {
   }
 
   private renderActivityMeta(label: string, value: string): HTMLElement {
-    const item = DomHelpers.createElement("span", "leif-next-activity-chip");
-    const labelEl = DomHelpers.createElement("span", "leif-next-activity-chip-label");
-    labelEl.textContent = `${label}:`;
-    const valueEl = DomHelpers.createElement("span", "leif-next-activity-chip-value");
-    valueEl.textContent = value;
-    item.append(labelEl, valueEl);
-    return item;
+    return DomHelpers.createMetric(label, value);
   }
 
   private formatDaysUntilExam(examDate: string): string {
