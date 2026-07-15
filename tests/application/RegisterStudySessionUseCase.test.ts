@@ -108,6 +108,27 @@ describe("RegisterStudySessionUseCase", () => {
     ).rejects.toBeInstanceOf(ValidationError);
   });
 
+  it("rejects a questions session with zero questions in the use case", async () => {
+    const store = createStore();
+    const factory = new EntityRepositoryFactory(store);
+    await seedContestSubjectTopic(store);
+    const useCase = new RegisterStudySessionUseCase(store, factory);
+
+    await expect(
+      useCase.execute({
+        id: "session-zero-questions",
+        contestId: "contest-1",
+        subjectId: "subject-1",
+        topicId: "topic-1",
+        type: "questions",
+        studiedAt: "2026-06-11T20:00:00.000Z",
+        pagesOrCount: 0,
+        correctAnswers: 0,
+        completed: true
+      })
+    ).rejects.toThrow("Questions count must be greater than zero");
+  });
+
   it("creates a questions session and increments the topic's question-notebook stats", async () => {
     const store = createStore();
     const factory = new EntityRepositoryFactory(store);

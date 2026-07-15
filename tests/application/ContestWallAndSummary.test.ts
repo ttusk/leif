@@ -8,6 +8,7 @@ import { GetActiveContestProgressDashboardUseCase } from "@/application/use-case
 import { GetActiveContestSummaryUseCase } from "@/application/use-cases/GetActiveContestSummaryUseCase";
 import { RegisterStudySessionUseCase } from "@/application/use-cases/RegisterStudySessionUseCase";
 import { UpdateContestWallUseCase } from "@/application/use-cases/UpdateContestWallUseCase";
+import { ValidationError } from "@/domain/errors/DomainErrors";
 import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
 import { PluginDataStore } from "@/infrastructure/persistence/PluginDataStore";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
@@ -63,6 +64,27 @@ describe("Contest wall and summary", () => {
         }
       }
     ]);
+  });
+
+  it("rejects invalid wall URLs before saving", async () => {
+    const store = createStore();
+    const factory = new EntityRepositoryFactory(store);
+    const createContest = new CreateContestUseCase(store, factory);
+    const updateContestWall = new UpdateContestWallUseCase(store, factory);
+
+    await createContest.execute({ id: "contest-1", name: "TRT" });
+
+    await expect(
+      updateContestWall.execute({
+        contestId: "contest-1",
+        wall: {
+          noticeLinks: [{ id: "notice-1", label: "Edital", url: "not a url" }],
+          examLinks: [],
+          subjectSnapshots: [],
+          notes: ""
+        }
+      })
+    ).rejects.toBeInstanceOf(ValidationError);
   });
 
   it("caps accuracy at 100% even when raw ratio exceeds 1", async () => {

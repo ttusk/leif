@@ -61,6 +61,12 @@ describe("Input Validators", () => {
       expect(result.valid).toBe(false);
       expect(result.errors).toContain("Weight cannot be negative");
     });
+
+    it("fails when totalPages is negative", () => {
+      const result = new CreateStudyItemValidator().validate({ subjectId: "sub-1", title: "Syntax", totalPages: -1 });
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain("Total pages cannot be negative");
+    });
   });
 
   describe("CreateTopicValidator", () => {
@@ -76,6 +82,14 @@ describe("Input Validators", () => {
         id: "session-1", contestId: "contest-1", type: "pdf", studiedAt: "2026-06-11"
       });
       expect(result.valid).toBe(true);
+    });
+
+    it("fails when a questions session has no positive count", () => {
+      const result = new RegisterStudySessionValidator().validate({
+        id: "session-1", contestId: "contest-1", type: "questions", studiedAt: "2026-06-11", pagesOrCount: 0
+      });
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain("Questions count must be greater than zero");
     });
   });
 
@@ -156,9 +170,29 @@ describe("Input Validators", () => {
   describe("UpdateContestWallValidator", () => {
     it("validates a correct input", () => {
       const result = new UpdateContestWallValidator().validate({
-        contestId: "contest-1"
+        contestId: "contest-1",
+        wall: {
+          noticeLinks: [{ id: "notice-1", label: "Edital", url: "https://example.com" }],
+          examLinks: [{ id: "exam-1", label: "Prova", url: "https://example.com/prova" }],
+          subjectSnapshots: [],
+          notes: ""
+        }
       });
       expect(result.valid).toBe(true);
+    });
+
+    it("fails when a wall link URL is invalid", () => {
+      const result = new UpdateContestWallValidator().validate({
+        contestId: "contest-1",
+        wall: {
+          noticeLinks: [{ id: "notice-1", label: "Edital", url: "not a url" }],
+          examLinks: [],
+          subjectSnapshots: [],
+          notes: ""
+        }
+      });
+      expect(result.valid).toBe(false);
+      expect(result.errors).toContain("Wall link URL must be a valid URL");
     });
   });
 });

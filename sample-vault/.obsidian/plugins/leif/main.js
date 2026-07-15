@@ -1007,6 +1007,26 @@ function requireNonNegative(value, fieldName) {
   }
   return void 0;
 }
+function requirePositive(value, fieldName) {
+  if (value === void 0 || value <= 0) {
+    return `${fieldName} must be greater than zero`;
+  }
+  return void 0;
+}
+function requireValidUrl(value, fieldName) {
+  if (!value?.trim()) {
+    return void 0;
+  }
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return `${fieldName} must be a valid URL`;
+    }
+    return void 0;
+  } catch {
+    return `${fieldName} must be a valid URL`;
+  }
+}
 function requireMinLength(value, min, fieldName) {
   if (value && value.length < min) {
     return `${fieldName} must be at least ${min} characters`;
@@ -1047,7 +1067,8 @@ var CreateStudyItemValidator = class {
       requireNonEmpty(input.subjectId, "Subject ID"),
       requireNonEmpty(input.title, "Title"),
       requireNonNegative(input.weight, "Weight"),
-      requireNonNegative(input.questionCount, "Question count")
+      requireNonNegative(input.questionCount, "Question count"),
+      requireNonNegative(input.totalPages, "Total pages")
     );
   }
 };
@@ -1066,7 +1087,8 @@ var RegisterStudySessionValidator = class {
       requireNonEmpty(input.id, "ID"),
       requireNonEmpty(input.contestId, "Contest ID"),
       requireNonEmpty(input.type, "Type"),
-      requireNonEmpty(input.studiedAt, "Studied at")
+      requireNonEmpty(input.studiedAt, "Studied at"),
+      input.type === "questions" ? requirePositive(input.pagesOrCount, "Questions count") : void 0
     );
   }
 };
@@ -1130,8 +1152,13 @@ var LinkQuestionNotebookValidator = class {
 };
 var UpdateContestWallValidator = class {
   validate(input) {
+    const wallLinks = [
+      ...input.wall?.noticeLinks ?? [],
+      ...input.wall?.examLinks ?? []
+    ];
     return collectErrors(
-      requireNonEmpty(input.contestId, "Contest ID")
+      requireNonEmpty(input.contestId, "Contest ID"),
+      ...wallLinks.map((link) => requireValidUrl(link.url, "Wall link URL"))
     );
   }
 };
@@ -4168,9 +4195,6 @@ var SessionsTab = class {
         const sessionType = typeSelect.value;
         const rawCount = Number(countInput.value);
         const rawCorrect = Number(correctInput.value);
-        if (sessionType === StudySessionType.QUESTIONS && (!rawCount || rawCount <= 0)) {
-          throw new ValidationError("Informe uma quantidade de quest\xF5es maior que zero.");
-        }
         const pagesOrCount = sessionType === StudySessionType.QUESTIONS ? rawCount : rawCount || void 0;
         const correctAnswers = sessionType === StudySessionType.QUESTIONS ? Math.min(rawCorrect, rawCount) : void 0;
         await this.registerStudySessionUseCase.execute({

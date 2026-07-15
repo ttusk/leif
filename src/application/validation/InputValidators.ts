@@ -1,4 +1,4 @@
-import { ValidationError } from "@/domain/errors/DomainErrors";
+import type { Wall } from "@/domain/entities/Wall";
 
 /**
  * Result of input validation.
@@ -40,6 +40,29 @@ function requireNonNegativeInteger(value: number | undefined, fieldName: string)
     return `${fieldName} must be an integer`;
   }
   return requireNonNegative(value, fieldName);
+}
+
+function requirePositive(value: number | undefined, fieldName: string): string | undefined {
+  if (value === undefined || value <= 0) {
+    return `${fieldName} must be greater than zero`;
+  }
+  return undefined;
+}
+
+function requireValidUrl(value: string | undefined, fieldName: string): string | undefined {
+  if (!value?.trim()) {
+    return undefined;
+  }
+
+  try {
+    const url = new URL(value);
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return `${fieldName} must be a valid URL`;
+    }
+    return undefined;
+  } catch {
+    return `${fieldName} must be a valid URL`;
+  }
 }
 
 function requireMinLength(value: string | undefined, min: number, fieldName: string): string | undefined {
@@ -91,12 +114,13 @@ export class CreateSubjectValidator {
  * Validates input for creating a study item.
  */
 export class CreateStudyItemValidator {
-  validate(input: { subjectId: string; title: string; weight?: number; questionCount?: number }): ValidationResult {
+  validate(input: { subjectId: string; title: string; weight?: number; questionCount?: number; totalPages?: number }): ValidationResult {
     return collectErrors(
       requireNonEmpty(input.subjectId, "Subject ID"),
       requireNonEmpty(input.title, "Title"),
       requireNonNegative(input.weight, "Weight"),
-      requireNonNegative(input.questionCount, "Question count")
+      requireNonNegative(input.questionCount, "Question count"),
+      requireNonNegative(input.totalPages, "Total pages")
     );
   }
 }
@@ -118,12 +142,15 @@ export class CreateTopicValidator {
  * Validates input for registering a study session.
  */
 export class RegisterStudySessionValidator {
-  validate(input: { id: string; contestId: string; type: string; studiedAt: string }): ValidationResult {
+  validate(input: { id: string; contestId: string; type: string; studiedAt: string; pagesOrCount?: number }): ValidationResult {
     return collectErrors(
       requireNonEmpty(input.id, "ID"),
       requireNonEmpty(input.contestId, "Contest ID"),
       requireNonEmpty(input.type, "Type"),
-      requireNonEmpty(input.studiedAt, "Studied at")
+      requireNonEmpty(input.studiedAt, "Studied at"),
+      input.type === "questions"
+        ? requirePositive(input.pagesOrCount, "Questions count")
+        : undefined
     );
   }
 }
@@ -218,9 +245,15 @@ export class LinkQuestionNotebookValidator {
  * Validates input for updating a contest's wall.
  */
 export class UpdateContestWallValidator {
-  validate(input: { contestId: string }): ValidationResult {
+  validate(input: { contestId: string; wall?: Wall }): ValidationResult {
+    const wallLinks = [
+      ...(input.wall?.noticeLinks ?? []),
+      ...(input.wall?.examLinks ?? [])
+    ];
+
     return collectErrors(
-      requireNonEmpty(input.contestId, "Contest ID")
+      requireNonEmpty(input.contestId, "Contest ID"),
+      ...wallLinks.map((link) => requireValidUrl(link.url, "Wall link URL"))
     );
   }
 }
