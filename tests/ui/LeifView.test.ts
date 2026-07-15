@@ -377,6 +377,7 @@ describe("LeifView", () => {
     expect(headerTexts).toEqual(["Ordem", "Recurso", "Peso", "Questões", "Páginas", "Ações"]);
     expect(leaf.containerEl.querySelector("table.leif-table")).not.toBeNull();
     expect(leaf.containerEl.querySelector(".leif-resource-card")).toBeNull();
+    expect(itemRow?.querySelector(".leif-field-card")).not.toBeNull();
     expect(itemRow?.textContent).toContain("Sintaxe");
     expect(itemRow?.querySelector("button[title='Editar']")).not.toBeNull();
   });
@@ -1149,6 +1150,7 @@ describe("LeifView", () => {
     const headerTexts = Array.from(headerCells).map((cell) => cell.textContent?.trim() ?? "");
     const resultColumnIndex = headerTexts.indexOf("Resultado");
     expect(headerTexts).toEqual(["Data", "Estudo", "Tipo", "Resultado", "Ações"]);
+    expect(questionsRow.querySelector(".leif-field-card")).not.toBeNull();
     expect(questionsCells.length).toBe(pdfCells.length);
     expect(questionsCells[resultColumnIndex]?.textContent).toContain("15/20 acertos");
   });
@@ -1784,6 +1786,7 @@ describe("LeifView", () => {
       .map((header) => header.textContent?.trim() ?? "");
 
     expect(headerTexts).toEqual(["Assunto", "Questões", "Caderno", "Ações"]);
+    expect(leaf.containerEl.querySelector("table.leif-table .leif-field-card")).not.toBeNull();
     expect(leaf.containerEl.querySelector("td.leif-topic-title-cell button[aria-label='Subir']")).toBeNull();
     expect(leaf.containerEl.querySelector("td.leif-topic-title-cell button[aria-label='Descer']")).toBeNull();
 

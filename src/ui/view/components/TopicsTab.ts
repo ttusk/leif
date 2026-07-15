@@ -172,11 +172,11 @@ export class TopicsTab {
     const titleCell = DomHelpers.createElement("td", "leif-topic-title-cell");
     const title = DomHelpers.createElement("span", "leif-topic-title");
     title.textContent = topic.name;
-    titleCell.appendChild(title);
+    titleCell.appendChild(DomHelpers.createMetric("Assunto", title));
 
     tr.appendChild(titleCell);
-    tr.appendChild(DomHelpers.createCell(this.formatQuestionProgress(topic)));
-    tr.appendChild(DomHelpers.createCell(null, this.renderNotebookCell(topic)));
+    tr.appendChild(DomHelpers.createCell(null, DomHelpers.createMetric("Questões", this.formatQuestionProgress(topic))));
+    tr.appendChild(DomHelpers.createCell(null, DomHelpers.createMetric("Caderno", this.renderNotebookCell(topic))));
     const actionsCell = DomHelpers.createCell(null, actions);
     actionsCell.classList.add("leif-actions-cell");
     tr.appendChild(actionsCell);

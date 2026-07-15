@@ -195,15 +195,15 @@ export class ItemsTab {
 
     const title = DomHelpers.createElement("strong", "leif-resource-table-title");
     title.textContent = item.title;
-    const titleCell = DomHelpers.createCell(null, title);
+    const titleCell = DomHelpers.createCell(null, DomHelpers.createMetric("Recurso", title));
     titleCell.classList.add("leif-resource-title-cell");
 
     tr.append(
-      DomHelpers.createCell(String(item.order)),
+      DomHelpers.createCell(null, DomHelpers.createMetric("Ordem", String(item.order))),
       titleCell,
-      DomHelpers.createCell(String(item.weight ?? 0)),
-      DomHelpers.createCell(String(item.questionCount ?? 0)),
-      DomHelpers.createCell(null, this.renderPagesCell(item, itemProgress)),
+      DomHelpers.createCell(null, DomHelpers.createMetric("Peso", String(item.weight ?? 0))),
+      DomHelpers.createCell(null, DomHelpers.createMetric("Questões", String(item.questionCount ?? 0))),
+      DomHelpers.createCell(null, DomHelpers.createMetric("Páginas", this.renderPagesCell(item, itemProgress))),
       DomHelpers.createCell(null, actions)
     );
 

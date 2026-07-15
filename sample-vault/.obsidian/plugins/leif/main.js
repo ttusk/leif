@@ -449,11 +449,15 @@ var DomHelpers = class {
    * Creates a compact label/value metric for scannable list rows.
    */
   static createMetric(label, value) {
-    const metric = this.createElement("div", "leif-metric");
+    const metric = this.createElement("div", "leif-metric leif-field-card");
     const labelEl = this.createElement("span", "leif-metric-label");
     labelEl.textContent = label;
     const valueEl = this.createElement("span", "leif-metric-value");
-    valueEl.textContent = value;
+    if (typeof value === "string") {
+      valueEl.textContent = value;
+    } else {
+      valueEl.appendChild(value);
+    }
     metric.append(labelEl, valueEl);
     return metric;
   }
@@ -3687,14 +3691,14 @@ var ItemsTab = class {
     }
     const title = DomHelpers.createElement("strong", "leif-resource-table-title");
     title.textContent = item.title;
-    const titleCell = DomHelpers.createCell(null, title);
+    const titleCell = DomHelpers.createCell(null, DomHelpers.createMetric("Recurso", title));
     titleCell.classList.add("leif-resource-title-cell");
     tr.append(
-      DomHelpers.createCell(String(item.order)),
+      DomHelpers.createCell(null, DomHelpers.createMetric("Ordem", String(item.order))),
       titleCell,
-      DomHelpers.createCell(String(item.weight ?? 0)),
-      DomHelpers.createCell(String(item.questionCount ?? 0)),
-      DomHelpers.createCell(null, this.renderPagesCell(item, itemProgress)),
+      DomHelpers.createCell(null, DomHelpers.createMetric("Peso", String(item.weight ?? 0))),
+      DomHelpers.createCell(null, DomHelpers.createMetric("Quest\xF5es", String(item.questionCount ?? 0))),
+      DomHelpers.createCell(null, DomHelpers.createMetric("P\xE1ginas", this.renderPagesCell(item, itemProgress))),
       DomHelpers.createCell(null, actions)
     );
     return tr;
@@ -4317,10 +4321,10 @@ var SessionsTab = class {
         })
       );
     }
-    tr.appendChild(DomHelpers.createCell(new Date(session.studiedAt).toLocaleDateString("pt-BR")));
-    tr.appendChild(DomHelpers.createCell(this.formatStudyLabel(subjectName, topicName)));
-    tr.appendChild(DomHelpers.createCell(this.formatSessionType(session.type)));
-    tr.appendChild(DomHelpers.createCell(null, this.renderSessionResult(session, data)));
+    tr.appendChild(DomHelpers.createCell(null, DomHelpers.createMetric("Data", new Date(session.studiedAt).toLocaleDateString("pt-BR"))));
+    tr.appendChild(DomHelpers.createCell(null, DomHelpers.createMetric("Estudo", this.formatStudyLabel(subjectName, topicName))));
+    tr.appendChild(DomHelpers.createCell(null, DomHelpers.createMetric("Tipo", this.formatSessionType(session.type))));
+    tr.appendChild(DomHelpers.createCell(null, DomHelpers.createMetric("Resultado", this.renderSessionResult(session, data))));
     const actionsCell = DomHelpers.createCell(null, actions);
     actionsCell.classList.add("leif-actions-cell");
     tr.appendChild(actionsCell);
@@ -4733,10 +4737,10 @@ var TopicsTab = class {
     const titleCell = DomHelpers.createElement("td", "leif-topic-title-cell");
     const title = DomHelpers.createElement("span", "leif-topic-title");
     title.textContent = topic.name;
-    titleCell.appendChild(title);
+    titleCell.appendChild(DomHelpers.createMetric("Assunto", title));
     tr.appendChild(titleCell);
-    tr.appendChild(DomHelpers.createCell(this.formatQuestionProgress(topic)));
-    tr.appendChild(DomHelpers.createCell(null, this.renderNotebookCell(topic)));
+    tr.appendChild(DomHelpers.createCell(null, DomHelpers.createMetric("Quest\xF5es", this.formatQuestionProgress(topic))));
+    tr.appendChild(DomHelpers.createCell(null, DomHelpers.createMetric("Caderno", this.renderNotebookCell(topic))));
     const actionsCell = DomHelpers.createCell(null, actions);
     actionsCell.classList.add("leif-actions-cell");
     tr.appendChild(actionsCell);
