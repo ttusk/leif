@@ -313,6 +313,8 @@ describe("LeifView", () => {
     expect(cycleCards.length).toBeGreaterThanOrEqual(2);
     expect(cycleCards[0]?.querySelector(".leif-cycle-card-order")?.textContent).toContain("1");
     expect(cycleCards[0]?.querySelector(".leif-cycle-card-title")?.textContent).toBeTruthy();
+    expect(cycleCards[0]?.querySelectorAll(".leif-cycle-metric").length).toBe(2);
+    expect(cycleCards[0]?.querySelector(".leif-key-value")).toBeNull();
     expect(cycleCards[0]?.textContent).toContain("No ciclo");
     expect(cycleCards[0]?.textContent).toContain("Tempo");
     expect(cycleCards[0]?.textContent).toContain("Etapa");

@@ -111,7 +111,6 @@ export class CycleTab {
       card.classList.add("is-paused");
     }
 
-    const header = DomHelpers.createElement("div", "leif-cycle-card-header");
     const titleGroup = DomHelpers.createElement("div", "leif-cycle-card-title-group");
     const order = DomHelpers.createElement("span", "leif-cycle-card-order");
     order.textContent = String(subject.order);
@@ -138,15 +137,13 @@ export class CycleTab {
       })
     );
 
-    header.append(titleGroup, actions);
-
     const meta = DomHelpers.createElement("div", "leif-cycle-card-meta");
     meta.append(
-      DomHelpers.createKeyValueRow("Tempo", `${subject.plannedStudyMinutes} min`),
-      DomHelpers.createKeyValueRow("Etapa", subject.currentStage ?? "—")
+      this.renderCycleMetric("Tempo", `${subject.plannedStudyMinutes} min`),
+      this.renderCycleMetric("Etapa", subject.currentStage ?? "—")
     );
 
-    card.append(header, meta);
+    card.append(titleGroup, meta, actions);
     return card;
   }
 
@@ -303,6 +300,16 @@ export class CycleTab {
     valueEl.textContent = value;
     chip.append(labelEl, valueEl);
     return chip;
+  }
+
+  private renderCycleMetric(label: string, value: string): HTMLElement {
+    const metric = DomHelpers.createElement("div", "leif-cycle-metric");
+    const labelEl = DomHelpers.createElement("span", "leif-cycle-metric-label");
+    labelEl.textContent = label;
+    const valueEl = DomHelpers.createElement("span", "leif-cycle-metric-value");
+    valueEl.textContent = value;
+    metric.append(labelEl, valueEl);
+    return metric;
   }
 
   private async moveSubject(

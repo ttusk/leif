@@ -507,9 +507,10 @@
 }
 
 .leif-cycle-card {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-4-3);
+  display: grid;
+  grid-template-columns: minmax(220px, 1.2fr) minmax(260px, 1fr) auto;
+  align-items: center;
+  gap: var(--size-4-4);
   padding: var(--size-4-3) 0;
   border-top: 1px solid var(--leif-border);
 }
@@ -535,6 +536,7 @@
   grid-template-columns: auto minmax(0, 1fr);
   gap: var(--size-2-1) var(--size-4-3);
   min-width: 0;
+  align-items: center;
 }
 
 .leif-cycle-card-order {
@@ -561,7 +563,27 @@
 .leif-cycle-card-meta {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: var(--size-4-3);
+  gap: var(--size-4-4);
+  min-width: 0;
+}
+
+.leif-cycle-metric {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-2-1);
+  min-width: 0;
+}
+
+.leif-cycle-metric-label {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.leif-cycle-metric-value {
+  color: var(--text-normal);
+  line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 
 .leif-cycle-edit-form {
@@ -1055,6 +1077,11 @@
 
   .leif-cycle-card-header {
     flex-direction: column;
+  }
+
+  .leif-cycle-card {
+    grid-template-columns: 1fr;
+    gap: var(--size-4-3);
   }
 
   .leif-cycle-card-meta,
