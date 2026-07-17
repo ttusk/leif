@@ -277,9 +277,18 @@
 
 .leif-icon {
   display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 1em;
   height: 1em;
   flex: 0 0 auto;
+  line-height: 0;
+}
+
+.leif-icon > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .leif-paragraph {
@@ -446,10 +455,10 @@ form.leif-card,
   gap: var(--size-4-3);
   width: fit-content;
   max-width: 100%;
-  padding: 7px 10px;
-  border: 1px solid var(--leif-border);
-  border-radius: var(--radius-s);
-  background: var(--leif-surface);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .leif-subject-picker-label {

@@ -106,6 +106,23 @@ describe("Leif visual system", () => {
     expect(styles).toMatch(/\.leif-progress-complete\s*{[^}]*color:\s*var\(--text-success\);/s);
   });
 
+  it("centers shared icons against adjacent text", () => {
+    const styles = readStyles();
+
+    expect(styles).toMatch(/\.leif-icon\s*{[^}]*line-height:\s*0;/s);
+    expect(styles).toMatch(
+      /\.leif-icon\s*>\s*svg\s*{[^}]*display:\s*block;[^}]*width:\s*100%;[^}]*height:\s*100%;/s
+    );
+  });
+
+  it("keeps the subject picker flat around the native select", () => {
+    const styles = readStyles();
+
+    expect(styles).toMatch(
+      /\.leif-subject-picker\s*{[^}]*padding:\s*0;[^}]*border:\s*0;[^}]*background:\s*transparent;/s
+    );
+  });
+
   it("styles URL controls as full-width icon fields", () => {
     const styles = readStyles();
 
