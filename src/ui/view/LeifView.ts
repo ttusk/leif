@@ -120,8 +120,6 @@ export class LeifView extends ItemView {
     this.workspace = DomHelpers.createElement("div", "leif-workspace");
     const navigation = DomHelpers.createElement("aside", "leif-navigation");
     navigation.setAttribute("aria-label", "Navegação do Leif");
-    const navigationLabel = DomHelpers.createElement("span", "leif-navigation-label");
-    navigationLabel.textContent = "Navegar";
 
     this.tabBar = DomHelpers.createElement("nav", "leif-tab-bar");
     this.tabBar.setAttribute("role", "tablist");
@@ -149,7 +147,7 @@ export class LeifView extends ItemView {
       this.tabButtons.set(tab.id, button);
       this.tabBar!.appendChild(button);
     });
-    navigation.append(navigationLabel, this.tabBar);
+    navigation.appendChild(this.tabBar);
 
     this.activeTabContainer = DomHelpers.createElement("section", "leif-body");
     this.activeTabContainer.id = "leif-tabpanel";

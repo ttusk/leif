@@ -29,6 +29,7 @@ describe("Leif visual system", () => {
     expect(styles).toMatch(
       /\.leif-navigation\s*{[^}]*position:\s*sticky;[^}]*align-self:\s*start;/s
     );
+    expect(styles).not.toContain(".leif-navigation-label");
     expect(styles).toMatch(/\.leif-tab-bar\s*{[^}]*flex-direction:\s*column;/s);
     expect(styles).toMatch(
       /@media\s*\(max-width:\s*760px\)[\s\S]*\.leif-workspace\s*{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/s

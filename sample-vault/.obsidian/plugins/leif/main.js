@@ -5193,8 +5193,6 @@ var LeifView = class extends import_obsidian6.ItemView {
     this.workspace = DomHelpers.createElement("div", "leif-workspace");
     const navigation = DomHelpers.createElement("aside", "leif-navigation");
     navigation.setAttribute("aria-label", "Navega\xE7\xE3o do Leif");
-    const navigationLabel = DomHelpers.createElement("span", "leif-navigation-label");
-    navigationLabel.textContent = "Navegar";
     this.tabBar = DomHelpers.createElement("nav", "leif-tab-bar");
     this.tabBar.setAttribute("role", "tablist");
     this.tabBar.setAttribute("aria-label", "Se\xE7\xF5es do Leif");
@@ -5221,7 +5219,7 @@ var LeifView = class extends import_obsidian6.ItemView {
       this.tabButtons.set(tab.id, button);
       this.tabBar.appendChild(button);
     });
-    navigation.append(navigationLabel, this.tabBar);
+    navigation.appendChild(this.tabBar);
     this.activeTabContainer = DomHelpers.createElement("section", "leif-body");
     this.activeTabContainer.id = "leif-tabpanel";
     this.activeTabContainer.setAttribute("role", "tabpanel");

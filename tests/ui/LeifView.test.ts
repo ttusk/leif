@@ -190,6 +190,8 @@ describe("LeifView", () => {
     );
     expect(leaf.containerEl.querySelector(".leif-workspace")).not.toBeNull();
     expect(leaf.containerEl.querySelector(".leif-navigation")).not.toBeNull();
+    expect(leaf.containerEl.querySelector(".leif-navigation-label")).toBeNull();
+    expect(leaf.containerEl.textContent).not.toContain("Navegar");
   });
 
   it("uses native Obsidian classes for buttons and form controls", async () => {
