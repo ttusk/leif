@@ -5094,6 +5094,10 @@ var LeifView = class extends import_obsidian6.ItemView {
   async onOpen() {
     await this.render();
   }
+  async onClose() {
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = void 0;
+  }
   /**
    * Full render - builds the shell structure once, then updates dynamic content.
    */
@@ -5125,17 +5129,27 @@ var LeifView = class extends import_obsidian6.ItemView {
     const header = DomHelpers.createElement("header", "leif-header");
     const titleGroup = DomHelpers.createElement("div", "leif-title-group");
     titleGroup.append(
-      DomHelpers.createHeading("Leif"),
-      DomHelpers.createParagraph("Seu plano de estudos dentro do Obsidian.")
+      DomHelpers.createHeading("Leif", "compass"),
+      DomHelpers.createParagraph("Sua rota de estudos, sem sair do Obsidian.")
     );
     this.headerActions = DomHelpers.createElement("div", "leif-header-actions");
     header.append(titleGroup, this.headerActions);
+    this.workspace = DomHelpers.createElement("div", "leif-workspace");
+    const navigation = DomHelpers.createElement("aside", "leif-navigation");
+    navigation.setAttribute("aria-label", "Navega\xE7\xE3o do Leif");
+    const navigationLabel = DomHelpers.createElement("span", "leif-navigation-label");
+    navigationLabel.textContent = "Navegar";
     this.tabBar = DomHelpers.createElement("nav", "leif-tab-bar");
     this.tabBar.setAttribute("role", "tablist");
     this.tabBar.setAttribute("aria-label", "Se\xE7\xF5es do Leif");
     TABS.forEach((tab, index) => {
-      const button = DomHelpers.createElement("div", "leif-tab-button");
-      button.textContent = tab.label;
+      const button = DomHelpers.createElement("button", "leif-tab-button");
+      button.type = "button";
+      const icon = DomHelpers.createIcon(tab.icon, "leif-tab-icon");
+      icon.setAttribute("aria-hidden", "true");
+      const label = DomHelpers.createElement("span", "leif-tab-label");
+      label.textContent = tab.label;
+      button.append(icon, label);
       button.dataset.tab = tab.id;
       button.addEventListener("click", async () => {
         await this.selectTab(tab.id);
@@ -5151,13 +5165,36 @@ var LeifView = class extends import_obsidian6.ItemView {
       this.tabButtons.set(tab.id, button);
       this.tabBar.appendChild(button);
     });
+    navigation.append(navigationLabel, this.tabBar);
     this.activeTabContainer = DomHelpers.createElement("section", "leif-body");
     this.activeTabContainer.id = "leif-tabpanel";
     this.activeTabContainer.setAttribute("role", "tabpanel");
     this.activeTabContainer.setAttribute("tabindex", "0");
     this.activeTabContainer.setAttribute("aria-labelledby", `leif-tab-${this.activeTab}`);
-    this.shell.append(header, this.tabBar, this.activeTabContainer);
+    this.workspace.append(navigation, this.activeTabContainer);
+    this.shell.append(header, this.workspace);
     this.contentEl.appendChild(this.shell);
+    this.observePaneWidth();
+  }
+  /**
+   * Obsidian views can be resized independently of the app window. A
+   * ResizeObserver keeps the layout tied to the leaf width, including split
+   * panes where viewport media queries do not apply.
+   */
+  observePaneWidth() {
+    if (typeof ResizeObserver === "undefined") return;
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width;
+      if (width !== void 0) {
+        this.updateResponsiveClasses(width);
+      }
+    });
+    this.resizeObserver.observe(this.contentEl);
+  }
+  updateResponsiveClasses(width) {
+    this.contentEl.classList.toggle("is-narrow", width <= 760);
+    this.contentEl.classList.toggle("is-compact", width <= 520);
   }
   /**
    * Updates the header actions with current data.
@@ -5167,7 +5204,10 @@ var LeifView = class extends import_obsidian6.ItemView {
     const activeContest = data.contests.find((contest) => contest.id === data.activeContestId);
     this.headerActions.innerHTML = "";
     this.headerActions.appendChild(
-      DomHelpers.createBadge(activeContest ? `Estudando: ${activeContest.name}` : "Sem concurso escolhido")
+      DomHelpers.createBadge(
+        activeContest ? `Estudando: ${activeContest.name}` : "Escolha um concurso",
+        activeContest ? "trophy" : "compass"
+      )
     );
   }
   /**

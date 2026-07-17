@@ -24,8 +24,10 @@ export class LeifView extends ItemView {
 
   private shell?: HTMLElement;
   private headerActions?: HTMLElement;
+  private workspace?: HTMLElement;
   private tabBar?: HTMLElement;
   private activeTabContainer?: HTMLElement;
+  private resizeObserver?: ResizeObserver;
   private tabButtons: Map<LeifTabId, HTMLElement> = new Map();
 
   private readonly dashboardTab: DashboardTab;
@@ -66,6 +68,11 @@ export class LeifView extends ItemView {
     await this.render();
   }
 
+  override async onClose(): Promise<void> {
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = undefined;
+  }
+
   /**
    * Full render - builds the shell structure once, then updates dynamic content.
    */
@@ -103,19 +110,30 @@ export class LeifView extends ItemView {
     const header = DomHelpers.createElement("header", "leif-header");
     const titleGroup = DomHelpers.createElement("div", "leif-title-group");
     titleGroup.append(
-      DomHelpers.createHeading("Leif"),
-      DomHelpers.createParagraph("Seu plano de estudos dentro do Obsidian.")
+      DomHelpers.createHeading("Leif", "compass"),
+      DomHelpers.createParagraph("Sua rota de estudos, sem sair do Obsidian.")
     );
 
     this.headerActions = DomHelpers.createElement("div", "leif-header-actions");
     header.append(titleGroup, this.headerActions);
 
+    this.workspace = DomHelpers.createElement("div", "leif-workspace");
+    const navigation = DomHelpers.createElement("aside", "leif-navigation");
+    navigation.setAttribute("aria-label", "Navegação do Leif");
+    const navigationLabel = DomHelpers.createElement("span", "leif-navigation-label");
+    navigationLabel.textContent = "Navegar";
+
     this.tabBar = DomHelpers.createElement("nav", "leif-tab-bar");
     this.tabBar.setAttribute("role", "tablist");
     this.tabBar.setAttribute("aria-label", "Seções do Leif");
     TABS.forEach((tab, index) => {
-      const button = DomHelpers.createElement("div", "leif-tab-button");
-      button.textContent = tab.label;
+      const button = DomHelpers.createElement("button", "leif-tab-button");
+      button.type = "button";
+      const icon = DomHelpers.createIcon(tab.icon, "leif-tab-icon");
+      icon.setAttribute("aria-hidden", "true");
+      const label = DomHelpers.createElement("span", "leif-tab-label");
+      label.textContent = tab.label;
+      button.append(icon, label);
       button.dataset.tab = tab.id;
       button.addEventListener("click", async () => {
         await this.selectTab(tab.id);
@@ -131,6 +149,7 @@ export class LeifView extends ItemView {
       this.tabButtons.set(tab.id, button);
       this.tabBar!.appendChild(button);
     });
+    navigation.append(navigationLabel, this.tabBar);
 
     this.activeTabContainer = DomHelpers.createElement("section", "leif-body");
     this.activeTabContainer.id = "leif-tabpanel";
@@ -138,8 +157,33 @@ export class LeifView extends ItemView {
     this.activeTabContainer.setAttribute("tabindex", "0");
     this.activeTabContainer.setAttribute("aria-labelledby", `leif-tab-${this.activeTab}`);
 
-    this.shell.append(header, this.tabBar, this.activeTabContainer);
+    this.workspace.append(navigation, this.activeTabContainer);
+    this.shell.append(header, this.workspace);
     this.contentEl.appendChild(this.shell);
+    this.observePaneWidth();
+  }
+
+  /**
+   * Obsidian views can be resized independently of the app window. A
+   * ResizeObserver keeps the layout tied to the leaf width, including split
+   * panes where viewport media queries do not apply.
+   */
+  private observePaneWidth(): void {
+    if (typeof ResizeObserver === "undefined") return;
+
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width;
+      if (width !== undefined) {
+        this.updateResponsiveClasses(width);
+      }
+    });
+    this.resizeObserver.observe(this.contentEl);
+  }
+
+  private updateResponsiveClasses(width: number): void {
+    this.contentEl.classList.toggle("is-narrow", width <= 760);
+    this.contentEl.classList.toggle("is-compact", width <= 520);
   }
 
   /**
@@ -151,7 +195,10 @@ export class LeifView extends ItemView {
     const activeContest = data.contests.find((contest) => contest.id === data.activeContestId);
     this.headerActions.innerHTML = "";
     this.headerActions.appendChild(
-      DomHelpers.createBadge(activeContest ? `Estudando: ${activeContest.name}` : "Sem concurso escolhido")
+      DomHelpers.createBadge(
+        activeContest ? `Estudando: ${activeContest.name}` : "Escolha um concurso",
+        activeContest ? "trophy" : "compass"
+      )
     );
   }
 
