@@ -36,9 +36,9 @@ export type LeifTabId = "dashboard" | "contests" | "cycle" | "items" | "topics" 
 
 export const TABS: Array<{ id: LeifTabId; label: string; icon: string }> = [
   { id: "dashboard", label: t("tab.dashboard"), icon: ICON_NAMES.dashboard },
+  { id: "sessions", label: t("tab.sessions"), icon: ICON_NAMES.sessions },
   { id: "cycle", label: t("tab.cycle"), icon: ICON_NAMES.cycle },
   { id: "topics", label: t("tab.topics"), icon: ICON_NAMES.topics },
-  { id: "sessions", label: t("tab.sessions"), icon: ICON_NAMES.sessions },
   { id: "items", label: t("tab.items"), icon: ICON_NAMES.items },
   { id: "contests", label: t("tab.contests"), icon: ICON_NAMES.contests },
   { id: "wall", label: t("tab.wall"), icon: ICON_NAMES.wall }

@@ -48,9 +48,9 @@ The plugin opens a side-panel view with **7 user-facing areas**:
 | Tab | Capabilities |
 |---|---|
 | **Hoje** | Overview of the active contest: next study activity, planned duration/stage, what comes next, and a per-subject summary (sessions, PDF page progress bar, questions, accuracy). |
-| **Plano** | Study-cycle setup: list the active contest's subjects; inline-create and inline-edit planned minutes + stage; click a status cell to toggle active/inactive; reorder up/down next to the order number. |
-| **Edital** | Syllabus/topic map: subject picker; simplified topics table; inline-create topics; inline-edit name + notebook stats; expandable row to link/edit a question notebook; inline delete confirmation. |
 | **Registros** | Study-session history and cycle action: recommended subject/item context, "Marcar como estudado" button, last-10 sessions table with compact result cells, inline-create sessions, inline-edit count/correct, and inline delete confirmation. |
+| **Matérias** | Study-cycle setup: list the active contest's subjects; inline-create and inline-edit planned minutes + stage; click a status cell to toggle active/inactive; reorder up/down next to the order number. |
+| **Edital** | Syllabus/topic map: subject picker; simplified topics table; inline-create topics; inline-edit name + notebook stats; expandable row to link/edit a question notebook; inline delete confirmation. |
 | **Recursos** | Study resources: subject picker; simplified resources table with page-progress bar and "✓ Concluído"; inline-create items; inline-edit title/weight/questions/total pages; expandable row to add pdf/video/link references; inline delete confirmation. |
 | **Concursos** | Contest management: simplified list of contests; set the active contest; inline-create contests; inline-edit name + wall notes; inline delete confirmation. |
 | **Mural** | Edit the active contest's notice link, exam link and notes; read-only subject snapshots table (subject, weight, score, target items). |

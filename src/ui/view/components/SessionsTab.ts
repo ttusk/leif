@@ -33,6 +33,7 @@ export class SessionsTab {
   private historyTypeFilter = "";
   private historyFromFilter = "";
   private historyToFilter = "";
+  private lastSessionFeedback: string | null = null;
 
   constructor(
     private readonly dataStore: PluginDataStore,
@@ -51,14 +52,6 @@ export class SessionsTab {
   async render(container: HTMLElement, data: LeifPluginData): Promise<void> {
     const header = DomHelpers.createElement("div", "leif-section-header");
     header.appendChild(DomHelpers.createSectionTitle("Registros"));
-    header.appendChild(
-      DomHelpers.createIconButton("add", "Nova sessão", {
-        onClick: async () => {
-          this.isCreatingSession = true;
-          await this.onUpdate();
-        }
-      })
-    );
     container.appendChild(header);
     container.appendChild(
       DomHelpers.createParagraph("Anote o que você estudou. O Leif cuida do resto.")
@@ -130,7 +123,27 @@ export class SessionsTab {
 
     const subjects = data.subjects.filter((subject) => subject.contestId === activeContest.id);
 
-    const recentSessions = DomHelpers.createCard("Histórico de sessões");
+    const recentSessions = DomHelpers.createElement("section", "leif-card");
+    const historyHeader = DomHelpers.createElement("div", "leif-card-header");
+    historyHeader.appendChild(DomHelpers.createSectionSubtitle("Histórico de sessões"));
+    historyHeader.appendChild(
+      DomHelpers.createIconButton("add", "Nova sessão", {
+        onClick: async () => {
+          this.isCreatingSession = true;
+          this.lastSessionFeedback = null;
+          await this.onUpdate();
+        }
+      })
+    );
+    recentSessions.appendChild(historyHeader);
+
+    if (this.lastSessionFeedback) {
+      const feedback = DomHelpers.createElement("div", "leif-session-feedback");
+      feedback.setAttribute("role", "status");
+      feedback.textContent = this.lastSessionFeedback;
+      recentSessions.appendChild(feedback);
+    }
+
     const allSessions = data.studySessions
       .filter((session) => session.contestId === activeContest.id)
       .slice()
@@ -400,7 +413,7 @@ export class SessionsTab {
         const correctAnswers =
           sessionType === StudySessionType.QUESTIONS ? Math.min(rawCorrect, rawCount) : undefined;
 
-        await this.registerStudySessionUseCase.execute({
+        const session = await this.registerStudySessionUseCase.execute({
           id: createId("session"),
           contestId: activeContest.id,
           subjectId: subjectSelect.value,
@@ -413,6 +426,10 @@ export class SessionsTab {
           completed: true
         });
         this.isCreatingSession = false;
+        this.lastSessionFeedback = this.formatCreatedSessionFeedback(
+          session,
+          subjectSelect.selectedOptions[0]?.textContent ?? "Sem matéria"
+        );
         await this.onUpdate();
       } catch (error) {
         DomHelpers.notifyError(error, "Não consegui salvar esse registro.");
@@ -446,7 +463,8 @@ export class SessionsTab {
     const topicSelect = DomHelpers.createSelect(getTopicOptions());
     const countInput = DomHelpers.createInput("number", "Páginas ou quantidade", "0");
     const correctInput = DomHelpers.createInput("number", "Acertos", "0");
-    const correctLabel = DomHelpers.createLabel("Acertos", correctInput);
+    const countLabel = DomHelpers.createStackedLabel("Páginas lidas", countInput);
+    const correctLabel = DomHelpers.createStackedLabel("Acertos nas questões", correctInput);
     const dateInput = DomHelpers.createInput("date", "Data");
     dateInput.value = this.getDefaultDateValue();
 
@@ -474,6 +492,19 @@ export class SessionsTab {
 
     const syncQuestionField = (): void => {
       const isQuestionSession = typeSelect.value === StudySessionType.QUESTIONS;
+      const countLabelText = countLabel.querySelector<HTMLElement>(".leif-field-label");
+      if (countLabelText) {
+        countLabelText.textContent = isQuestionSession
+          ? "Questões resolvidas"
+          : typeSelect.value === StudySessionType.PDF
+            ? "Páginas lidas"
+            : "Quantidade";
+      }
+      countInput.placeholder = isQuestionSession
+        ? "Total de questões"
+        : typeSelect.value === StudySessionType.PDF
+          ? "Páginas lidas"
+          : "Quantidade";
       correctLabel.style.display = isQuestionSession ? "" : "none";
     };
 
@@ -484,13 +515,13 @@ export class SessionsTab {
 
     const formGrid = DomHelpers.createElement("div", "leif-grid leif-grid-2");
     formGrid.append(
-      DomHelpers.createLabel("Matéria", subjectSelect),
-      DomHelpers.createLabel("Tipo", typeSelect),
-      DomHelpers.createLabel("Item", itemSelect),
-      DomHelpers.createLabel("Assunto", topicSelect),
-      DomHelpers.createLabel("Quantidade", countInput),
+      DomHelpers.createStackedLabel("Matéria", subjectSelect),
+      DomHelpers.createStackedLabel("Tipo de registro", typeSelect),
+      DomHelpers.createStackedLabel("Item de estudo", itemSelect),
+      DomHelpers.createStackedLabel("Assunto do edital", topicSelect),
+      countLabel,
       correctLabel,
-      DomHelpers.createLabel("Data", dateInput)
+      DomHelpers.createStackedLabel("Data do estudo", dateInput)
     );
     form.classList.add("leif-card");
     form.append(
@@ -522,6 +553,18 @@ export class SessionsTab {
     return "PDF";
   }
 
+  private formatCreatedSessionFeedback(session: StudySession, subjectName: string): string {
+    const type = this.formatSessionType(session.type);
+    const amount =
+      session.pagesOrCount === undefined
+        ? ""
+        : session.type === StudySessionType.QUESTIONS
+          ? ` · ${this.formatQuestionResult(session)}`
+          : ` · ${session.pagesOrCount} ${session.type === StudySessionType.PDF ? "páginas" : "unid."}`;
+
+    return `Registro salvo: ${type} em ${subjectName}${amount}.`;
+  }
+
   private formatStudyLabel(subjectName: string, topicName: string): string {
     return topicName === "—" ? subjectName : `${subjectName} · ${topicName}`;
   }
@@ -529,11 +572,19 @@ export class SessionsTab {
   private renderSessionResult(session: StudySession, data: LeifPluginData): HTMLElement {
     if (session.type === StudySessionType.QUESTIONS) {
       const result = DomHelpers.createElement("span");
-      result.textContent = `${session.correctAnswers ?? 0}/${session.pagesOrCount ?? 0} acertos`;
+      result.textContent = this.formatQuestionResult(session);
       return result;
     }
 
     return this.renderSessionProgress(session, data);
+  }
+
+  private formatQuestionResult(session: StudySession): string {
+    const total = session.pagesOrCount ?? 0;
+    const correct = session.correctAnswers ?? 0;
+    const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
+
+    return `${correct}/${total} acertos (${percentage}%)`;
   }
 
   private getDefaultDateValue(): string {

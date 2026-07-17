@@ -138,17 +138,18 @@ export class ContestsTab {
       );
     }
 
+    const header = DomHelpers.createElement("div", "leif-contest-card-header");
     const titleGroup = DomHelpers.createElement("div", "leif-contest-card-title-group");
     const title = DomHelpers.createElement("strong", "leif-contest-card-title");
     title.textContent = contest.name;
     const status = DomHelpers.createElement("span", isActive ? "leif-status-active" : "leif-status-inactive");
     status.textContent = isActive ? "Estudando agora" : "Guardado";
     titleGroup.append(title, status);
+    header.append(titleGroup, actions);
 
     const notes = DomHelpers.createParagraph(contest.wall.notes?.trim() || "Sem notas ainda.");
     notes.classList.add("leif-contest-notes");
     const meta = DomHelpers.createElement("div", "leif-contest-meta");
-    meta.append(DomHelpers.createMetric("ID", contest.id));
     if (contest.examPlan?.examDate) {
       meta.append(DomHelpers.createMetric("Prova", contest.examPlan.examDate));
     }
@@ -161,8 +162,11 @@ export class ContestsTab {
     if (contest.examPlan?.weeklyQuestionGoal !== undefined) {
       meta.append(DomHelpers.createMetric("Meta", `${contest.examPlan.weeklyQuestionGoal} questões/semana`));
     }
+    if (meta.childElementCount === 0) {
+      meta.append(DomHelpers.createMetric("Planejamento", "Sem dados de prova"));
+    }
 
-    card.append(titleGroup, meta, actions, notes);
+    card.append(header, meta, notes);
     return card;
   }
 

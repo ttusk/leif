@@ -88,9 +88,9 @@ Leif: Abrir painel do Leif
 O painel é dividido pelas etapas principais do estudo:
 
 - `Hoje`
-- `Plano`
-- `Edital`
 - `Registros`
+- `Matérias`
+- `Edital`
 - `Recursos`
 - `Concursos`
 - `Mural`

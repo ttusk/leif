@@ -65,7 +65,7 @@ export class ItemsTab {
       container.appendChild(
         DomHelpers.createEmptyState(
           "Sem matéria escolhida",
-          "Crie uma matéria no Plano para adicionar recursos."
+          "Crie uma matéria em Matérias para adicionar recursos."
         )
       );
       return;

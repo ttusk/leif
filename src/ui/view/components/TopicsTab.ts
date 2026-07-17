@@ -3,11 +3,18 @@ import { CreateTopicUseCase } from "@/application/use-cases/CreateTopicUseCase";
 import { DeleteTopicUseCase } from "@/application/use-cases/DeleteTopicUseCase";
 import { UpdateTopicUseCase } from "@/application/use-cases/UpdateTopicUseCase";
 import type { Topic } from "@/domain/entities/Topic";
+import { StudySessionType } from "@/domain/entities/StudySession";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 import { SubjectPicker } from "@/ui/view/shared/SubjectPicker";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 import { createId } from "@/application/Id";
+
+type TopicStudyProgress = {
+  solvedQuestions: number;
+  correctAnswers: number;
+  pdfPages: number;
+};
 
 /**
  * Topics tab component with unified CRUD pattern.
@@ -57,7 +64,7 @@ export class TopicsTab {
       container.appendChild(
         DomHelpers.createEmptyState(
           "Sem matéria escolhida",
-          "Crie uma matéria no Plano para organizar o edital."
+          "Crie uma matéria em Matérias para organizar o edital."
         )
       );
       return;
@@ -76,6 +83,7 @@ export class TopicsTab {
 
     const topics = data.topics
       .filter((topic) => topic.subjectId === subject.id);
+    const progressByTopic = this.getProgressByTopic(data);
 
     const card = DomHelpers.createCard(`Assuntos de ${subject.name}`);
 
@@ -87,7 +95,7 @@ export class TopicsTab {
 
     const { container: tableContainer, tbody } = DomHelpers.createCrudTable([
       "Assunto",
-      "Questões",
+      "Progresso",
       "Caderno",
       "Ações"
     ]);
@@ -97,13 +105,13 @@ export class TopicsTab {
       const isExpanded = this.expandedTopicId === topic.id;
 
       if (isEditing) {
-        tbody.appendChild(this.renderEditableRow(topic));
+        tbody.appendChild(this.renderEditableRow(topic, progressByTopic.get(topic.id)));
       } else {
-        tbody.appendChild(this.renderDisplayRow(topic));
+        tbody.appendChild(this.renderDisplayRow(topic, progressByTopic.get(topic.id)));
       }
 
       if (isExpanded && !isEditing) {
-        tbody.appendChild(this.renderDetailRow(topic));
+        tbody.appendChild(this.renderDetailRow(topic, progressByTopic.get(topic.id)));
       }
     });
 
@@ -111,7 +119,7 @@ export class TopicsTab {
     container.appendChild(card);
   }
 
-  private renderDisplayRow(topic: Topic): HTMLElement {
+  private renderDisplayRow(topic: Topic, progress?: TopicStudyProgress): HTMLElement {
     const tr = DomHelpers.createElement("tr");
     tr.dataset.topicId = topic.id;
     const hasDetails = Boolean(topic.questionNotebook);
@@ -175,7 +183,7 @@ export class TopicsTab {
     titleCell.appendChild(title);
 
     tr.appendChild(titleCell);
-    tr.appendChild(DomHelpers.createCell(this.formatQuestionProgress(topic)));
+    tr.appendChild(DomHelpers.createCell(this.formatQuestionProgress(topic, progress)));
     tr.appendChild(DomHelpers.createCell(null, this.renderNotebookCell(topic)));
     const actionsCell = DomHelpers.createCell(null, actions);
     actionsCell.classList.add("leif-actions-cell");
@@ -209,7 +217,7 @@ export class TopicsTab {
     return link;
   }
 
-  private renderEditableRow(topic: Topic): HTMLElement {
+  private renderEditableRow(topic: Topic, progress?: TopicStudyProgress): HTMLElement {
     const tr = DomHelpers.createElement("tr");
     tr.className = "leif-editing-row";
     tr.dataset.topicId = topic.id;
@@ -221,12 +229,12 @@ export class TopicsTab {
     const solvedInput = DomHelpers.createCompactInput(
       "number",
       "Questões resolvidas",
-      String(topic.questionNotebook?.solvedQuestions ?? 0)
+      String(topic.questionNotebook?.solvedQuestions ?? progress?.solvedQuestions ?? 0)
     );
     const correctInput = DomHelpers.createCompactInput(
       "number",
-      "Acert.",
-      String(topic.questionNotebook?.correctAnswers ?? 0)
+      "Acertos",
+      String(topic.questionNotebook?.correctAnswers ?? progress?.correctAnswers ?? 0)
     );
 
     const saveButton = DomHelpers.createIconButton("save", "Salvar", {
@@ -297,7 +305,7 @@ export class TopicsTab {
     return tr;
   }
 
-  private renderDetailRow(topic: Topic): HTMLElement {
+  private renderDetailRow(topic: Topic, progress?: TopicStudyProgress): HTMLElement {
     const tr = DomHelpers.createElement("tr");
     tr.className = "leif-detail-row";
 
@@ -317,7 +325,7 @@ export class TopicsTab {
       const title = DomHelpers.createElement("span", "leif-material-title");
       title.textContent = notebook.name;
       const stats = DomHelpers.createElement("span", "leif-material-type");
-      stats.textContent = this.formatQuestionProgress(topic);
+      stats.textContent = this.formatQuestionProgress(topic, progress);
       info.append(stats, title);
       row.appendChild(info);
 
@@ -387,14 +395,46 @@ export class TopicsTab {
     return form;
   }
 
-  private formatQuestionProgress(topic: Topic): string {
-    const solved = topic.questionNotebook?.solvedQuestions ?? 0;
-    const correct = topic.questionNotebook?.correctAnswers ?? 0;
+  private getProgressByTopic(data: LeifPluginData): Map<string, TopicStudyProgress> {
+    const progressByTopic = new Map<string, TopicStudyProgress>();
+
+    data.studySessions.forEach((session) => {
+      if (!session.topicId) {
+        return;
+      }
+
+      const progress = progressByTopic.get(session.topicId) ?? {
+        solvedQuestions: 0,
+        correctAnswers: 0,
+        pdfPages: 0
+      };
+
+      if (session.type === StudySessionType.QUESTIONS) {
+        progress.solvedQuestions += session.pagesOrCount ?? 0;
+        progress.correctAnswers += session.correctAnswers ?? 0;
+      } else if (session.type === StudySessionType.PDF) {
+        progress.pdfPages += session.pagesOrCount ?? 0;
+      }
+
+      progressByTopic.set(session.topicId, progress);
+    });
+
+    return progressByTopic;
+  }
+
+  private formatQuestionProgress(topic: Topic, progress?: TopicStudyProgress): string {
+    const solved = progress?.solvedQuestions ?? topic.questionNotebook?.solvedQuestions ?? 0;
+    const correct = progress?.correctAnswers ?? topic.questionNotebook?.correctAnswers ?? 0;
 
     if (solved === 0) {
-      return "0 resolvidas";
+      return progress?.pdfPages
+        ? `0 resolvidas · ${progress.pdfPages} pág. PDF`
+        : "0 resolvidas";
     }
 
-    return `${correct}/${solved} acertos`;
+    const questionProgress = `${correct}/${solved} acertos`;
+    return progress?.pdfPages
+      ? `${questionProgress} · ${progress.pdfPages} pág. PDF`
+      : questionProgress;
   }
 }

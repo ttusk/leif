@@ -26,7 +26,7 @@ const ptBR = {
 
   "tab.dashboard": "Hoje",
   "tab.contests": "Concursos",
-  "tab.cycle": "Plano",
+  "tab.cycle": "Matérias",
   "tab.items": "Recursos",
   "tab.topics": "Edital",
   "tab.sessions": "Registros",

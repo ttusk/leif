@@ -1,6 +1,7 @@
 import { Notice } from "obsidian";
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import { CreateSubjectUseCase } from "@/application/use-cases/CreateSubjectUseCase";
+import { GetActiveContestSummaryUseCase, type SubjectSummary } from "@/application/use-cases/GetActiveContestSummaryUseCase";
 import { ListSubjectsForActiveContestUseCase } from "@/application/use-cases/ListSubjectsForActiveContestUseCase";
 import { ReorderSubjectsUseCase } from "@/application/use-cases/ReorderSubjectsUseCase";
 import { SetSubjectActiveStateUseCase } from "@/application/use-cases/SetSubjectActiveStateUseCase";
@@ -18,6 +19,7 @@ import { createId } from "@/application/Id";
  */
 export class CycleTab {
   private readonly createSubjectUseCase: CreateSubjectUseCase;
+  private readonly getActiveContestSummaryUseCase: GetActiveContestSummaryUseCase;
   private readonly listSubjectsForActiveContestUseCase: ListSubjectsForActiveContestUseCase;
   private readonly reorderSubjectsUseCase: ReorderSubjectsUseCase;
   private readonly setSubjectActiveStateUseCase: SetSubjectActiveStateUseCase;
@@ -31,6 +33,7 @@ export class CycleTab {
   ) {
     const repositoryFactory = new EntityRepositoryFactory(dataStore);
     this.createSubjectUseCase = new CreateSubjectUseCase(dataStore, repositoryFactory);
+    this.getActiveContestSummaryUseCase = new GetActiveContestSummaryUseCase(dataStore);
     this.listSubjectsForActiveContestUseCase = new ListSubjectsForActiveContestUseCase(dataStore);
     this.reorderSubjectsUseCase = new ReorderSubjectsUseCase(dataStore, repositoryFactory);
     this.setSubjectActiveStateUseCase = new SetSubjectActiveStateUseCase(dataStore, repositoryFactory);
@@ -42,7 +45,7 @@ export class CycleTab {
    */
   async render(container: HTMLElement, data: LeifPluginData): Promise<void> {
     const header = DomHelpers.createElement("div", "leif-section-header");
-    header.appendChild(DomHelpers.createSectionTitle("Plano"));
+    header.appendChild(DomHelpers.createSectionTitle("Matérias"));
     header.appendChild(
       DomHelpers.createIconButton("add", "Nova matéria", {
         onClick: async () => {
@@ -63,6 +66,10 @@ export class CycleTab {
     const activeContest =
       data.contests.find((contest) => contest.id === data.activeContestId) ?? null;
     const subjects = await this.listSubjectsForActiveContestUseCase.execute();
+    const summary = await this.getActiveContestSummaryUseCase.execute();
+    const summaryBySubject = new Map(
+      summary.subjectSummaries.map((subjectSummary) => [subjectSummary.subjectId, subjectSummary])
+    );
     const card = DomHelpers.createCard(
       activeContest ? `Matérias de ${activeContest.name}` : "Matérias"
     );
@@ -75,59 +82,80 @@ export class CycleTab {
       return;
     }
 
-    const list = DomHelpers.createElement("div", "leif-cycle-card-list");
     const activeMinutes = subjects
       .filter((subject) => subject.isActive)
       .reduce((total, subject) => total + subject.plannedStudyMinutes, 0);
-    const summary = DomHelpers.createElement("div", "leif-cycle-summary");
-    summary.append(
+    const summaryBar = DomHelpers.createElement("div", "leif-cycle-summary");
+    summaryBar.append(
       this.renderSummaryChip("Matérias", String(subjects.length)),
       this.renderSummaryChip("No ciclo", String(subjects.filter((subject) => subject.isActive).length)),
       this.renderSummaryChip("Tempo total", `${activeMinutes} min`)
     );
-    card.appendChild(summary);
+    card.appendChild(summaryBar);
+
+    const { container: tableContainer, tbody } = DomHelpers.createCrudTable([
+      "Ordem",
+      "Matéria",
+      "Status",
+      "Tempo",
+      "Etapa",
+      "Questões",
+      "Ações"
+    ]);
 
     subjects.forEach((subject, index) => {
       const isEditing = this.editingSubjectId === subject.id;
-      const subjectCard = isEditing
-        ? this.renderEditableCard(subject)
-        : this.renderDisplayCard(subject, subjects, index, data.activeContestId);
-      list.appendChild(subjectCard);
+      tbody.appendChild(
+        isEditing
+          ? this.renderEditableRow(subject)
+          : this.renderDisplayRow(
+              subject,
+              subjects,
+              index,
+              data.activeContestId,
+              summaryBySubject.get(subject.id)
+            )
+      );
     });
-    card.appendChild(list);
+    card.appendChild(tableContainer);
 
     container.appendChild(card);
   }
 
-  private renderDisplayCard(
+  private renderDisplayRow(
     subject: Subject,
     subjects: Subject[],
     index: number,
-    activeContestId: string | null
-  ): HTMLElement {
-    const card = DomHelpers.createElement("section", "leif-cycle-card");
-    card.dataset.subjectId = subject.id;
+    activeContestId: string | null,
+    summary?: SubjectSummary
+  ): HTMLTableRowElement {
+    const tr = DomHelpers.createElement("tr");
+    tr.dataset.subjectId = subject.id;
     if (!subject.isActive) {
-      card.classList.add("is-paused");
+      tr.classList.add("is-paused");
     }
 
-    const titleGroup = DomHelpers.createElement("div", "leif-cycle-card-title-group");
-    const order = DomHelpers.createElement("span", "leif-cycle-card-order");
+    const orderControl = DomHelpers.createElement("div", "leif-order-control");
+    const order = DomHelpers.createElement("span", "leif-order-number");
     order.textContent = String(subject.order);
-    const title = DomHelpers.createElement("strong", "leif-cycle-card-title");
-    title.textContent = subject.name;
-    const status = DomHelpers.createElement("span", subject.isActive ? "leif-status-active" : "leif-status-inactive");
-    status.textContent = subject.isActive ? "No ciclo" : "Pausada";
-    titleGroup.append(order, title, status);
-
-    const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
-    actions.append(
+    const orderActions = DomHelpers.createElement("span", "leif-order-actions");
+    orderActions.append(
       this.renderMoveButton("up", "Subir", async () => {
         await this.moveSubject(subjects, index, index - 1, activeContestId);
       }, index === 0),
       this.renderMoveButton("down", "Descer", async () => {
         await this.moveSubject(subjects, index, index + 1, activeContestId);
-      }, index === subjects.length - 1),
+      }, index === subjects.length - 1)
+    );
+    orderControl.append(order, orderActions);
+
+    const title = DomHelpers.createElement("strong", "leif-cycle-table-title");
+    title.textContent = subject.name;
+    const status = DomHelpers.createElement("span", subject.isActive ? "leif-status-active" : "leif-status-inactive");
+    status.textContent = subject.isActive ? "No ciclo" : "Pausada";
+
+    const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
+    actions.append(
       this.renderCycleToggleButton(subject),
       DomHelpers.createIconButton("edit", "Editar", {
         onClick: async () => {
@@ -137,19 +165,22 @@ export class CycleTab {
       })
     );
 
-    const meta = DomHelpers.createElement("div", "leif-cycle-card-meta");
-    meta.append(
-      DomHelpers.createMetric("Tempo", `${subject.plannedStudyMinutes} min`),
-      DomHelpers.createMetric("Etapa", subject.currentStage ?? "—")
+    tr.append(
+      DomHelpers.createCell(null, orderControl),
+      DomHelpers.createCell(null, title),
+      DomHelpers.createCell(null, status),
+      DomHelpers.createCell(`${subject.plannedStudyMinutes} min`),
+      DomHelpers.createCell(subject.currentStage ?? "—"),
+      DomHelpers.createCell(this.formatQuestionSummary(summary)),
+      DomHelpers.createCell(null, actions)
     );
 
-    card.append(titleGroup, meta, actions);
-    return card;
+    return tr;
   }
 
-  private renderEditableCard(subject: Subject): HTMLElement {
-    const card = DomHelpers.createElement("section", "leif-cycle-card is-editing");
-    card.dataset.subjectId = subject.id;
+  private renderEditableRow(subject: Subject): HTMLTableRowElement {
+    const tr = DomHelpers.createElement("tr", "leif-editing-row");
+    tr.dataset.subjectId = subject.id;
 
     const minutesInput = DomHelpers.createInput(
       "number",
@@ -188,23 +219,21 @@ export class CycleTab {
     controls.appendChild(saveButton);
     controls.appendChild(cancelButton);
 
-    const header = DomHelpers.createElement("div", "leif-cycle-card-header");
-    const titleGroup = DomHelpers.createElement("div", "leif-cycle-card-title-group");
-    const order = DomHelpers.createElement("span", "leif-cycle-card-order");
+    const order = DomHelpers.createElement("span", "leif-order-number");
     order.textContent = String(subject.order);
-    const title = DomHelpers.createElement("strong", "leif-cycle-card-title");
+    const title = DomHelpers.createElement("strong", "leif-cycle-table-title");
     title.textContent = subject.name;
-    titleGroup.append(order, title);
-    header.append(titleGroup, controls);
 
-    const fields = DomHelpers.createElement("div", "leif-cycle-edit-form");
-    fields.append(
-      DomHelpers.createStackedLabel("Tempo em minutos", minutesInput),
-      DomHelpers.createStackedLabel("Etapa", stageInput)
+    tr.append(
+      DomHelpers.createCell(null, order),
+      DomHelpers.createCell(null, title),
+      DomHelpers.createCell("Editando"),
+      DomHelpers.createCell(null, minutesInput),
+      DomHelpers.createCell(null, stageInput),
+      DomHelpers.createCell("—"),
+      DomHelpers.createCell(null, controls)
     );
-
-    card.append(header, fields);
-    return card;
+    return tr;
   }
 
   private renderCreateSubjectForm(data: LeifPluginData): HTMLElement {
@@ -300,6 +329,15 @@ export class CycleTab {
     valueEl.textContent = value;
     chip.append(labelEl, valueEl);
     return chip;
+  }
+
+  private formatQuestionSummary(summary?: SubjectSummary): string {
+    if (!summary || summary.questionProgressCount === 0 || summary.questionAccuracy === null) {
+      return "—";
+    }
+
+    const correctAnswers = Math.round(summary.questionAccuracy * summary.questionProgressCount);
+    return `${Math.round(summary.questionAccuracy * 100)}% (${correctAnswers}/${summary.questionProgressCount})`;
   }
 
   private async moveSubject(

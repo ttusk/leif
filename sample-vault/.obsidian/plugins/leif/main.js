@@ -182,7 +182,7 @@ var ptBR = {
   "command.resetPluginData": "Redefinir dados do plugin",
   "tab.dashboard": "Hoje",
   "tab.contests": "Concursos",
-  "tab.cycle": "Plano",
+  "tab.cycle": "Mat\xE9rias",
   "tab.items": "Recursos",
   "tab.topics": "Edital",
   "tab.sessions": "Registros",
@@ -224,9 +224,9 @@ var ICON_NAMES = {
 };
 var TABS = [
   { id: "dashboard", label: t("tab.dashboard"), icon: ICON_NAMES.dashboard },
+  { id: "sessions", label: t("tab.sessions"), icon: ICON_NAMES.sessions },
   { id: "cycle", label: t("tab.cycle"), icon: ICON_NAMES.cycle },
   { id: "topics", label: t("tab.topics"), icon: ICON_NAMES.topics },
-  { id: "sessions", label: t("tab.sessions"), icon: ICON_NAMES.sessions },
   { id: "items", label: t("tab.items"), icon: ICON_NAMES.items },
   { id: "contests", label: t("tab.contests"), icon: ICON_NAMES.contests },
   { id: "wall", label: t("tab.wall"), icon: ICON_NAMES.wall }
@@ -2714,16 +2714,17 @@ var ContestsTab = class {
         })
       );
     }
+    const header = DomHelpers.createElement("div", "leif-contest-card-header");
     const titleGroup = DomHelpers.createElement("div", "leif-contest-card-title-group");
     const title = DomHelpers.createElement("strong", "leif-contest-card-title");
     title.textContent = contest.name;
     const status = DomHelpers.createElement("span", isActive ? "leif-status-active" : "leif-status-inactive");
     status.textContent = isActive ? "Estudando agora" : "Guardado";
     titleGroup.append(title, status);
+    header.append(titleGroup, actions);
     const notes = DomHelpers.createParagraph(contest.wall.notes?.trim() || "Sem notas ainda.");
     notes.classList.add("leif-contest-notes");
     const meta = DomHelpers.createElement("div", "leif-contest-meta");
-    meta.append(DomHelpers.createMetric("ID", contest.id));
     if (contest.examPlan?.examDate) {
       meta.append(DomHelpers.createMetric("Prova", contest.examPlan.examDate));
     }
@@ -2736,7 +2737,10 @@ var ContestsTab = class {
     if (contest.examPlan?.weeklyQuestionGoal !== void 0) {
       meta.append(DomHelpers.createMetric("Meta", `${contest.examPlan.weeklyQuestionGoal} quest\xF5es/semana`));
     }
-    card.append(titleGroup, meta, actions, notes);
+    if (meta.childElementCount === 0) {
+      meta.append(DomHelpers.createMetric("Planejamento", "Sem dados de prova"));
+    }
+    card.append(header, meta, notes);
     return card;
   }
   renderEditableCard(contest, data) {
@@ -2861,6 +2865,7 @@ var CycleTab = class {
     this.isCreatingSubject = false;
     const repositoryFactory = new EntityRepositoryFactory(dataStore);
     this.createSubjectUseCase = new CreateSubjectUseCase(dataStore, repositoryFactory);
+    this.getActiveContestSummaryUseCase = new GetActiveContestSummaryUseCase(dataStore);
     this.listSubjectsForActiveContestUseCase = new ListSubjectsForActiveContestUseCase(dataStore);
     this.reorderSubjectsUseCase = new ReorderSubjectsUseCase(dataStore, repositoryFactory);
     this.setSubjectActiveStateUseCase = new SetSubjectActiveStateUseCase(dataStore, repositoryFactory);
@@ -2871,7 +2876,7 @@ var CycleTab = class {
    */
   async render(container, data) {
     const header = DomHelpers.createElement("div", "leif-section-header");
-    header.appendChild(DomHelpers.createSectionTitle("Plano"));
+    header.appendChild(DomHelpers.createSectionTitle("Mat\xE9rias"));
     header.appendChild(
       DomHelpers.createIconButton("add", "Nova mat\xE9ria", {
         onClick: async () => {
@@ -2889,6 +2894,10 @@ var CycleTab = class {
     }
     const activeContest = data.contests.find((contest) => contest.id === data.activeContestId) ?? null;
     const subjects = await this.listSubjectsForActiveContestUseCase.execute();
+    const summary = await this.getActiveContestSummaryUseCase.execute();
+    const summaryBySubject = new Map(
+      summary.subjectSummaries.map((subjectSummary) => [subjectSummary.subjectId, subjectSummary])
+    );
     const card = DomHelpers.createCard(
       activeContest ? `Mat\xE9rias de ${activeContest.name}` : "Mat\xE9rias"
     );
@@ -2899,45 +2908,63 @@ var CycleTab = class {
       container.appendChild(card);
       return;
     }
-    const list = DomHelpers.createElement("div", "leif-cycle-card-list");
     const activeMinutes = subjects.filter((subject) => subject.isActive).reduce((total, subject) => total + subject.plannedStudyMinutes, 0);
-    const summary = DomHelpers.createElement("div", "leif-cycle-summary");
-    summary.append(
+    const summaryBar = DomHelpers.createElement("div", "leif-cycle-summary");
+    summaryBar.append(
       this.renderSummaryChip("Mat\xE9rias", String(subjects.length)),
       this.renderSummaryChip("No ciclo", String(subjects.filter((subject) => subject.isActive).length)),
       this.renderSummaryChip("Tempo total", `${activeMinutes} min`)
     );
-    card.appendChild(summary);
+    card.appendChild(summaryBar);
+    const { container: tableContainer, tbody } = DomHelpers.createCrudTable([
+      "Ordem",
+      "Mat\xE9ria",
+      "Status",
+      "Tempo",
+      "Etapa",
+      "Quest\xF5es",
+      "A\xE7\xF5es"
+    ]);
     subjects.forEach((subject, index) => {
       const isEditing = this.editingSubjectId === subject.id;
-      const subjectCard = isEditing ? this.renderEditableCard(subject) : this.renderDisplayCard(subject, subjects, index, data.activeContestId);
-      list.appendChild(subjectCard);
+      tbody.appendChild(
+        isEditing ? this.renderEditableRow(subject) : this.renderDisplayRow(
+          subject,
+          subjects,
+          index,
+          data.activeContestId,
+          summaryBySubject.get(subject.id)
+        )
+      );
     });
-    card.appendChild(list);
+    card.appendChild(tableContainer);
     container.appendChild(card);
   }
-  renderDisplayCard(subject, subjects, index, activeContestId) {
-    const card = DomHelpers.createElement("section", "leif-cycle-card");
-    card.dataset.subjectId = subject.id;
+  renderDisplayRow(subject, subjects, index, activeContestId, summary) {
+    const tr = DomHelpers.createElement("tr");
+    tr.dataset.subjectId = subject.id;
     if (!subject.isActive) {
-      card.classList.add("is-paused");
+      tr.classList.add("is-paused");
     }
-    const titleGroup = DomHelpers.createElement("div", "leif-cycle-card-title-group");
-    const order = DomHelpers.createElement("span", "leif-cycle-card-order");
+    const orderControl = DomHelpers.createElement("div", "leif-order-control");
+    const order = DomHelpers.createElement("span", "leif-order-number");
     order.textContent = String(subject.order);
-    const title = DomHelpers.createElement("strong", "leif-cycle-card-title");
-    title.textContent = subject.name;
-    const status = DomHelpers.createElement("span", subject.isActive ? "leif-status-active" : "leif-status-inactive");
-    status.textContent = subject.isActive ? "No ciclo" : "Pausada";
-    titleGroup.append(order, title, status);
-    const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
-    actions.append(
+    const orderActions = DomHelpers.createElement("span", "leif-order-actions");
+    orderActions.append(
       this.renderMoveButton("up", "Subir", async () => {
         await this.moveSubject(subjects, index, index - 1, activeContestId);
       }, index === 0),
       this.renderMoveButton("down", "Descer", async () => {
         await this.moveSubject(subjects, index, index + 1, activeContestId);
-      }, index === subjects.length - 1),
+      }, index === subjects.length - 1)
+    );
+    orderControl.append(order, orderActions);
+    const title = DomHelpers.createElement("strong", "leif-cycle-table-title");
+    title.textContent = subject.name;
+    const status = DomHelpers.createElement("span", subject.isActive ? "leif-status-active" : "leif-status-inactive");
+    status.textContent = subject.isActive ? "No ciclo" : "Pausada";
+    const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
+    actions.append(
       this.renderCycleToggleButton(subject),
       DomHelpers.createIconButton("edit", "Editar", {
         onClick: async () => {
@@ -2946,17 +2973,20 @@ var CycleTab = class {
         }
       })
     );
-    const meta = DomHelpers.createElement("div", "leif-cycle-card-meta");
-    meta.append(
-      DomHelpers.createMetric("Tempo", `${subject.plannedStudyMinutes} min`),
-      DomHelpers.createMetric("Etapa", subject.currentStage ?? "\u2014")
+    tr.append(
+      DomHelpers.createCell(null, orderControl),
+      DomHelpers.createCell(null, title),
+      DomHelpers.createCell(null, status),
+      DomHelpers.createCell(`${subject.plannedStudyMinutes} min`),
+      DomHelpers.createCell(subject.currentStage ?? "\u2014"),
+      DomHelpers.createCell(this.formatQuestionSummary(summary)),
+      DomHelpers.createCell(null, actions)
     );
-    card.append(titleGroup, meta, actions);
-    return card;
+    return tr;
   }
-  renderEditableCard(subject) {
-    const card = DomHelpers.createElement("section", "leif-cycle-card is-editing");
-    card.dataset.subjectId = subject.id;
+  renderEditableRow(subject) {
+    const tr = DomHelpers.createElement("tr", "leif-editing-row");
+    tr.dataset.subjectId = subject.id;
     const minutesInput = DomHelpers.createInput(
       "number",
       "Min",
@@ -2989,21 +3019,20 @@ var CycleTab = class {
     const controls = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
     controls.appendChild(saveButton);
     controls.appendChild(cancelButton);
-    const header = DomHelpers.createElement("div", "leif-cycle-card-header");
-    const titleGroup = DomHelpers.createElement("div", "leif-cycle-card-title-group");
-    const order = DomHelpers.createElement("span", "leif-cycle-card-order");
+    const order = DomHelpers.createElement("span", "leif-order-number");
     order.textContent = String(subject.order);
-    const title = DomHelpers.createElement("strong", "leif-cycle-card-title");
+    const title = DomHelpers.createElement("strong", "leif-cycle-table-title");
     title.textContent = subject.name;
-    titleGroup.append(order, title);
-    header.append(titleGroup, controls);
-    const fields = DomHelpers.createElement("div", "leif-cycle-edit-form");
-    fields.append(
-      DomHelpers.createStackedLabel("Tempo em minutos", minutesInput),
-      DomHelpers.createStackedLabel("Etapa", stageInput)
+    tr.append(
+      DomHelpers.createCell(null, order),
+      DomHelpers.createCell(null, title),
+      DomHelpers.createCell("Editando"),
+      DomHelpers.createCell(null, minutesInput),
+      DomHelpers.createCell(null, stageInput),
+      DomHelpers.createCell("\u2014"),
+      DomHelpers.createCell(null, controls)
     );
-    card.append(header, fields);
-    return card;
+    return tr;
   }
   renderCreateSubjectForm(data) {
     const activeContestId = data.activeContestId;
@@ -3084,6 +3113,13 @@ var CycleTab = class {
     valueEl.textContent = value;
     chip.append(labelEl, valueEl);
     return chip;
+  }
+  formatQuestionSummary(summary) {
+    if (!summary || summary.questionProgressCount === 0 || summary.questionAccuracy === null) {
+      return "\u2014";
+    }
+    const correctAnswers = Math.round(summary.questionAccuracy * summary.questionProgressCount);
+    return `${Math.round(summary.questionAccuracy * 100)}% (${correctAnswers}/${summary.questionProgressCount})`;
   }
   async moveSubject(subjects, sourceIndex, targetIndex, activeContestId) {
     try {
@@ -3181,12 +3217,9 @@ var DashboardTab = class {
   constructor(dataStore, onUpdate) {
     this.dataStore = dataStore;
     this.onUpdate = onUpdate;
-    this.isRegisteringNextActivity = false;
-    const repositoryFactory = new EntityRepositoryFactory(dataStore);
     this.getActiveCycleSnapshotUseCase = new GetActiveCycleSnapshotUseCase(dataStore);
     this.getActiveContestSummaryUseCase = new GetActiveContestSummaryUseCase(dataStore);
     this.getActiveContestProgressDashboardUseCase = new GetActiveContestProgressDashboardUseCase(dataStore);
-    this.registerStudySessionUseCase = new RegisterStudySessionUseCase(dataStore, repositoryFactory);
   }
   /**
    * Renders the dashboard tab content.
@@ -3222,22 +3255,12 @@ var DashboardTab = class {
     container.appendChild(
       this.renderNextActivityPanel({
         subjectName: recommendedSubject?.name ?? "Sem mat\xE9ria ativa",
-        itemName: recommendedSubject ? itemMap.get(recommendedItemId ?? "") ?? "Sem item definido" : "Crie ou ative uma mat\xE9ria no Plano para aparecer aqui.",
+        itemName: recommendedSubject ? itemMap.get(recommendedItemId ?? "") ?? "Sem item definido" : "Crie ou ative uma mat\xE9ria em Mat\xE9rias para aparecer aqui.",
         plannedMinutes: recommendedSubject?.plannedStudyMinutes,
         stage: recommendedSubject?.currentStage,
         nextSubjectName: afterRecommendedSubject?.name,
         nextItemName: itemMap.get(afterRecommendedItemId ?? ""),
-        onRegister: recommendedSubject ? async () => {
-          this.isRegisteringNextActivity = true;
-          await this.onUpdate();
-        } : void 0,
-        registerForm: this.isRegisteringNextActivity && recommendedSubject ? this.renderRecommendedSessionForm({
-          contestId: activeContest.id,
-          subjectId: recommendedSubject.id,
-          subjectName: recommendedSubject.name,
-          itemId: recommendedItemId ?? void 0,
-          itemName: itemMap.get(recommendedItemId ?? "") ?? void 0
-        }) : void 0
+        registerHint: recommendedSubject ? "Registre o estudo na aba Registros." : void 0
       })
     );
     const subjectSummaryCard = DomHelpers.createCard("Resumo por mat\xE9ria");
@@ -3314,23 +3337,17 @@ var DashboardTab = class {
     if (activity.nextSubjectName || activity.nextItemName) {
       const next = DomHelpers.createElement("div", "leif-next-activity-next");
       next.textContent = [
-        activity.nextSubjectName ? `Depois vem ${activity.nextSubjectName}` : void 0,
-        activity.nextItemName ? `na fila: ${activity.nextItemName}` : void 0
+        activity.nextSubjectName ? `Pr\xF3xima mat\xE9ria: ${activity.nextSubjectName}` : void 0,
+        activity.nextItemName ? `item na fila: ${activity.nextItemName}` : void 0
       ].filter(Boolean).join(" \xB7 ");
-      meta.appendChild(next);
+      panel.appendChild(next);
     }
-    if (activity.onRegister) {
-      meta.appendChild(
-        DomHelpers.createButton("Registrar agora", {
-          className: "mod-cta",
-          onClick: activity.onRegister
-        })
-      );
+    if (activity.registerHint) {
+      const hint = DomHelpers.createElement("span", "leif-next-activity-item");
+      hint.textContent = activity.registerHint;
+      meta.appendChild(hint);
     }
     panel.append(intro, meta);
-    if (activity.registerForm) {
-      panel.appendChild(activity.registerForm);
-    }
     return panel;
   }
   renderActivityMeta(label, value) {
@@ -3367,81 +3384,6 @@ var DashboardTab = class {
     const currentIndex = activeSubjects.findIndex((subject) => subject.id === subjectId);
     if (currentIndex === -1) return null;
     return activeSubjects[(currentIndex + 1) % activeSubjects.length] ?? null;
-  }
-  renderRecommendedSessionForm(activity) {
-    const typeSelect = DomHelpers.createSelect([
-      [StudySessionType.PDF, "PDF"],
-      [StudySessionType.VIDEO, "V\xEDdeo"],
-      [StudySessionType.QUESTIONS, "Quest\xF5es"]
-    ]);
-    const countInput = DomHelpers.createInput("number", "P\xE1ginas ou quantidade", "0");
-    const correctInput = DomHelpers.createInput("number", "Acertos", "0");
-    const correctLabel = DomHelpers.createLabel("Acertos", correctInput);
-    const dateInput = DomHelpers.createInput("date", "Data");
-    dateInput.value = this.getDefaultDateValue();
-    const syncQuestionField = () => {
-      correctLabel.style.display = typeSelect.value === StudySessionType.QUESTIONS ? "" : "none";
-    };
-    typeSelect.addEventListener("change", syncQuestionField);
-    syncQuestionField();
-    const form = DomHelpers.createForm(async () => {
-      try {
-        const sessionType = typeSelect.value;
-        const rawCount = Number(countInput.value);
-        const rawCorrect = Number(correctInput.value);
-        if (sessionType === StudySessionType.QUESTIONS && (!rawCount || rawCount <= 0)) {
-          throw new ValidationError("Informe uma quantidade de quest\xF5es maior que zero.");
-        }
-        await this.registerStudySessionUseCase.execute({
-          id: createId("session"),
-          contestId: activity.contestId,
-          subjectId: activity.subjectId,
-          studyItemId: activity.itemId,
-          type: sessionType,
-          studiedAt: dateInput.value,
-          pagesOrCount: sessionType === StudySessionType.QUESTIONS ? rawCount : rawCount || void 0,
-          correctAnswers: sessionType === StudySessionType.QUESTIONS ? Math.min(rawCorrect, rawCount) : void 0,
-          completed: true
-        });
-        this.isRegisteringNextActivity = false;
-        await this.onUpdate();
-      } catch (error) {
-        DomHelpers.notifyError(error, "N\xE3o consegui salvar esse registro.");
-      }
-    });
-    const context = DomHelpers.createElement("div", "leif-stack");
-    context.append(
-      DomHelpers.createKeyValueRow("Mat\xE9ria", activity.subjectName),
-      DomHelpers.createKeyValueRow("Item", activity.itemName ?? "Sem item definido")
-    );
-    const fields = DomHelpers.createElement("div", "leif-grid leif-grid-2");
-    fields.append(
-      DomHelpers.createLabel("Tipo", typeSelect),
-      DomHelpers.createLabel("Quantidade", countInput),
-      correctLabel,
-      DomHelpers.createLabel("Data", dateInput)
-    );
-    const actions = DomHelpers.createElement("div", "leif-form-actions");
-    actions.append(
-      DomHelpers.createButton("Cancelar", {
-        onClick: async () => {
-          this.isRegisteringNextActivity = false;
-          await this.onUpdate();
-        }
-      }),
-      DomHelpers.createButton("Registrar", {
-        className: "mod-cta",
-        onClick: () => form.requestSubmit()
-      })
-    );
-    form.append(context, fields, actions);
-    return form;
-  }
-  getDefaultDateValue() {
-    const now = /* @__PURE__ */ new Date();
-    const timezoneOffset = now.getTimezoneOffset() * 6e4;
-    const localDate = new Date(now.getTime() - timezoneOffset);
-    return localDate.toISOString().split("T")[0];
   }
 };
 
@@ -3577,7 +3519,7 @@ var ItemsTab = class {
       container.appendChild(
         DomHelpers.createEmptyState(
           "Sem mat\xE9ria escolhida",
-          "Crie uma mat\xE9ria no Plano para adicionar recursos."
+          "Crie uma mat\xE9ria em Mat\xE9rias para adicionar recursos."
         )
       );
       return;
@@ -4096,6 +4038,7 @@ var SessionsTab = class {
     this.historyTypeFilter = "";
     this.historyFromFilter = "";
     this.historyToFilter = "";
+    this.lastSessionFeedback = null;
     const repositoryFactory = new EntityRepositoryFactory(dataStore);
     this.registerStudySessionUseCase = new RegisterStudySessionUseCase(dataStore, repositoryFactory);
     this.deleteStudySessionUseCase = new DeleteStudySessionUseCase(dataStore, repositoryFactory);
@@ -4108,14 +4051,6 @@ var SessionsTab = class {
   async render(container, data) {
     const header = DomHelpers.createElement("div", "leif-section-header");
     header.appendChild(DomHelpers.createSectionTitle("Registros"));
-    header.appendChild(
-      DomHelpers.createIconButton("add", "Nova sess\xE3o", {
-        onClick: async () => {
-          this.isCreatingSession = true;
-          await this.onUpdate();
-        }
-      })
-    );
     container.appendChild(header);
     container.appendChild(
       DomHelpers.createParagraph("Anote o que voc\xEA estudou. O Leif cuida do resto.")
@@ -4174,7 +4109,25 @@ var SessionsTab = class {
       container.appendChild(this.renderCreateSessionForm(data));
     }
     const subjects = data.subjects.filter((subject) => subject.contestId === activeContest.id);
-    const recentSessions = DomHelpers.createCard("Hist\xF3rico de sess\xF5es");
+    const recentSessions = DomHelpers.createElement("section", "leif-card");
+    const historyHeader = DomHelpers.createElement("div", "leif-card-header");
+    historyHeader.appendChild(DomHelpers.createSectionSubtitle("Hist\xF3rico de sess\xF5es"));
+    historyHeader.appendChild(
+      DomHelpers.createIconButton("add", "Nova sess\xE3o", {
+        onClick: async () => {
+          this.isCreatingSession = true;
+          this.lastSessionFeedback = null;
+          await this.onUpdate();
+        }
+      })
+    );
+    recentSessions.appendChild(historyHeader);
+    if (this.lastSessionFeedback) {
+      const feedback = DomHelpers.createElement("div", "leif-session-feedback");
+      feedback.setAttribute("role", "status");
+      feedback.textContent = this.lastSessionFeedback;
+      recentSessions.appendChild(feedback);
+    }
     const allSessions = data.studySessions.filter((session) => session.contestId === activeContest.id).slice().reverse();
     const sessions = this.filterSessions(allSessions);
     if (allSessions.length > 0) {
@@ -4399,7 +4352,7 @@ var SessionsTab = class {
         const rawCorrect = Number(correctInput.value);
         const pagesOrCount = sessionType === StudySessionType.QUESTIONS ? rawCount : rawCount || void 0;
         const correctAnswers = sessionType === StudySessionType.QUESTIONS ? Math.min(rawCorrect, rawCount) : void 0;
-        await this.registerStudySessionUseCase.execute({
+        const session = await this.registerStudySessionUseCase.execute({
           id: createId("session"),
           contestId: activeContest.id,
           subjectId: subjectSelect.value,
@@ -4412,6 +4365,10 @@ var SessionsTab = class {
           completed: true
         });
         this.isCreatingSession = false;
+        this.lastSessionFeedback = this.formatCreatedSessionFeedback(
+          session,
+          subjectSelect.selectedOptions[0]?.textContent ?? "Sem mat\xE9ria"
+        );
         await this.onUpdate();
       } catch (error) {
         DomHelpers.notifyError(error, "N\xE3o consegui salvar esse registro.");
@@ -4437,7 +4394,8 @@ var SessionsTab = class {
     const topicSelect = DomHelpers.createSelect(getTopicOptions());
     const countInput = DomHelpers.createInput("number", "P\xE1ginas ou quantidade", "0");
     const correctInput = DomHelpers.createInput("number", "Acertos", "0");
-    const correctLabel = DomHelpers.createLabel("Acertos", correctInput);
+    const countLabel = DomHelpers.createStackedLabel("P\xE1ginas lidas", countInput);
+    const correctLabel = DomHelpers.createStackedLabel("Acertos nas quest\xF5es", correctInput);
     const dateInput = DomHelpers.createInput("date", "Data");
     dateInput.value = this.getDefaultDateValue();
     const syncDependentSelects = () => {
@@ -4460,6 +4418,11 @@ var SessionsTab = class {
     };
     const syncQuestionField = () => {
       const isQuestionSession = typeSelect.value === StudySessionType.QUESTIONS;
+      const countLabelText = countLabel.querySelector(".leif-field-label");
+      if (countLabelText) {
+        countLabelText.textContent = isQuestionSession ? "Quest\xF5es resolvidas" : typeSelect.value === StudySessionType.PDF ? "P\xE1ginas lidas" : "Quantidade";
+      }
+      countInput.placeholder = isQuestionSession ? "Total de quest\xF5es" : typeSelect.value === StudySessionType.PDF ? "P\xE1ginas lidas" : "Quantidade";
       correctLabel.style.display = isQuestionSession ? "" : "none";
     };
     subjectSelect.addEventListener("change", syncDependentSelects);
@@ -4468,13 +4431,13 @@ var SessionsTab = class {
     syncQuestionField();
     const formGrid = DomHelpers.createElement("div", "leif-grid leif-grid-2");
     formGrid.append(
-      DomHelpers.createLabel("Mat\xE9ria", subjectSelect),
-      DomHelpers.createLabel("Tipo", typeSelect),
-      DomHelpers.createLabel("Item", itemSelect),
-      DomHelpers.createLabel("Assunto", topicSelect),
-      DomHelpers.createLabel("Quantidade", countInput),
+      DomHelpers.createStackedLabel("Mat\xE9ria", subjectSelect),
+      DomHelpers.createStackedLabel("Tipo de registro", typeSelect),
+      DomHelpers.createStackedLabel("Item de estudo", itemSelect),
+      DomHelpers.createStackedLabel("Assunto do edital", topicSelect),
+      countLabel,
       correctLabel,
-      DomHelpers.createLabel("Data", dateInput)
+      DomHelpers.createStackedLabel("Data do estudo", dateInput)
     );
     form.classList.add("leif-card");
     form.append(
@@ -4502,16 +4465,27 @@ var SessionsTab = class {
     if (type === StudySessionType.VIDEO) return "V\xEDdeo";
     return "PDF";
   }
+  formatCreatedSessionFeedback(session, subjectName) {
+    const type = this.formatSessionType(session.type);
+    const amount = session.pagesOrCount === void 0 ? "" : session.type === StudySessionType.QUESTIONS ? ` \xB7 ${this.formatQuestionResult(session)}` : ` \xB7 ${session.pagesOrCount} ${session.type === StudySessionType.PDF ? "p\xE1ginas" : "unid."}`;
+    return `Registro salvo: ${type} em ${subjectName}${amount}.`;
+  }
   formatStudyLabel(subjectName, topicName) {
     return topicName === "\u2014" ? subjectName : `${subjectName} \xB7 ${topicName}`;
   }
   renderSessionResult(session, data) {
     if (session.type === StudySessionType.QUESTIONS) {
       const result = DomHelpers.createElement("span");
-      result.textContent = `${session.correctAnswers ?? 0}/${session.pagesOrCount ?? 0} acertos`;
+      result.textContent = this.formatQuestionResult(session);
       return result;
     }
     return this.renderSessionProgress(session, data);
+  }
+  formatQuestionResult(session) {
+    const total = session.pagesOrCount ?? 0;
+    const correct = session.correctAnswers ?? 0;
+    const percentage = total > 0 ? Math.round(correct / total * 100) : 0;
+    return `${correct}/${total} acertos (${percentage}%)`;
   }
   getDefaultDateValue() {
     const now = /* @__PURE__ */ new Date();
@@ -4633,7 +4607,7 @@ var TopicsTab = class {
       container.appendChild(
         DomHelpers.createEmptyState(
           "Sem mat\xE9ria escolhida",
-          "Crie uma mat\xE9ria no Plano para organizar o edital."
+          "Crie uma mat\xE9ria em Mat\xE9rias para organizar o edital."
         )
       );
       return;
@@ -4648,6 +4622,7 @@ var TopicsTab = class {
       container.appendChild(this.renderCreateTopicForm(subject.id));
     }
     const topics = data.topics.filter((topic) => topic.subjectId === subject.id);
+    const progressByTopic = this.getProgressByTopic(data);
     const card = DomHelpers.createCard(`Assuntos de ${subject.name}`);
     if (topics.length === 0) {
       card.appendChild(DomHelpers.createParagraph("Nenhum assunto cadastrado nessa mat\xE9ria."));
@@ -4656,7 +4631,7 @@ var TopicsTab = class {
     }
     const { container: tableContainer, tbody } = DomHelpers.createCrudTable([
       "Assunto",
-      "Quest\xF5es",
+      "Progresso",
       "Caderno",
       "A\xE7\xF5es"
     ]);
@@ -4664,18 +4639,18 @@ var TopicsTab = class {
       const isEditing = this.editingTopicId === topic.id;
       const isExpanded = this.expandedTopicId === topic.id;
       if (isEditing) {
-        tbody.appendChild(this.renderEditableRow(topic));
+        tbody.appendChild(this.renderEditableRow(topic, progressByTopic.get(topic.id)));
       } else {
-        tbody.appendChild(this.renderDisplayRow(topic));
+        tbody.appendChild(this.renderDisplayRow(topic, progressByTopic.get(topic.id)));
       }
       if (isExpanded && !isEditing) {
-        tbody.appendChild(this.renderDetailRow(topic));
+        tbody.appendChild(this.renderDetailRow(topic, progressByTopic.get(topic.id)));
       }
     });
     card.appendChild(tableContainer);
     container.appendChild(card);
   }
-  renderDisplayRow(topic) {
+  renderDisplayRow(topic, progress) {
     const tr = DomHelpers.createElement("tr");
     tr.dataset.topicId = topic.id;
     const hasDetails = Boolean(topic.questionNotebook);
@@ -4735,7 +4710,7 @@ var TopicsTab = class {
     title.textContent = topic.name;
     titleCell.appendChild(title);
     tr.appendChild(titleCell);
-    tr.appendChild(DomHelpers.createCell(this.formatQuestionProgress(topic)));
+    tr.appendChild(DomHelpers.createCell(this.formatQuestionProgress(topic, progress)));
     tr.appendChild(DomHelpers.createCell(null, this.renderNotebookCell(topic)));
     const actionsCell = DomHelpers.createCell(null, actions);
     actionsCell.classList.add("leif-actions-cell");
@@ -4762,7 +4737,7 @@ var TopicsTab = class {
     });
     return link;
   }
-  renderEditableRow(topic) {
+  renderEditableRow(topic, progress) {
     const tr = DomHelpers.createElement("tr");
     tr.className = "leif-editing-row";
     tr.dataset.topicId = topic.id;
@@ -4773,12 +4748,12 @@ var TopicsTab = class {
     const solvedInput = DomHelpers.createCompactInput(
       "number",
       "Quest\xF5es resolvidas",
-      String(topic.questionNotebook?.solvedQuestions ?? 0)
+      String(topic.questionNotebook?.solvedQuestions ?? progress?.solvedQuestions ?? 0)
     );
     const correctInput = DomHelpers.createCompactInput(
       "number",
-      "Acert.",
-      String(topic.questionNotebook?.correctAnswers ?? 0)
+      "Acertos",
+      String(topic.questionNotebook?.correctAnswers ?? progress?.correctAnswers ?? 0)
     );
     const saveButton = DomHelpers.createIconButton("save", "Salvar", {
       onClick: async () => {
@@ -4834,7 +4809,7 @@ var TopicsTab = class {
     tr.appendChild(actionsCell);
     return tr;
   }
-  renderDetailRow(topic) {
+  renderDetailRow(topic, progress) {
     const tr = DomHelpers.createElement("tr");
     tr.className = "leif-detail-row";
     const td = DomHelpers.createElement("td");
@@ -4851,7 +4826,7 @@ var TopicsTab = class {
       const title = DomHelpers.createElement("span", "leif-material-title");
       title.textContent = notebook.name;
       const stats = DomHelpers.createElement("span", "leif-material-type");
-      stats.textContent = this.formatQuestionProgress(topic);
+      stats.textContent = this.formatQuestionProgress(topic, progress);
       info.append(stats, title);
       row.appendChild(info);
       if (notebook.url) {
@@ -4911,13 +4886,35 @@ var TopicsTab = class {
     );
     return form;
   }
-  formatQuestionProgress(topic) {
-    const solved = topic.questionNotebook?.solvedQuestions ?? 0;
-    const correct = topic.questionNotebook?.correctAnswers ?? 0;
+  getProgressByTopic(data) {
+    const progressByTopic = /* @__PURE__ */ new Map();
+    data.studySessions.forEach((session) => {
+      if (!session.topicId) {
+        return;
+      }
+      const progress = progressByTopic.get(session.topicId) ?? {
+        solvedQuestions: 0,
+        correctAnswers: 0,
+        pdfPages: 0
+      };
+      if (session.type === StudySessionType.QUESTIONS) {
+        progress.solvedQuestions += session.pagesOrCount ?? 0;
+        progress.correctAnswers += session.correctAnswers ?? 0;
+      } else if (session.type === StudySessionType.PDF) {
+        progress.pdfPages += session.pagesOrCount ?? 0;
+      }
+      progressByTopic.set(session.topicId, progress);
+    });
+    return progressByTopic;
+  }
+  formatQuestionProgress(topic, progress) {
+    const solved = progress?.solvedQuestions ?? topic.questionNotebook?.solvedQuestions ?? 0;
+    const correct = progress?.correctAnswers ?? topic.questionNotebook?.correctAnswers ?? 0;
     if (solved === 0) {
-      return "0 resolvidas";
+      return progress?.pdfPages ? `0 resolvidas \xB7 ${progress.pdfPages} p\xE1g. PDF` : "0 resolvidas";
     }
-    return `${correct}/${solved} acertos`;
+    const questionProgress = `${correct}/${solved} acertos`;
+    return progress?.pdfPages ? `${questionProgress} \xB7 ${progress.pdfPages} p\xE1g. PDF` : questionProgress;
   }
 };
 
@@ -5137,12 +5134,11 @@ var LeifView = class extends import_obsidian6.ItemView {
     this.tabBar.setAttribute("role", "tablist");
     this.tabBar.setAttribute("aria-label", "Se\xE7\xF5es do Leif");
     TABS.forEach((tab, index) => {
-      const button = DomHelpers.createButton(tab.label, {
-        dataset: { tab: tab.id },
-        className: "leif-tab-button",
-        onClick: async () => {
-          await this.selectTab(tab.id);
-        }
+      const button = DomHelpers.createElement("div", "leif-tab-button");
+      button.textContent = tab.label;
+      button.dataset.tab = tab.id;
+      button.addEventListener("click", async () => {
+        await this.selectTab(tab.id);
       });
       button.setAttribute("role", "tab");
       button.id = `leif-tab-${tab.id}`;

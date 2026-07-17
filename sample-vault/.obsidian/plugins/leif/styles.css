@@ -579,6 +579,11 @@
   overflow-wrap: anywhere;
 }
 
+.leif-cycle-table-title {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
 .leif-cycle-card-meta {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -622,7 +627,8 @@
   display: flex;
   justify-content: space-between;
   gap: var(--size-4-3);
-  align-items: flex-start;
+  align-items: center;
+  grid-column: 1 / -1;
 }
 
 .leif-contest-card-title-group {
@@ -640,7 +646,7 @@
 
 .leif-contest-meta {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: var(--size-4-3);
   min-width: 0;
 }
@@ -948,15 +954,16 @@
 .leif-cycle-context-sublabel {
   font-size: 13px;
   color: var(--text-muted);
-  margin-left: var(--size-2-2);
-  padding-left: var(--size-2-2);
-  border-left: 1px solid var(--leif-border);
+  margin-left: 0;
+  padding-left: 0;
+  border-left: 0;
 }
 
 .leif-cycle-context-next {
   font-size: 13px;
   color: var(--text-muted);
-  margin-left: auto;
+  flex-basis: 100%;
+  margin-left: 0;
 }
 
 .leif-cycle-action {
@@ -998,15 +1005,18 @@
 
 /* Progress bars */
 .leif-progress-bar {
+  box-sizing: border-box;
   width: 100%;
   min-width: 60px;
   height: 6px;
+  max-width: 320px;
   background: var(--background-modifier-border);
   border-radius: var(--radius-s);
   overflow: hidden;
 }
 
 .leif-progress-fill {
+  display: block;
   height: 100%;
   background: var(--interactive-accent);
   border-radius: var(--radius-s);
@@ -1033,6 +1043,7 @@
 }
 
 .leif-progress-value {
+  display: inline-block;
   color: var(--text-normal);
   font-weight: 500;
 }
@@ -1151,4 +1162,714 @@
     grid-template-columns: 1fr;
   }
 
+}
+
+/* Studio pass: edital desk */
+.leif-view {
+  --leif-paper: color-mix(in srgb, var(--background-primary) 94%, var(--text-normal) 6%);
+  --leif-paper-quiet: color-mix(in srgb, var(--background-primary-alt) 88%, var(--text-muted) 12%);
+  --leif-ruled: color-mix(in srgb, var(--leif-border) 78%, transparent);
+  --leif-ink-soft: color-mix(in srgb, var(--text-normal) 78%, var(--text-muted));
+  --leif-leaf: color-mix(in srgb, var(--interactive-success) 68%, var(--text-normal));
+  --leif-amber: color-mix(in srgb, #b87924 64%, var(--text-normal));
+  --leif-slate: color-mix(in srgb, #40556f 66%, var(--text-normal));
+  --leif-hairline: color-mix(in srgb, var(--leif-border) 58%, transparent);
+  --leif-progress-track: color-mix(in srgb, var(--leif-border) 38%, transparent);
+  --leif-progress-fill: color-mix(in srgb, var(--interactive-accent) 82%, var(--text-normal));
+  --leif-progress-complete: color-mix(in srgb, var(--interactive-success) 82%, var(--text-normal));
+  background: var(--background-primary);
+  padding: clamp(16px, 2.2vw, 28px);
+}
+
+.leif-shell {
+  gap: clamp(16px, 2vw, 24px);
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.leif-header {
+  position: relative;
+  align-items: stretch;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: hidden;
+}
+
+.leif-header::after {
+  content: none;
+}
+
+.leif-title-group {
+  gap: 8px;
+  max-width: 64ch;
+}
+
+.leif-title {
+  font-size: clamp(26px, 3.6vw, 42px);
+  font-weight: 760;
+  letter-spacing: 0;
+}
+
+.leif-title .leif-text-label {
+  display: inline-block;
+}
+
+.leif-paragraph {
+  max-width: 70ch;
+  color: var(--leif-ink-soft);
+}
+
+.leif-header-actions {
+  align-content: flex-start;
+  justify-content: flex-end;
+}
+
+.leif-badge {
+  padding: 4px 0;
+  color: var(--leif-ink-soft);
+  font-size: 12px;
+  font-weight: 650;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.leif-tab-bar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  gap: 0;
+  padding: 0;
+  border: 1px solid var(--leif-border);
+  border-radius: var(--leif-radius-lg);
+  background: var(--background-primary);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.leif-tab-button {
+  position: relative;
+  flex: 1 0 auto;
+  min-height: 42px;
+  border: 0;
+  border-right: 1px solid var(--leif-border);
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.leif-tab-button:last-child {
+  border-right: 0;
+}
+
+.leif-tab-button::before {
+  content: "";
+  position: absolute;
+  inset: auto 10px 7px;
+  height: 3px;
+  border-radius: var(--radius-s);
+  background: transparent;
+}
+
+.leif-tab-button:hover {
+  background: color-mix(in srgb, var(--background-modifier-hover) 70%, transparent);
+  color: var(--text-normal);
+}
+
+.leif-tab-button.is-active {
+  background: var(--background-primary-alt);
+  color: var(--text-normal);
+  border-color: var(--leif-border);
+}
+
+.leif-tab-button.is-active::before {
+  background: var(--leif-leaf);
+}
+
+.leif-body {
+  gap: clamp(14px, 1.7vw, 20px);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.leif-section-header {
+  align-items: flex-start;
+  padding-bottom: var(--size-4-3);
+  border-bottom: 1px solid var(--leif-border);
+}
+
+.leif-section-title {
+  color: var(--text-normal);
+  font-size: clamp(20px, 2.2vw, 28px);
+  font-weight: 740;
+  letter-spacing: 0;
+}
+
+.leif-section-subtitle {
+  position: relative;
+  padding-bottom: var(--size-2-3);
+  border-bottom: 1px solid var(--leif-border);
+  color: var(--text-normal);
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.leif-card,
+.leif-empty-state {
+  gap: var(--size-4-3);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+form.leif-card,
+.leif-card.is-editing,
+.leif-contest-card.is-editing,
+.leif-cycle-card.is-editing {
+  border: 0;
+  border-top: 1px solid var(--leif-border);
+  border-bottom: 1px solid var(--leif-border);
+  border-radius: 0;
+  background: transparent;
+  padding: var(--size-4-3) 0;
+}
+
+.leif-empty-state {
+  border-style: none;
+  background: transparent;
+}
+
+.leif-key-value {
+  padding: var(--size-2-3) 0;
+}
+
+.leif-key-label,
+.leif-metric-label,
+.leif-material-field-label {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.leif-metric {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.leif-metric-value {
+  font-weight: 650;
+}
+
+.leif-status-active {
+  color: var(--leif-leaf);
+  font-weight: 700;
+}
+
+.leif-status-inactive {
+  color: var(--text-muted);
+}
+
+.leif-table-wrapper {
+  border: 0;
+  border-top: 1px solid var(--leif-border);
+  border-bottom: 1px solid var(--leif-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.leif-table th,
+.leif-table td {
+  padding: 10px 12px;
+}
+
+.leif-table th {
+  background: var(--background-primary-alt);
+  color: var(--text-muted);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.leif-table thead th {
+  box-shadow: none;
+}
+
+.leif-table tbody tr:hover {
+  background: color-mix(in srgb, var(--leif-leaf) 8%, var(--background-modifier-hover));
+}
+
+.leif-detail-row td {
+  background: var(--background-primary-alt);
+}
+
+.leif-detail-list-item {
+  padding: var(--size-2-3) 0;
+}
+
+.leif-material-type {
+  color: var(--leif-slate);
+  letter-spacing: 0.05em;
+}
+
+.leif-cycle-summary {
+  margin-bottom: 0;
+  padding: var(--size-2-3) 0 var(--size-4-2);
+  border-bottom: 1px solid var(--leif-border);
+}
+
+.leif-cycle-card-list,
+.leif-contest-list,
+.leif-wall-snapshot-list {
+  gap: 0;
+}
+
+.leif-cycle-card,
+.leif-contest-card,
+.leif-wall-snapshot-card {
+  position: relative;
+  padding: var(--size-4-4) 0;
+}
+
+.leif-cycle-card,
+.leif-contest-card {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+
+.leif-cycle-card-meta,
+.leif-contest-meta {
+  grid-column: 1 / -1;
+}
+
+.leif-contest-card-header {
+  align-items: flex-start;
+}
+
+.leif-contest-card-title-group {
+  gap: 4px;
+}
+
+.leif-contest-card-title {
+  font-size: clamp(18px, 1.8vw, 22px);
+}
+
+.leif-contest-card > .leif-inline-actions,
+.leif-contest-card-header .leif-inline-actions {
+  justify-content: flex-end;
+}
+
+.leif-contest-meta {
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  padding-top: var(--size-2-3);
+}
+
+.leif-contest-notes {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  margin: 0;
+  padding: 0 0 0 var(--size-4-4);
+  border-top: 0;
+  color: var(--leif-ink-soft);
+}
+
+.leif-contest-card {
+  grid-template-columns: minmax(260px, 0.9fr) minmax(260px, 1.1fr);
+  column-gap: var(--size-4-6);
+}
+
+.leif-contest-card-header,
+.leif-contest-meta {
+  grid-column: 1;
+}
+
+.leif-cycle-card.is-paused {
+  opacity: 0.72;
+}
+
+.leif-cycle-card-order {
+  min-width: 2.35rem;
+  height: 2.35rem;
+  border-color: color-mix(in srgb, var(--leif-leaf) 32%, var(--leif-border));
+  background: color-mix(in srgb, var(--leif-leaf) 8%, transparent);
+  color: var(--text-normal);
+  font-variant-numeric: tabular-nums;
+}
+
+.leif-contest-meta,
+.leif-cycle-card-meta,
+.leif-wall-snapshot-meta {
+  gap: var(--size-4-3);
+}
+
+.leif-contest-notes {
+  padding-top: var(--size-2-3);
+  border-top: 1px dashed var(--leif-border);
+}
+
+.leif-next-activity,
+.leif-cycle-context {
+  position: relative;
+  border: 0;
+  border-top: 1px solid var(--leif-border);
+  border-bottom: 1px solid var(--leif-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.leif-next-activity-intro {
+  padding-left: 0;
+}
+
+.leif-next-activity {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+}
+
+.leif-next-activity-meta {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  align-items: start;
+  justify-content: start;
+  width: 100%;
+}
+
+.leif-next-activity-meta .leif-metric {
+  align-items: flex-start;
+  text-align: left;
+}
+
+.leif-next-activity-next {
+  width: 100%;
+  padding-top: var(--size-2-2);
+  border-top: 1px solid var(--leif-border);
+  text-align: left;
+}
+
+.leif-next-activity-label,
+.leif-cycle-context-label {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.leif-next-activity-subject {
+  font-size: clamp(22px, 3vw, 34px);
+  font-weight: 760;
+}
+
+.leif-next-activity-item,
+.leif-next-activity-next {
+  color: var(--leif-ink-soft);
+}
+
+.leif-exam-plan {
+  border-color: color-mix(in srgb, var(--leif-amber) 42%, var(--leif-border));
+}
+
+.leif-session-filters {
+  padding: var(--size-4-3);
+  border: 0;
+  border-top: 1px solid var(--leif-border);
+  border-bottom: 1px solid var(--leif-border);
+  border-radius: 0;
+  background: transparent;
+}
+
+.leif-progress-bar {
+  box-sizing: border-box;
+  height: 8px;
+  max-width: 320px;
+  background: var(--leif-progress-track);
+}
+
+.leif-progress-fill {
+  display: block;
+  background: var(--leif-progress-fill);
+}
+
+.leif-progress-fill.is-complete {
+  background: var(--leif-progress-complete);
+}
+
+.leif-progress-bar-container {
+  width: 100%;
+  min-width: 0;
+}
+
+.leif-progress-label {
+  justify-content: flex-start;
+}
+
+.leif-progress-value {
+  display: inline-block;
+}
+
+.leif-wall-form {
+  gap: var(--size-4-4);
+}
+
+.leif-wall-card {
+  padding: var(--size-4-3) 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.leif-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--size-4-3);
+}
+
+.leif-session-feedback {
+  padding: var(--size-2-3) var(--size-4-3);
+  border-radius: var(--leif-radius);
+  background: color-mix(in srgb, var(--interactive-success) 14%, transparent);
+  color: var(--text-normal);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.leif-wall-primary {
+  border-top: 1px solid var(--leif-border);
+  background: var(--background-primary);
+}
+
+.leif-wall-notes {
+  min-height: 320px;
+}
+
+.leif-disclosure-summary {
+  border-bottom: 1px solid var(--leif-border);
+}
+
+.leif-inline-actions-compact {
+  align-items: center;
+}
+
+.leif-field-stack,
+.leif-material-field {
+  gap: 6px;
+}
+
+.leif-field-label {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.leif-subject-picker {
+  padding: var(--size-2-3) var(--size-4-3);
+  border: 1px solid var(--leif-border);
+  border-radius: var(--leif-radius);
+  background: color-mix(in srgb, var(--background-primary-alt) 72%, transparent);
+}
+
+@media (max-width: 720px) {
+  .leif-view {
+    padding: 12px;
+  }
+
+  .leif-shell {
+    gap: 12px;
+  }
+
+  .leif-header,
+  .leif-body {
+    padding: 0;
+  }
+
+  .leif-header-actions {
+    justify-content: flex-start;
+  }
+
+  .leif-tab-bar {
+    border-radius: var(--leif-radius);
+  }
+
+  .leif-tab-button {
+    flex: 0 0 auto;
+    min-width: max-content;
+    padding-inline: 12px;
+  }
+
+  .leif-card,
+  .leif-empty-state,
+  .leif-wall-card {
+    padding: 0;
+  }
+
+  .leif-cycle-card,
+  .leif-contest-card,
+  .leif-wall-snapshot-card {
+    padding-left: 0;
+  }
+
+  .leif-contest-card {
+    grid-template-columns: 1fr;
+  }
+
+  .leif-contest-card-header,
+  .leif-card-header,
+  .leif-contest-meta,
+  .leif-contest-notes {
+    grid-column: 1;
+  }
+
+  .leif-contest-notes {
+    grid-row: auto;
+    padding-left: 0;
+  }
+
+}
+
+/* Divider diet: keep structure quiet and let spacing do the grouping. */
+.leif-section-header,
+.leif-section-subtitle,
+.leif-cycle-summary {
+  border-bottom: 0;
+}
+
+.leif-tab-bar,
+.leif-table-wrapper,
+form.leif-card,
+.leif-card.is-editing,
+.leif-contest-card.is-editing,
+.leif-cycle-card.is-editing,
+.leif-next-activity,
+.leif-cycle-context,
+.leif-session-filters,
+.leif-wall-primary {
+  border: 0;
+}
+
+.leif-tab-button {
+  border-right: 0;
+}
+
+.leif-table th,
+.leif-table td,
+.leif-detail-row {
+  border-top: 0;
+}
+
+.leif-table tbody tr + tr td {
+  padding-top: 14px;
+}
+
+.leif-table thead th {
+  box-shadow: none;
+}
+
+.leif-cycle-card,
+.leif-contest-card,
+.leif-wall-snapshot-card,
+.leif-card-subsection,
+.leif-key-value,
+.leif-next-activity form,
+.leif-next-activity-next,
+.leif-contest-notes,
+.leif-disclosure-summary {
+  border-top: 0;
+  border-bottom: 0;
+}
+
+/* Minimal tab index: text only, no border marks. */
+.leif-tab-bar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  gap: clamp(14px, 2.4vw, 28px);
+  padding: 2px 0 6px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.leif-tab-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 680;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  user-select: none;
+}
+
+.leif-tab-button::before {
+  content: none;
+}
+
+.leif-tab-button:hover {
+  background: transparent;
+  color: var(--text-normal);
+}
+
+.leif-tab-button.is-active {
+  background: transparent;
+  color: var(--text-normal);
+  font-weight: 760;
+}
+
+.leif-tab-button.is-active::before {
+  content: none;
+}
+
+@media (max-width: 720px) {
+  .leif-tab-bar {
+    gap: 16px;
+    border-radius: 0;
+  }
+
+  .leif-tab-button {
+    padding-inline: 0;
+  }
+}
+
+/* Punctual separators: only between major groups. */
+.leif-body > .leif-card + .leif-card,
+.leif-body > .leif-empty-state + .leif-card {
+  border-top: 1px solid var(--leif-hairline);
+  padding-top: var(--size-4-4);
+}
+
+.leif-next-activity + .leif-card,
+.leif-cycle-context + .leif-cycle-action,
+.leif-cycle-action + .leif-card {
+  border-top: 1px solid var(--leif-hairline);
+  padding-top: var(--size-4-4);
+}
+
+form.leif-card + .leif-card {
+  border-top: 1px solid var(--leif-hairline);
+  padding-top: var(--size-4-4);
 }

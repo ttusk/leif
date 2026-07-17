@@ -114,12 +114,11 @@ export class LeifView extends ItemView {
     this.tabBar.setAttribute("role", "tablist");
     this.tabBar.setAttribute("aria-label", "Seções do Leif");
     TABS.forEach((tab, index) => {
-      const button = DomHelpers.createButton(tab.label, {
-        dataset: { tab: tab.id },
-        className: "leif-tab-button",
-        onClick: async () => {
-          await this.selectTab(tab.id);
-        }
+      const button = DomHelpers.createElement("div", "leif-tab-button");
+      button.textContent = tab.label;
+      button.dataset.tab = tab.id;
+      button.addEventListener("click", async () => {
+        await this.selectTab(tab.id);
       });
       button.setAttribute("role", "tab");
       button.id = `leif-tab-${tab.id}`;

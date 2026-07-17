@@ -2,13 +2,8 @@ import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import { GetActiveContestSummaryUseCase } from "@/application/use-cases/GetActiveContestSummaryUseCase";
 import { GetActiveContestProgressDashboardUseCase } from "@/application/use-cases/GetActiveContestProgressDashboardUseCase";
 import { GetActiveCycleSnapshotUseCase } from "@/application/use-cases/GetActiveCycleSnapshotUseCase";
-import { RegisterStudySessionUseCase } from "@/application/use-cases/RegisterStudySessionUseCase";
-import { createId } from "@/application/Id";
 import type { Subject } from "@/domain/entities/Subject";
-import { StudySessionType } from "@/domain/entities/StudySession";
-import { ValidationError } from "@/domain/errors/DomainErrors";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
-import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 
 /**
@@ -18,18 +13,14 @@ export class DashboardTab {
   private readonly getActiveCycleSnapshotUseCase: GetActiveCycleSnapshotUseCase;
   private readonly getActiveContestSummaryUseCase: GetActiveContestSummaryUseCase;
   private readonly getActiveContestProgressDashboardUseCase: GetActiveContestProgressDashboardUseCase;
-  private readonly registerStudySessionUseCase: RegisterStudySessionUseCase;
-  private isRegisteringNextActivity = false;
 
   constructor(
     private readonly dataStore: PluginDataStore,
     private readonly onUpdate: () => Promise<void>
   ) {
-    const repositoryFactory = new EntityRepositoryFactory(dataStore);
     this.getActiveCycleSnapshotUseCase = new GetActiveCycleSnapshotUseCase(dataStore);
     this.getActiveContestSummaryUseCase = new GetActiveContestSummaryUseCase(dataStore);
     this.getActiveContestProgressDashboardUseCase = new GetActiveContestProgressDashboardUseCase(dataStore);
-    this.registerStudySessionUseCase = new RegisterStudySessionUseCase(dataStore, repositoryFactory);
   }
 
   /**
@@ -74,26 +65,12 @@ export class DashboardTab {
         subjectName: recommendedSubject?.name ?? "Sem matéria ativa",
         itemName: recommendedSubject
           ? itemMap.get(recommendedItemId ?? "") ?? "Sem item definido"
-          : "Crie ou ative uma matéria no Plano para aparecer aqui.",
+          : "Crie ou ative uma matéria em Matérias para aparecer aqui.",
         plannedMinutes: recommendedSubject?.plannedStudyMinutes,
         stage: recommendedSubject?.currentStage,
         nextSubjectName: afterRecommendedSubject?.name,
         nextItemName: itemMap.get(afterRecommendedItemId ?? ""),
-        onRegister: recommendedSubject
-          ? async () => {
-              this.isRegisteringNextActivity = true;
-              await this.onUpdate();
-            }
-          : undefined,
-        registerForm: this.isRegisteringNextActivity && recommendedSubject
-          ? this.renderRecommendedSessionForm({
-              contestId: activeContest.id,
-              subjectId: recommendedSubject.id,
-              subjectName: recommendedSubject.name,
-              itemId: recommendedItemId ?? undefined,
-              itemName: itemMap.get(recommendedItemId ?? "") ?? undefined
-            })
-          : undefined
+        registerHint: recommendedSubject ? "Registre o estudo na aba Registros." : undefined
       })
     );
 
@@ -171,8 +148,7 @@ export class DashboardTab {
     stage?: string;
     nextSubjectName?: string;
     nextItemName?: string;
-    onRegister?: () => void | Promise<void>;
-    registerForm?: HTMLElement;
+    registerHint?: string;
   }): HTMLElement {
     const panel = DomHelpers.createElement("section", "leif-next-activity");
     const intro = DomHelpers.createElement("div", "leif-next-activity-intro");
@@ -193,25 +169,19 @@ export class DashboardTab {
     if (activity.nextSubjectName || activity.nextItemName) {
       const next = DomHelpers.createElement("div", "leif-next-activity-next");
       next.textContent = [
-        activity.nextSubjectName ? `Depois vem ${activity.nextSubjectName}` : undefined,
-        activity.nextItemName ? `na fila: ${activity.nextItemName}` : undefined
+        activity.nextSubjectName ? `Próxima matéria: ${activity.nextSubjectName}` : undefined,
+        activity.nextItemName ? `item na fila: ${activity.nextItemName}` : undefined
       ].filter(Boolean).join(" · ");
-      meta.appendChild(next);
+      panel.appendChild(next);
     }
 
-    if (activity.onRegister) {
-      meta.appendChild(
-        DomHelpers.createButton("Registrar agora", {
-          className: "mod-cta",
-          onClick: activity.onRegister
-        })
-      );
+    if (activity.registerHint) {
+      const hint = DomHelpers.createElement("span", "leif-next-activity-item");
+      hint.textContent = activity.registerHint;
+      meta.appendChild(hint);
     }
 
     panel.append(intro, meta);
-    if (activity.registerForm) {
-      panel.appendChild(activity.registerForm);
-    }
     return panel;
   }
 
@@ -269,95 +239,4 @@ export class DashboardTab {
     return activeSubjects[(currentIndex + 1) % activeSubjects.length] ?? null;
   }
 
-  private renderRecommendedSessionForm(activity: {
-    contestId: string;
-    subjectId: string;
-    subjectName: string;
-    itemId?: string;
-    itemName?: string;
-  }): HTMLElement {
-    const typeSelect = DomHelpers.createSelect([
-      [StudySessionType.PDF, "PDF"],
-      [StudySessionType.VIDEO, "Vídeo"],
-      [StudySessionType.QUESTIONS, "Questões"]
-    ]);
-    const countInput = DomHelpers.createInput("number", "Páginas ou quantidade", "0");
-    const correctInput = DomHelpers.createInput("number", "Acertos", "0");
-    const correctLabel = DomHelpers.createLabel("Acertos", correctInput);
-    const dateInput = DomHelpers.createInput("date", "Data");
-    dateInput.value = this.getDefaultDateValue();
-
-    const syncQuestionField = (): void => {
-      correctLabel.style.display = typeSelect.value === StudySessionType.QUESTIONS ? "" : "none";
-    };
-    typeSelect.addEventListener("change", syncQuestionField);
-    syncQuestionField();
-
-    const form = DomHelpers.createForm(async () => {
-      try {
-        const sessionType = typeSelect.value as StudySessionType;
-        const rawCount = Number(countInput.value);
-        const rawCorrect = Number(correctInput.value);
-
-        if (sessionType === StudySessionType.QUESTIONS && (!rawCount || rawCount <= 0)) {
-          throw new ValidationError("Informe uma quantidade de questões maior que zero.");
-        }
-
-        await this.registerStudySessionUseCase.execute({
-          id: createId("session"),
-          contestId: activity.contestId,
-          subjectId: activity.subjectId,
-          studyItemId: activity.itemId,
-          type: sessionType,
-          studiedAt: dateInput.value,
-          pagesOrCount: sessionType === StudySessionType.QUESTIONS ? rawCount : rawCount || undefined,
-          correctAnswers:
-            sessionType === StudySessionType.QUESTIONS ? Math.min(rawCorrect, rawCount) : undefined,
-          completed: true
-        });
-        this.isRegisteringNextActivity = false;
-        await this.onUpdate();
-      } catch (error) {
-        DomHelpers.notifyError(error, "Não consegui salvar esse registro.");
-      }
-    });
-
-    const context = DomHelpers.createElement("div", "leif-stack");
-    context.append(
-      DomHelpers.createKeyValueRow("Matéria", activity.subjectName),
-      DomHelpers.createKeyValueRow("Item", activity.itemName ?? "Sem item definido")
-    );
-
-    const fields = DomHelpers.createElement("div", "leif-grid leif-grid-2");
-    fields.append(
-      DomHelpers.createLabel("Tipo", typeSelect),
-      DomHelpers.createLabel("Quantidade", countInput),
-      correctLabel,
-      DomHelpers.createLabel("Data", dateInput)
-    );
-
-    const actions = DomHelpers.createElement("div", "leif-form-actions");
-    actions.append(
-      DomHelpers.createButton("Cancelar", {
-        onClick: async () => {
-          this.isRegisteringNextActivity = false;
-          await this.onUpdate();
-        }
-      }),
-      DomHelpers.createButton("Registrar", {
-        className: "mod-cta",
-        onClick: () => form.requestSubmit()
-      })
-    );
-
-    form.append(context, fields, actions);
-    return form;
-  }
-
-  private getDefaultDateValue(): string {
-    const now = new Date();
-    const timezoneOffset = now.getTimezoneOffset() * 60000;
-    const localDate = new Date(now.getTime() - timezoneOffset);
-    return localDate.toISOString().split("T")[0];
-  }
 }
