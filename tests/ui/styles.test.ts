@@ -106,6 +106,14 @@ describe("Leif visual system", () => {
     expect(styles).toMatch(/\.leif-progress-complete\s*{[^}]*color:\s*var\(--text-success\);/s);
   });
 
+  it("shows the active contest as quiet green text instead of a filled pill", () => {
+    const styles = readStyles();
+
+    expect(styles).toMatch(
+      /\.leif-status-active\s*{[^}]*padding:\s*0;[^}]*border-radius:\s*0;[^}]*background:\s*transparent;[^}]*color:\s*var\(--text-success\);/s
+    );
+  });
+
   it("centers shared icons against adjacent text", () => {
     const styles = readStyles();
 
