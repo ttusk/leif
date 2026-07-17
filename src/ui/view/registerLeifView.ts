@@ -5,7 +5,7 @@ import { LeifView } from "@/ui/view/LeifView";
 import { t } from "@/ui/i18n";
 
 export const LEIF_VIEW_TYPE = "leif-main-view";
-export const LEIF_ICON = "feather";
+export const LEIF_ICON = "compass";
 
 export function registerLeifView(plugin: Obsidian.Plugin, dataStore: PluginDataStore): void {
   plugin.registerView(LEIF_VIEW_TYPE, (leaf) => new LeifView(leaf, dataStore));

@@ -1,242 +1,123 @@
 # Leif
 
-![Versão](https://img.shields.io/badge/vers%C3%A3o-0.1.0-blue)
-![Obsidian](https://img.shields.io/badge/Obsidian-1.5.0%2B-7c3aed)
-![Licença](https://img.shields.io/badge/licen%C3%A7a-MIT-green)
-![Testes](https://img.shields.io/badge/testes-Vitest-orange)
+**A bússola do seu estudo.**
 
-Leif é um plugin para [Obsidian](https://obsidian.md/) voltado ao acompanhamento de estudos para concursos públicos.
+Leif é um plugin para [Obsidian](https://obsidian.md/) feito para acompanhar estudos para concursos.
 
-Ele organiza o estudo por concurso, matéria, item, assunto e sessão. A proposta é substituir controles dispersos em planilhas por um painel integrado ao vault, preservando um fluxo simples: escolher o concurso ativo, seguir o ciclo de matérias, registrar sessões e acompanhar progresso.
+O nome vem de Leif Eriksson, navegador que cruzou mares antes de muita gente saber o caminho. A ideia é essa: ajudar você a se orientar no edital, no ciclo e no que falta estudar.
 
-## Status do projeto
+## O que ele faz
 
-O projeto está em desenvolvimento inicial.
+Leif organiza o estudo em uma estrutura simples:
 
-As funcionalidades principais já estão implementadas e cobertas por testes, mas o plugin ainda não foi publicado na lista oficial de plugins da comunidade do Obsidian.
+- concursos;
+- matérias;
+- itens de estudo;
+- assuntos do edital;
+- cadernos de questões;
+- sessões estudadas.
 
-## Funcionalidades
+Com isso, você consegue ver o que estudar hoje, registrar o que fez e acompanhar o avanço por matéria.
 
-- Gestão de múltiplos concursos.
-- Seleção de concurso ativo.
-- Mural por concurso, com links, notas e informações de referência.
-- Cadastro de matérias com ordem, tempo planejado, etapa e status no ciclo.
-- Ciclo de estudo entre matérias ativas.
-- Indicação da matéria e do item recomendados para estudo.
-- Cadastro de itens de estudo por matéria.
-- Associação de PDF, vídeo e link aos itens de estudo.
-- Cadastro de assuntos por matéria.
-- Associação de caderno de questões aos assuntos.
-- Abertura do link do caderno no navegador.
-- Registro manual de sessões de PDF, vídeo e questões.
-- Acompanhamento de páginas lidas, questões resolvidas e acertos.
-- Hoje com próxima atividade e resumo por matéria.
-- Exportação de dados em CSV.
-- Vault de exemplo com dados de demonstração.
+## Para quem é
 
-## Instalação
+Para quem estuda para concurso e quer sair de planilhas soltas, anotações perdidas e controle manual em excesso.
 
-### Instalação pela comunidade do Obsidian
-
-O Leif ainda não está disponível na lista oficial de plugins da comunidade.
-
-Quando for publicado, a instalação poderá ser feita por:
-
-1. Abrir `Settings` no Obsidian.
-2. Acessar `Community plugins`.
-3. Procurar por `Leif`.
-4. Instalar e ativar o plugin.
-
-### Instalação manual
-
-1. Baixe os arquivos gerados do plugin:
-
-   - `main.js`
-   - `styles.css`
-   - `manifest.json`
-
-2. Crie a pasta do plugin dentro do vault:
-
-   ```text
-   .obsidian/plugins/leif/
-   ```
-
-3. Copie os três arquivos para essa pasta.
-
-4. Reinicie o Obsidian.
-
-5. Ative o plugin em `Settings > Community plugins`.
-
-### Instalação com BRAT
-
-Se você usa o plugin [BRAT](https://github.com/TfTHacker/obsidian42-brat), adicione este repositório como plugin beta:
-
-```text
-https://github.com/ttusk/leif
-```
-
-Depois disso, ative o Leif na lista de plugins da comunidade.
+Leif não tenta estudar por você. Ele só mantém o mapa em ordem.
 
 ## Como usar
 
-Abra o painel principal pela faixa lateral esquerda ou pela paleta de comandos:
+Abra o painel pela faixa lateral do Obsidian ou pela paleta de comandos:
 
 ```text
 Leif: Abrir painel do Leif
 ```
 
-O painel é dividido pelas etapas principais do estudo:
-
-- `Hoje`
-- `Registros`
-- `Matérias`
-- `Edital`
-- `Recursos`
-- `Concursos`
-- `Mural`
-
-### Fluxo recomendado
+Fluxo básico:
 
 1. Crie ou selecione um concurso.
-2. Cadastre as matérias do concurso.
-3. Defina a ordem e o status das matérias no ciclo.
-4. Cadastre os itens de estudo de cada matéria.
-5. Cadastre os assuntos e associe cadernos de questões quando necessário.
-6. Use `Hoje` para ver a próxima atividade.
-7. Registre sessões de estudo em `Registros` conforme avançar.
-8. Acompanhe progresso e desempenho em `Hoje`.
+2. Cadastre as matérias.
+3. Organize o ciclo em `Matérias`.
+4. Mapeie assuntos em `Edital`.
+5. Cadastre materiais em `Recursos`.
+6. Registre sessões em `Registros`.
+7. Use `Hoje` para se orientar.
 
-## Conceitos principais
+## Instalação
 
-### Concurso
+O Leif ainda não está publicado na lista oficial de plugins da comunidade do Obsidian.
 
-É a unidade principal de organização. Cada concurso possui seus próprios dados, incluindo matérias, itens, assuntos, sessões e mural.
+### Manual
 
-### Matéria
+Baixe ou gere estes arquivos:
 
-Representa uma disciplina do concurso. Pode ser ativada ou desativada no ciclo e possui ordem, tempo planejado e etapa atual.
+```text
+main.js
+styles.css
+manifest.json
+```
 
-### Item
+Copie para:
 
-Representa uma unidade de estudo dentro de uma matéria. PDFs, vídeos e links pertencem aos itens.
+```text
+.obsidian/plugins/leif/
+```
 
-### Assunto
+Depois reinicie o Obsidian e ative o plugin em `Settings > Community plugins`.
 
-Representa um tópico da matéria. Cadernos de questões pertencem aos assuntos.
+### BRAT
 
-### Sessão
+Se usa [BRAT](https://github.com/TfTHacker/obsidian42-brat), adicione este repositório:
 
-Representa um registro manual de estudo. Pode ser de PDF, vídeo ou questões.
+```text
+https://github.com/ttusk/leif
+```
 
 ## Vault de demonstração
 
 O repositório inclui um vault de exemplo em `sample-vault/`.
 
-Ele já contém:
-
-- Leif instalado e ativado.
-- Três concursos de demonstração.
-- Matérias, itens, assuntos, cadernos e sessões cadastrados.
-- Dados suficientes para testar alternância entre concursos e visualização de progresso.
-
-Para usar:
+Para testar:
 
 1. Abra o Obsidian.
-2. Selecione `Open folder as vault`.
-3. Escolha a pasta `sample-vault/`.
-4. Abra o Leif pela faixa lateral ou pela paleta de comandos.
+2. Escolha `Open folder as vault`.
+3. Selecione `sample-vault/`.
+4. Abra o Leif pela faixa lateral.
 
 ## Desenvolvimento
 
-### Requisitos
+Requisitos:
 
-- Node.js 20 ou superior.
-- npm.
-- Obsidian instalado para teste manual.
+- Node.js 20+
+- npm
+- Obsidian
 
-### Preparação
+Instale as dependências:
 
 ```bash
 npm install
 ```
 
-### Modo de desenvolvimento
+Rode em desenvolvimento:
 
 ```bash
 npm run dev
 ```
 
-### Build de produção
+Gere o build:
 
 ```bash
 npm run build
 ```
 
-O build copia automaticamente `main.js` e `styles.css` para:
-
-```text
-sample-vault/.obsidian/plugins/leif/
-```
-
-### Testes
+Rode os testes:
 
 ```bash
 npm test
 ```
 
-## Estrutura do projeto
-
-```text
-src/
-  domain/          Entidades, serviços de domínio e erros
-  application/     Casos de uso, portas, validações e guards
-  infrastructure/  Persistência, migrations, seed e adapters
-  ui/              Comandos, view principal e componentes
-```
-
-## Comandos registrados
-
-O plugin registra comandos auxiliares para uso e desenvolvimento:
-
-- `Leif: Abrir painel do Leif`
-- `Leif: Seed demo data`
-- `Leif: Show active contest`
-- `Leif: Switch active contest`
-- `Leif: Show active contest subjects`
-- `Leif: Reorder active contest subjects`
-- `Leif: Toggle first subject active state`
-- `Leif: Update first subject configuration`
-- `Leif: Advance cycle`
-- `Leif: Show cycle snapshot`
-- `Leif: Show active contest wall`
-- `Leif: Show active contest summary`
-- `Leif: Register demo question session`
-- `Leif: Register demo video session`
-- `Leif: Reset plugin data`
-
-## Roadmap
-
-- Publicar o plugin na comunidade do Obsidian.
-- Adicionar filtros e busca nas tabelas.
-- Melhorar a visualização de estatísticas.
-- Adicionar importação de CSV.
-- Revisar a experiência mobile.
-- Criar documentação com capturas de tela.
-
-## Contribuição
-
-Contribuições são bem-vindas.
-
-Antes de abrir um pull request:
-
-1. Descreva claramente o problema ou a melhoria.
-2. Mantenha a alteração focada.
-3. Inclua testes quando a mudança afetar comportamento.
-4. Execute `npm test`.
-5. Execute `npm run build`.
+O build copia `main.js` e `styles.css` para o vault de demonstração.
 
 ## Licença
 
-Este projeto é de código aberto e está licenciado sob os termos da licença MIT.
-
-Consulte o arquivo [LICENSE](LICENSE) para mais informações.
+MIT. Veja [LICENSE](LICENSE).

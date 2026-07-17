@@ -5252,7 +5252,7 @@ var LeifView = class extends import_obsidian6.ItemView {
 
 // src/ui/view/registerLeifView.ts
 var LEIF_VIEW_TYPE = "leif-main-view";
-var LEIF_ICON = "feather";
+var LEIF_ICON = "compass";
 function registerLeifView(plugin, dataStore) {
   plugin.registerView(LEIF_VIEW_TYPE, (leaf) => new LeifView(leaf, dataStore));
   plugin.addRibbonIcon(LEIF_ICON, "Abrir Leif", () => openLeifView(plugin));
