@@ -1,7 +1,10 @@
 import { Notice } from "obsidian";
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import { CreateSubjectUseCase } from "@/application/use-cases/CreateSubjectUseCase";
-import { GetActiveContestSummaryUseCase, type SubjectSummary } from "@/application/use-cases/GetActiveContestSummaryUseCase";
+import {
+  GetActiveContestSummaryUseCase,
+  type SubjectSummary
+} from "@/application/use-cases/GetActiveContestSummaryUseCase";
 import { ListSubjectsForActiveContestUseCase } from "@/application/use-cases/ListSubjectsForActiveContestUseCase";
 import { ReorderSubjectsUseCase } from "@/application/use-cases/ReorderSubjectsUseCase";
 import { SetSubjectActiveStateUseCase } from "@/application/use-cases/SetSubjectActiveStateUseCase";
@@ -36,8 +39,14 @@ export class CycleTab {
     this.getActiveContestSummaryUseCase = new GetActiveContestSummaryUseCase(dataStore);
     this.listSubjectsForActiveContestUseCase = new ListSubjectsForActiveContestUseCase(dataStore);
     this.reorderSubjectsUseCase = new ReorderSubjectsUseCase(dataStore, repositoryFactory);
-    this.setSubjectActiveStateUseCase = new SetSubjectActiveStateUseCase(dataStore, repositoryFactory);
-    this.updateSubjectConfigurationUseCase = new UpdateSubjectConfigurationUseCase(dataStore, repositoryFactory);
+    this.setSubjectActiveStateUseCase = new SetSubjectActiveStateUseCase(
+      dataStore,
+      repositoryFactory
+    );
+    this.updateSubjectConfigurationUseCase = new UpdateSubjectConfigurationUseCase(
+      dataStore,
+      repositoryFactory
+    );
   }
 
   /**
@@ -75,9 +84,7 @@ export class CycleTab {
     );
 
     if (subjects.length === 0) {
-      card.appendChild(
-        DomHelpers.createParagraph("Ainda não há matérias nesse concurso.")
-      );
+      card.appendChild(DomHelpers.createParagraph("Ainda não há matérias nesse concurso."));
       container.appendChild(card);
       return;
     }
@@ -88,7 +95,10 @@ export class CycleTab {
     const summaryBar = DomHelpers.createElement("div", "leif-cycle-summary");
     summaryBar.append(
       this.renderSummaryChip("Matérias", String(subjects.length)),
-      this.renderSummaryChip("No ciclo", String(subjects.filter((subject) => subject.isActive).length)),
+      this.renderSummaryChip(
+        "No ciclo",
+        String(subjects.filter((subject) => subject.isActive).length)
+      ),
       this.renderSummaryChip("Tempo total", `${activeMinutes} min`)
     );
     card.appendChild(summaryBar);
@@ -140,21 +150,37 @@ export class CycleTab {
     order.textContent = String(subject.order);
     const orderActions = DomHelpers.createElement("span", "leif-order-actions");
     orderActions.append(
-      this.renderMoveButton("up", "Subir", async () => {
-        await this.moveSubject(subjects, index, index - 1, activeContestId);
-      }, index === 0),
-      this.renderMoveButton("down", "Descer", async () => {
-        await this.moveSubject(subjects, index, index + 1, activeContestId);
-      }, index === subjects.length - 1)
+      this.renderMoveButton(
+        "up",
+        "Subir",
+        async () => {
+          await this.moveSubject(subjects, index, index - 1, activeContestId);
+        },
+        index === 0
+      ),
+      this.renderMoveButton(
+        "down",
+        "Descer",
+        async () => {
+          await this.moveSubject(subjects, index, index + 1, activeContestId);
+        },
+        index === subjects.length - 1
+      )
     );
     orderControl.append(order, orderActions);
 
     const title = DomHelpers.createElement("strong", "leif-cycle-table-title");
     title.textContent = subject.name;
-    const status = DomHelpers.createElement("span", subject.isActive ? "leif-status-active" : "leif-status-inactive");
+    const status = DomHelpers.createElement(
+      "span",
+      `leif-cycle-status ${subject.isActive ? "leif-status-active" : "leif-status-inactive"}`
+    );
     status.textContent = subject.isActive ? "No ciclo" : "Pausada";
 
-    const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
+    const actions = DomHelpers.createElement(
+      "div",
+      "leif-inline-actions leif-inline-actions-compact"
+    );
     actions.append(
       this.renderCycleToggleButton(subject),
       DomHelpers.createIconButton("edit", "Editar", {
@@ -215,7 +241,10 @@ export class CycleTab {
       }
     });
 
-    const controls = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
+    const controls = DomHelpers.createElement(
+      "div",
+      "leif-inline-actions leif-inline-actions-compact"
+    );
     controls.appendChild(saveButton);
     controls.appendChild(cancelButton);
 
@@ -294,7 +323,9 @@ export class CycleTab {
             subjectId: subject.id,
             isActive: nextState
           });
-          new Notice(nextState ? `${subject.name} voltou para o ciclo.` : `${subject.name} saiu do ciclo.`);
+          new Notice(
+            nextState ? `${subject.name} voltou para o ciclo.` : `${subject.name} saiu do ciclo.`
+          );
           await this.onUpdate();
         } catch (error) {
           DomHelpers.notifyError(error, "Não consegui alterar essa matéria.");

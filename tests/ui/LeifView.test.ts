@@ -379,6 +379,11 @@ describe("LeifView", () => {
       correctAnswers: 15,
       completed: true
     });
+    const seededData = await dataStore.load();
+    seededData.subjects = seededData.subjects.map((subject) =>
+      subject.id === "subject-2" ? { ...subject, isActive: false } : subject
+    );
+    await dataStore.save(seededData);
 
     const { leaf } = await openLeifView(dataStore);
     const planTabButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='cycle']");
@@ -417,7 +422,10 @@ describe("LeifView", () => {
     expect(subjectRows.length).toBeGreaterThanOrEqual(2);
     expect(subjectRows[0]?.querySelector(".leif-order-number")?.textContent).toContain("1");
     expect(subjectRows[0]?.querySelector(".leif-cycle-table-title")?.textContent).toBeTruthy();
+    expect(subjectRows[0]?.querySelector(".leif-cycle-status.leif-status-active")).not.toBeNull();
+    expect(subjectRows[1]?.querySelector(".leif-cycle-status.leif-status-inactive")).not.toBeNull();
     expect(subjectRows[0]?.textContent).toContain("No ciclo");
+    expect(subjectRows[1]?.textContent).toContain("Pausada");
     expect(subjectRows[0]?.textContent).toContain("60 min");
     expect(subjectRows[0]?.textContent).toContain("75% (15/20)");
     expect(subjectRows[0]?.querySelector(".leif-key-value")).toBeNull();

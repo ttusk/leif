@@ -538,6 +538,20 @@ form.leif-card,
   color: var(--leif-text-muted);
 }
 
+.leif-cycle-status {
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.leif-cycle-status.leif-status-active {
+  color: var(--text-success);
+}
+
+.leif-cycle-status.leif-status-inactive {
+  color: var(--text-warning);
+}
+
 /* Tables */
 
 .leif-table-wrapper {

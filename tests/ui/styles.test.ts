@@ -114,6 +114,20 @@ describe("Leif visual system", () => {
     );
   });
 
+  it("shows active and inactive subjects as flat semantic text", () => {
+    const styles = readStyles();
+
+    expect(styles).toMatch(
+      /\.leif-cycle-status\s*{[^}]*padding:\s*0;[^}]*border-radius:\s*0;[^}]*background:\s*transparent;/s
+    );
+    expect(styles).toMatch(
+      /\.leif-cycle-status\.leif-status-active\s*{[^}]*color:\s*var\(--text-success\);/s
+    );
+    expect(styles).toMatch(
+      /\.leif-cycle-status\.leif-status-inactive\s*{[^}]*color:\s*var\(--text-warning\);/s
+    );
+  });
+
   it("centers shared icons against adjacent text", () => {
     const styles = readStyles();
 

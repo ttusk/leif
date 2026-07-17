@@ -2887,8 +2887,14 @@ var CycleTab = class {
     this.getActiveContestSummaryUseCase = new GetActiveContestSummaryUseCase(dataStore);
     this.listSubjectsForActiveContestUseCase = new ListSubjectsForActiveContestUseCase(dataStore);
     this.reorderSubjectsUseCase = new ReorderSubjectsUseCase(dataStore, repositoryFactory);
-    this.setSubjectActiveStateUseCase = new SetSubjectActiveStateUseCase(dataStore, repositoryFactory);
-    this.updateSubjectConfigurationUseCase = new UpdateSubjectConfigurationUseCase(dataStore, repositoryFactory);
+    this.setSubjectActiveStateUseCase = new SetSubjectActiveStateUseCase(
+      dataStore,
+      repositoryFactory
+    );
+    this.updateSubjectConfigurationUseCase = new UpdateSubjectConfigurationUseCase(
+      dataStore,
+      repositoryFactory
+    );
   }
   /**
    * Renders the cycle tab content.
@@ -2921,9 +2927,7 @@ var CycleTab = class {
       activeContest ? `Mat\xE9rias de ${activeContest.name}` : "Mat\xE9rias"
     );
     if (subjects.length === 0) {
-      card.appendChild(
-        DomHelpers.createParagraph("Ainda n\xE3o h\xE1 mat\xE9rias nesse concurso.")
-      );
+      card.appendChild(DomHelpers.createParagraph("Ainda n\xE3o h\xE1 mat\xE9rias nesse concurso."));
       container.appendChild(card);
       return;
     }
@@ -2931,7 +2935,10 @@ var CycleTab = class {
     const summaryBar = DomHelpers.createElement("div", "leif-cycle-summary");
     summaryBar.append(
       this.renderSummaryChip("Mat\xE9rias", String(subjects.length)),
-      this.renderSummaryChip("No ciclo", String(subjects.filter((subject) => subject.isActive).length)),
+      this.renderSummaryChip(
+        "No ciclo",
+        String(subjects.filter((subject) => subject.isActive).length)
+      ),
       this.renderSummaryChip("Tempo total", `${activeMinutes} min`)
     );
     card.appendChild(summaryBar);
@@ -2970,19 +2977,35 @@ var CycleTab = class {
     order.textContent = String(subject.order);
     const orderActions = DomHelpers.createElement("span", "leif-order-actions");
     orderActions.append(
-      this.renderMoveButton("up", "Subir", async () => {
-        await this.moveSubject(subjects, index, index - 1, activeContestId);
-      }, index === 0),
-      this.renderMoveButton("down", "Descer", async () => {
-        await this.moveSubject(subjects, index, index + 1, activeContestId);
-      }, index === subjects.length - 1)
+      this.renderMoveButton(
+        "up",
+        "Subir",
+        async () => {
+          await this.moveSubject(subjects, index, index - 1, activeContestId);
+        },
+        index === 0
+      ),
+      this.renderMoveButton(
+        "down",
+        "Descer",
+        async () => {
+          await this.moveSubject(subjects, index, index + 1, activeContestId);
+        },
+        index === subjects.length - 1
+      )
     );
     orderControl.append(order, orderActions);
     const title = DomHelpers.createElement("strong", "leif-cycle-table-title");
     title.textContent = subject.name;
-    const status = DomHelpers.createElement("span", subject.isActive ? "leif-status-active" : "leif-status-inactive");
+    const status = DomHelpers.createElement(
+      "span",
+      `leif-cycle-status ${subject.isActive ? "leif-status-active" : "leif-status-inactive"}`
+    );
     status.textContent = subject.isActive ? "No ciclo" : "Pausada";
-    const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
+    const actions = DomHelpers.createElement(
+      "div",
+      "leif-inline-actions leif-inline-actions-compact"
+    );
     actions.append(
       this.renderCycleToggleButton(subject),
       DomHelpers.createIconButton("edit", "Editar", {
@@ -3035,7 +3058,10 @@ var CycleTab = class {
         await this.onUpdate();
       }
     });
-    const controls = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
+    const controls = DomHelpers.createElement(
+      "div",
+      "leif-inline-actions leif-inline-actions-compact"
+    );
     controls.appendChild(saveButton);
     controls.appendChild(cancelButton);
     const order = DomHelpers.createElement("span", "leif-order-number");
@@ -3106,7 +3132,9 @@ var CycleTab = class {
             subjectId: subject.id,
             isActive: nextState
           });
-          new import_obsidian4.Notice(nextState ? `${subject.name} voltou para o ciclo.` : `${subject.name} saiu do ciclo.`);
+          new import_obsidian4.Notice(
+            nextState ? `${subject.name} voltou para o ciclo.` : `${subject.name} saiu do ciclo.`
+          );
           await this.onUpdate();
         } catch (error) {
           DomHelpers.notifyError(error, "N\xE3o consegui alterar essa mat\xE9ria.");
