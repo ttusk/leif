@@ -20,14 +20,17 @@ export class DashboardTab {
   ) {
     this.getActiveCycleSnapshotUseCase = new GetActiveCycleSnapshotUseCase(dataStore);
     this.getActiveContestSummaryUseCase = new GetActiveContestSummaryUseCase(dataStore);
-    this.getActiveContestProgressDashboardUseCase = new GetActiveContestProgressDashboardUseCase(dataStore);
+    this.getActiveContestProgressDashboardUseCase = new GetActiveContestProgressDashboardUseCase(
+      dataStore
+    );
   }
 
   /**
    * Renders the dashboard tab content.
    */
   async render(container: HTMLElement, data: LeifPluginData): Promise<void> {
-    const activeContest = data.contests.find((contest) => contest.id === data.activeContestId) ?? null;
+    const activeContest =
+      data.contests.find((contest) => contest.id === data.activeContestId) ?? null;
 
     if (!activeContest) {
       container.append(
@@ -64,7 +67,7 @@ export class DashboardTab {
       this.renderNextActivityPanel({
         subjectName: recommendedSubject?.name ?? "Sem matéria ativa",
         itemName: recommendedSubject
-          ? itemMap.get(recommendedItemId ?? "") ?? "Sem item definido"
+          ? (itemMap.get(recommendedItemId ?? "") ?? "Sem item definido")
           : "Crie ou ative uma matéria em Matérias para aparecer aqui.",
         plannedMinutes: recommendedSubject?.plannedStudyMinutes,
         stage: recommendedSubject?.currentStage,
@@ -79,9 +82,13 @@ export class DashboardTab {
     const progressMap = new Map(progress.pdfProgressBySubject.map((s) => [s.subjectId, s]));
     const rows = summary.subjectSummaries.map((subjectSummary) => {
       const subjectProgress = progressMap.get(subjectSummary.subjectId);
-      const totalPages = subjectProgress?.items.reduce((sum, item) => sum + (item.totalPages ?? 0), 0) ?? 0;
+      const totalPages =
+        subjectProgress?.items.reduce((sum, item) => sum + (item.totalPages ?? 0), 0) ?? 0;
       const readPages = subjectProgress?.totalProgressCount ?? 0;
-      const progressBar = DomHelpers.createProgressBar(readPages, totalPages > 0 ? totalPages : undefined);
+      const progressBar = DomHelpers.createProgressBar(
+        readPages,
+        totalPages > 0 ? totalPages : undefined
+      );
       return [
         subjectSummary.subjectName,
         String(subjectSummary.totalSessions),
@@ -95,22 +102,28 @@ export class DashboardTab {
 
     if (rows.length === 0) {
       subjectSummaryCard.appendChild(
-        DomHelpers.createParagraph("Quando você começar a registrar estudos, o resumo aparece aqui.")
+        DomHelpers.createParagraph(
+          "Quando você começar a registrar estudos, o resumo aparece aqui."
+        )
       );
     } else {
       subjectSummaryCard.appendChild(
-        DomHelpers.createTable(
-          ["Matéria", "Sessões", "Páginas", "Questões", "Acerto"],
-          rows
-        )
+        DomHelpers.createTable(["Matéria", "Sessões", "Páginas", "Questões", "Acerto"], rows)
       );
     }
     container.appendChild(subjectSummaryCard);
   }
 
-  private renderExamPlanPanel(contest: NonNullable<LeifPluginData["contests"][number]>): HTMLElement | null {
+  private renderExamPlanPanel(
+    contest: NonNullable<LeifPluginData["contests"][number]>
+  ): HTMLElement | null {
     const plan = contest.examPlan;
-    if (!plan?.examDate && !plan?.board && plan?.weeklyStudyHours === undefined && plan?.weeklyQuestionGoal === undefined) {
+    if (
+      !plan?.examDate &&
+      !plan?.board &&
+      plan?.weeklyStudyHours === undefined &&
+      plan?.weeklyQuestionGoal === undefined
+    ) {
       return null;
     }
 
@@ -123,7 +136,9 @@ export class DashboardTab {
       ? `Prova em ${this.formatDaysUntilExam(plan.examDate)}`
       : "Planejamento da prova";
     const details = DomHelpers.createElement("span", "leif-next-activity-item");
-    details.textContent = plan?.examDate ? this.formatDate(plan.examDate) : "Data ainda não definida";
+    details.textContent = plan?.examDate
+      ? this.formatDate(plan.examDate)
+      : "Data ainda não definida";
     intro.append(label, title, details);
 
     const meta = DomHelpers.createElement("div", "leif-next-activity-meta");
@@ -134,7 +149,9 @@ export class DashboardTab {
       meta.appendChild(this.renderActivityMeta("Carga", `${plan.weeklyStudyHours} h/semana`));
     }
     if (plan?.weeklyQuestionGoal !== undefined) {
-      meta.appendChild(this.renderActivityMeta("Meta", `${plan.weeklyQuestionGoal} questões/semana`));
+      meta.appendChild(
+        this.renderActivityMeta("Meta", `${plan.weeklyQuestionGoal} questões/semana`)
+      );
     }
 
     panel.append(intro, meta);
@@ -162,18 +179,12 @@ export class DashboardTab {
 
     const meta = DomHelpers.createElement("div", "leif-next-activity-meta");
     meta.append(
-      this.renderActivityMeta("Tempo", activity.plannedMinutes ? `${activity.plannedMinutes} min` : "sem tempo definido"),
+      this.renderActivityMeta(
+        "Tempo",
+        activity.plannedMinutes ? `${activity.plannedMinutes} min` : "sem tempo definido"
+      ),
       this.renderActivityMeta("Etapa", activity.stage?.trim() ? activity.stage : "sem etapa")
     );
-
-    if (activity.nextSubjectName || activity.nextItemName) {
-      const next = DomHelpers.createElement("div", "leif-next-activity-next");
-      next.textContent = [
-        activity.nextSubjectName ? `Próxima matéria: ${activity.nextSubjectName}` : undefined,
-        activity.nextItemName ? `item na fila: ${activity.nextItemName}` : undefined
-      ].filter(Boolean).join(" · ");
-      panel.appendChild(next);
-    }
 
     if (activity.registerHint) {
       const hint = DomHelpers.createElement("span", "leif-next-activity-item");
@@ -182,6 +193,18 @@ export class DashboardTab {
     }
 
     panel.append(intro, meta);
+
+    if (activity.nextSubjectName || activity.nextItemName) {
+      const next = DomHelpers.createElement("div", "leif-next-activity-next");
+      next.textContent = [
+        activity.nextSubjectName ? `Próxima matéria: ${activity.nextSubjectName}` : undefined,
+        activity.nextItemName ? `item na fila: ${activity.nextItemName}` : undefined
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      panel.appendChild(next);
+    }
+
     return panel;
   }
 
@@ -238,5 +261,4 @@ export class DashboardTab {
 
     return activeSubjects[(currentIndex + 1) % activeSubjects.length] ?? null;
   }
-
 }

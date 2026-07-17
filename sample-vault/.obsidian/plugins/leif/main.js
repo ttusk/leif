@@ -424,6 +424,20 @@ var DomHelpers = class {
     return label;
   }
   /**
+   * Creates a full-width URL field with a quiet link affordance.
+   */
+  static createUrlField(text, input) {
+    const field = this.createElement("label", "leif-url-field");
+    const label = this.createElement("span", "leif-field-label");
+    const control = this.createElement("span", "leif-url-control");
+    const icon = this.createIcon("link");
+    icon.setAttribute("aria-hidden", "true");
+    label.textContent = text;
+    control.append(icon, input);
+    field.append(label, control);
+    return field;
+  }
+  /**
    * Creates a disclosure (details/summary) element.
    */
   static createDisclosure(title, content, icon) {
@@ -607,12 +621,8 @@ var DomHelpers = class {
    */
   static createCrudActions(onEdit, onDelete) {
     const actions = this.createElement("div", "leif-inline-actions leif-inline-actions-compact");
-    actions.appendChild(
-      this.createIconButton("edit", t("action.edit"), { onClick: onEdit })
-    );
-    actions.appendChild(
-      this.createIconButton("delete", t("action.delete"), { onClick: onDelete })
-    );
+    actions.appendChild(this.createIconButton("edit", t("action.edit"), { onClick: onEdit }));
+    actions.appendChild(this.createIconButton("delete", t("action.delete"), { onClick: onDelete }));
     return actions;
   }
   /**
@@ -683,19 +693,29 @@ var DomHelpers = class {
    */
   static createProgressBar(readed, total) {
     const container = this.createElement("div", "leif-progress-bar-container");
-    const bar = this.createElement("div", "leif-progress-bar");
-    const fill = this.createElement("div", "leif-progress-fill");
     if (total !== void 0 && total > 0) {
       const percentage = Math.min(100, Math.round(readed / total * 100));
-      fill.style.width = `${percentage}%`;
-      if (readed >= total) {
-        fill.classList.add("is-complete");
-      }
       const label = this.createElement("div", "leif-progress-label");
       const text = this.createElement("span", "leif-progress-value");
       text.textContent = `${readed}/${total} (${percentage}%)`;
       label.appendChild(text);
-      container.appendChild(bar);
+      if (readed >= total) {
+        const complete = this.createElement("span", "leif-progress-complete");
+        const completeText = this.createElement("span");
+        completeText.textContent = "Conclu\xEDdo";
+        complete.append(this.createIcon("check-circle-2"), completeText);
+        label.appendChild(complete);
+      } else {
+        const bar = this.createElement("div", "leif-progress-bar");
+        const fill = this.createElement("div", "leif-progress-fill");
+        fill.style.width = `${percentage}%`;
+        bar.setAttribute("role", "progressbar");
+        bar.setAttribute("aria-valuemin", "0");
+        bar.setAttribute("aria-valuemax", String(total));
+        bar.setAttribute("aria-valuenow", String(Math.min(readed, total)));
+        bar.appendChild(fill);
+        container.appendChild(bar);
+      }
       container.appendChild(label);
     } else {
       const label = this.createElement("div", "leif-progress-label");
@@ -704,7 +724,6 @@ var DomHelpers = class {
       label.appendChild(value);
       container.appendChild(label);
     }
-    bar.appendChild(fill);
     return container;
   }
 };
@@ -3219,7 +3238,9 @@ var DashboardTab = class {
     this.onUpdate = onUpdate;
     this.getActiveCycleSnapshotUseCase = new GetActiveCycleSnapshotUseCase(dataStore);
     this.getActiveContestSummaryUseCase = new GetActiveContestSummaryUseCase(dataStore);
-    this.getActiveContestProgressDashboardUseCase = new GetActiveContestProgressDashboardUseCase(dataStore);
+    this.getActiveContestProgressDashboardUseCase = new GetActiveContestProgressDashboardUseCase(
+      dataStore
+    );
   }
   /**
    * Renders the dashboard tab content.
@@ -3269,7 +3290,10 @@ var DashboardTab = class {
       const subjectProgress = progressMap.get(subjectSummary.subjectId);
       const totalPages = subjectProgress?.items.reduce((sum, item) => sum + (item.totalPages ?? 0), 0) ?? 0;
       const readPages = subjectProgress?.totalProgressCount ?? 0;
-      const progressBar = DomHelpers.createProgressBar(readPages, totalPages > 0 ? totalPages : void 0);
+      const progressBar = DomHelpers.createProgressBar(
+        readPages,
+        totalPages > 0 ? totalPages : void 0
+      );
       return [
         subjectSummary.subjectName,
         String(subjectSummary.totalSessions),
@@ -3280,14 +3304,13 @@ var DashboardTab = class {
     });
     if (rows.length === 0) {
       subjectSummaryCard.appendChild(
-        DomHelpers.createParagraph("Quando voc\xEA come\xE7ar a registrar estudos, o resumo aparece aqui.")
+        DomHelpers.createParagraph(
+          "Quando voc\xEA come\xE7ar a registrar estudos, o resumo aparece aqui."
+        )
       );
     } else {
       subjectSummaryCard.appendChild(
-        DomHelpers.createTable(
-          ["Mat\xE9ria", "Sess\xF5es", "P\xE1ginas", "Quest\xF5es", "Acerto"],
-          rows
-        )
+        DomHelpers.createTable(["Mat\xE9ria", "Sess\xF5es", "P\xE1ginas", "Quest\xF5es", "Acerto"], rows)
       );
     }
     container.appendChild(subjectSummaryCard);
@@ -3314,7 +3337,9 @@ var DashboardTab = class {
       meta.appendChild(this.renderActivityMeta("Carga", `${plan.weeklyStudyHours} h/semana`));
     }
     if (plan?.weeklyQuestionGoal !== void 0) {
-      meta.appendChild(this.renderActivityMeta("Meta", `${plan.weeklyQuestionGoal} quest\xF5es/semana`));
+      meta.appendChild(
+        this.renderActivityMeta("Meta", `${plan.weeklyQuestionGoal} quest\xF5es/semana`)
+      );
     }
     panel.append(intro, meta);
     return panel;
@@ -3331,9 +3356,18 @@ var DashboardTab = class {
     intro.append(label, subject, item);
     const meta = DomHelpers.createElement("div", "leif-next-activity-meta");
     meta.append(
-      this.renderActivityMeta("Tempo", activity.plannedMinutes ? `${activity.plannedMinutes} min` : "sem tempo definido"),
+      this.renderActivityMeta(
+        "Tempo",
+        activity.plannedMinutes ? `${activity.plannedMinutes} min` : "sem tempo definido"
+      ),
       this.renderActivityMeta("Etapa", activity.stage?.trim() ? activity.stage : "sem etapa")
     );
+    if (activity.registerHint) {
+      const hint = DomHelpers.createElement("span", "leif-next-activity-item");
+      hint.textContent = activity.registerHint;
+      meta.appendChild(hint);
+    }
+    panel.append(intro, meta);
     if (activity.nextSubjectName || activity.nextItemName) {
       const next = DomHelpers.createElement("div", "leif-next-activity-next");
       next.textContent = [
@@ -3342,12 +3376,6 @@ var DashboardTab = class {
       ].filter(Boolean).join(" \xB7 ");
       panel.appendChild(next);
     }
-    if (activity.registerHint) {
-      const hint = DomHelpers.createElement("span", "leif-next-activity-item");
-      hint.textContent = activity.registerHint;
-      meta.appendChild(hint);
-    }
-    panel.append(intro, meta);
     return panel;
   }
   renderActivityMeta(label, value) {
@@ -3492,8 +3520,13 @@ var ItemsTab = class {
     this.pendingDeleteItemId = null;
     const repositoryFactory = new EntityRepositoryFactory(dataStore);
     this.createStudyItemUseCase = new CreateStudyItemUseCase(dataStore, repositoryFactory);
-    this.addStudyItemResourceReferenceUseCase = new AddStudyItemResourceReferenceUseCase(dataStore, repositoryFactory);
-    this.getActiveContestProgressDashboardUseCase = new GetActiveContestProgressDashboardUseCase(dataStore);
+    this.addStudyItemResourceReferenceUseCase = new AddStudyItemResourceReferenceUseCase(
+      dataStore,
+      repositoryFactory
+    );
+    this.getActiveContestProgressDashboardUseCase = new GetActiveContestProgressDashboardUseCase(
+      dataStore
+    );
     this.deleteStudyItemUseCase = new DeleteStudyItemUseCase(dataStore, repositoryFactory);
     this.updateStudyItemUseCase = new UpdateStudyItemUseCase(dataStore, repositoryFactory);
   }
@@ -3553,9 +3586,7 @@ var ItemsTab = class {
       "A\xE7\xF5es"
     ]);
     items.forEach((item) => {
-      const itemProgress = subjectProgress?.items.find(
-        (entry) => entry.studyItemId === item.id
-      );
+      const itemProgress = subjectProgress?.items.find((entry) => entry.studyItemId === item.id);
       const isEditing = this.editingItemId === item.id;
       const isExpanded = this.expandedItemId === item.id;
       if (isEditing) {
@@ -3575,7 +3606,10 @@ var ItemsTab = class {
     const tr = DomHelpers.createElement("tr");
     tr.dataset.itemId = item.id;
     const refs = item.resourceReferences ?? [];
-    const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
+    const actions = DomHelpers.createElement(
+      "div",
+      "leif-inline-actions leif-inline-actions-compact"
+    );
     const hasRefs = refs.length > 0;
     actions.appendChild(
       DomHelpers.createIconButton(
@@ -3646,8 +3680,16 @@ var ItemsTab = class {
     tr.dataset.itemId = item.id;
     const titleInput = DomHelpers.createCompactInput("text", "T\xEDtulo", item.title);
     const weightInput = DomHelpers.createCompactInput("number", "Peso", String(item.weight ?? 0));
-    const questionInput = DomHelpers.createCompactInput("number", "Qts", String(item.questionCount ?? 0));
-    const totalPagesInput = DomHelpers.createCompactInput("number", "Total", String(item.totalPages ?? ""));
+    const questionInput = DomHelpers.createCompactInput(
+      "number",
+      "Qts",
+      String(item.questionCount ?? 0)
+    );
+    const totalPagesInput = DomHelpers.createCompactInput(
+      "number",
+      "Total",
+      String(item.totalPages ?? "")
+    );
     titleInput.classList.add("leif-resource-edit-input");
     weightInput.classList.add("leif-resource-edit-input");
     questionInput.classList.add("leif-resource-edit-input");
@@ -3676,7 +3718,10 @@ var ItemsTab = class {
         await this.onUpdate();
       }
     });
-    const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
+    const actions = DomHelpers.createElement(
+      "div",
+      "leif-inline-actions leif-inline-actions-compact"
+    );
     actions.appendChild(saveButton);
     actions.appendChild(cancelButton);
     tr.append(
@@ -3715,20 +3760,17 @@ var ItemsTab = class {
       });
       materialSection.appendChild(list);
     } else {
-      materialSection.appendChild(
-        DomHelpers.createParagraph("Nenhum material vinculado ainda.")
-      );
+      materialSection.appendChild(DomHelpers.createParagraph("Nenhum material vinculado ainda."));
     }
     const addSection = DomHelpers.createElement("section", "leif-resource-material-section");
     addSection.append(
       DomHelpers.createSectionSubtitle("Adicionar novo material"),
-      DomHelpers.createParagraph("Use esta \xE1rea para anexar PDF, v\xEDdeo ou link ao recurso em edi\xE7\xE3o."),
+      DomHelpers.createParagraph(
+        "Use esta \xE1rea para anexar PDF, v\xEDdeo ou link ao recurso em edi\xE7\xE3o."
+      ),
       this.renderAddMaterialForm(item)
     );
-    content.append(
-      materialSection,
-      addSection
-    );
+    content.append(materialSection, addSection);
     td.appendChild(content);
     tr.appendChild(td);
     return tr;
@@ -3739,11 +3781,6 @@ var ItemsTab = class {
     const total = item.totalPages;
     const progressBar = DomHelpers.createProgressBar(readed, total);
     cell.appendChild(progressBar);
-    if (progress?.completed) {
-      const badge = DomHelpers.createElement("span", "leif-pages-completed");
-      badge.textContent = "\u2713 Conclu\xEDdo";
-      cell.appendChild(badge);
-    }
     return cell;
   }
   renderDetailContent(item) {
@@ -3781,26 +3818,27 @@ var ItemsTab = class {
       });
       content.appendChild(list);
     } else {
-      content.appendChild(
-        DomHelpers.createParagraph("Nenhum material vinculado ainda.")
-      );
+      content.appendChild(DomHelpers.createParagraph("Nenhum material vinculado ainda."));
     }
     return content;
   }
   renderMaterialEditor(item, reference) {
     const titleInput = DomHelpers.createInput("text", "T\xEDtulo", reference.title);
-    const typeSelect = DomHelpers.createSelect([
-      ["pdf", "PDF"],
-      ["video", "V\xEDdeo"],
-      ["link", "Link"]
-    ], reference.type);
+    const typeSelect = DomHelpers.createSelect(
+      [
+        ["pdf", "PDF"],
+        ["video", "V\xEDdeo"],
+        ["link", "Link"]
+      ],
+      reference.type
+    );
     const urlInput = DomHelpers.createInput("url", "URL", reference.url ?? "");
     const row = DomHelpers.createElement("div", "leif-resource-material-editor");
     row.dataset.resourceMaterialEditorId = reference.id;
     row.append(
       this.renderMaterialField("T\xEDtulo", titleInput),
       this.renderMaterialField("Tipo", typeSelect),
-      this.renderMaterialField("URL", urlInput)
+      DomHelpers.createUrlField("URL", urlInput)
     );
     const actions = DomHelpers.createElement("div", "leif-resource-material-editor-actions");
     actions.append(
@@ -3855,7 +3893,7 @@ var ItemsTab = class {
     form.append(
       this.renderMaterialField("T\xEDtulo", titleInput),
       this.renderMaterialField("Tipo", typeSelect),
-      this.renderMaterialField("URL", urlInput),
+      DomHelpers.createUrlField("URL", urlInput),
       DomHelpers.createElement("div", "leif-form-actions")
     );
     const actions = form.querySelector(".leif-form-actions");
@@ -3891,7 +3929,9 @@ var ItemsTab = class {
     try {
       await this.updateStudyItemUseCase.execute({
         itemId: item.id,
-        resourceReferences: (item.resourceReferences ?? []).filter((reference) => reference.id !== referenceId)
+        resourceReferences: (item.resourceReferences ?? []).filter(
+          (reference) => reference.id !== referenceId
+        )
       });
       await this.onUpdate();
     } catch (error) {
@@ -4040,7 +4080,10 @@ var SessionsTab = class {
     this.historyToFilter = "";
     this.lastSessionFeedback = null;
     const repositoryFactory = new EntityRepositoryFactory(dataStore);
-    this.registerStudySessionUseCase = new RegisterStudySessionUseCase(dataStore, repositoryFactory);
+    this.registerStudySessionUseCase = new RegisterStudySessionUseCase(
+      dataStore,
+      repositoryFactory
+    );
     this.deleteStudySessionUseCase = new DeleteStudySessionUseCase(dataStore, repositoryFactory);
     this.getActiveContestSummaryUseCase = new GetActiveContestSummaryUseCase(dataStore);
     this.listSubjectsForActiveContestUseCase = new ListSubjectsForActiveContestUseCase(dataStore);
@@ -4087,9 +4130,8 @@ var SessionsTab = class {
       nextInfo.textContent = `Depois vem ${afterRecommendedSubject.name}`;
       cycleContext.appendChild(nextInfo);
     }
-    container.appendChild(cycleContext);
-    const cycleAction = DomHelpers.createElement("div", "leif-cycle-action");
-    cycleAction.appendChild(
+    const cycleActions = DomHelpers.createElement("div", "leif-cycle-context-actions");
+    cycleActions.appendChild(
       DomHelpers.createButton("Marcar como estudado", {
         className: "mod-cta",
         icon: "refresh-cw",
@@ -4104,7 +4146,8 @@ var SessionsTab = class {
         }
       })
     );
-    container.appendChild(cycleAction);
+    cycleContext.appendChild(cycleActions);
+    container.appendChild(cycleContext);
     if (this.isCreatingSession) {
       container.appendChild(this.renderCreateSessionForm(data));
     }
@@ -4161,10 +4204,7 @@ var SessionsTab = class {
   }
   renderHistoryFilters(subjects) {
     const subjectSelect = DomHelpers.createSelect(
-      [
-        ["", "Todas"],
-        ...subjects.map((subject) => [subject.id, subject.name])
-      ],
+      [["", "Todas"], ...subjects.map((subject) => [subject.id, subject.name])],
       this.historySubjectFilter
     );
     const typeSelect = DomHelpers.createSelect(
@@ -4230,7 +4270,10 @@ var SessionsTab = class {
     tr.dataset.sessionId = session.id;
     const subjectName = data.subjects.find((subject) => subject.id === session.subjectId)?.name ?? "\u2014";
     const topicName = data.topics.find((topic) => topic.id === session.topicId)?.name ?? "\u2014";
-    const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
+    const actions = DomHelpers.createElement(
+      "div",
+      "leif-inline-actions leif-inline-actions-compact"
+    );
     actions.appendChild(
       DomHelpers.createIconButton("edit", "Editar", {
         onClick: async () => {
@@ -4299,8 +4342,16 @@ var SessionsTab = class {
     tr.className = "leif-editing-row";
     tr.dataset.sessionId = session.id;
     const countLabel = session.type === StudySessionType.QUESTIONS ? "Quest\xF5es resolvidas" : "P\xE1ginas/quantidade";
-    const countInput = DomHelpers.createCompactInput("number", countLabel, String(session.pagesOrCount ?? 0));
-    const correctInput = DomHelpers.createCompactInput("number", "Acertos", String(session.correctAnswers ?? 0));
+    const countInput = DomHelpers.createCompactInput(
+      "number",
+      countLabel,
+      String(session.pagesOrCount ?? 0)
+    );
+    const correctInput = DomHelpers.createCompactInput(
+      "number",
+      "Acertos",
+      String(session.correctAnswers ?? 0)
+    );
     const saveButton = DomHelpers.createIconButton("save", "Salvar", {
       onClick: async () => {
         try {
@@ -4322,7 +4373,10 @@ var SessionsTab = class {
         await this.onUpdate();
       }
     });
-    const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
+    const actions = DomHelpers.createElement(
+      "div",
+      "leif-inline-actions leif-inline-actions-compact"
+    );
     actions.appendChild(saveButton);
     actions.appendChild(cancelButton);
     const subjectName = data.subjects.find((subject) => subject.id === session.subjectId)?.name ?? "\u2014";
@@ -4343,7 +4397,11 @@ var SessionsTab = class {
   }
   renderCreateSessionForm(data) {
     const activeContest = data.contests.find((contest) => contest.id === data.activeContestId);
-    if (!activeContest) return DomHelpers.createEmptyState("Sem concurso escolhido", "Escolha um concurso antes de registrar.");
+    if (!activeContest)
+      return DomHelpers.createEmptyState(
+        "Sem concurso escolhido",
+        "Escolha um concurso antes de registrar."
+      );
     const subjects = data.subjects.filter((subject) => subject.contestId === activeContest.id);
     const form = DomHelpers.createForm(async () => {
       try {
@@ -4577,7 +4635,6 @@ var TopicsTab = class {
     this.onUpdate = onUpdate;
     this.selectedSubjectId = null;
     this.editingTopicId = null;
-    this.expandedTopicId = null;
     this.isCreatingTopic = false;
     this.pendingDeleteTopicId = null;
     const repositoryFactory = new EntityRepositoryFactory(dataStore);
@@ -4637,14 +4694,10 @@ var TopicsTab = class {
     ]);
     topics.forEach((topic) => {
       const isEditing = this.editingTopicId === topic.id;
-      const isExpanded = this.expandedTopicId === topic.id;
       if (isEditing) {
         tbody.appendChild(this.renderEditableRow(topic, progressByTopic.get(topic.id)));
       } else {
         tbody.appendChild(this.renderDisplayRow(topic, progressByTopic.get(topic.id)));
-      }
-      if (isExpanded && !isEditing) {
-        tbody.appendChild(this.renderDetailRow(topic, progressByTopic.get(topic.id)));
       }
     });
     card.appendChild(tableContainer);
@@ -4653,20 +4706,9 @@ var TopicsTab = class {
   renderDisplayRow(topic, progress) {
     const tr = DomHelpers.createElement("tr");
     tr.dataset.topicId = topic.id;
-    const hasDetails = Boolean(topic.questionNotebook);
-    const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
-    actions.appendChild(
-      DomHelpers.createIconButton(
-        this.expandedTopicId === topic.id ? "collapse" : "expand",
-        this.expandedTopicId === topic.id ? "Recolher" : "Expandir",
-        {
-          className: `clickable-icon ${hasDetails ? "" : "leif-expand-button"}`,
-          onClick: async () => {
-            this.expandedTopicId = this.expandedTopicId === topic.id ? null : topic.id;
-            await this.onUpdate();
-          }
-        }
-      )
+    const actions = DomHelpers.createElement(
+      "div",
+      "leif-inline-actions leif-inline-actions-compact"
     );
     actions.appendChild(
       DomHelpers.createIconButton("edit", "Editar", {
@@ -4743,8 +4785,16 @@ var TopicsTab = class {
     tr.dataset.topicId = topic.id;
     const nameInput = DomHelpers.createInput("text", "Nome do assunto", topic.name);
     nameInput.classList.add("leif-topic-name-input");
-    const notebookNameInput = DomHelpers.createInput("text", "Nome do caderno", topic.questionNotebook?.name ?? "");
-    const notebookUrlInput = DomHelpers.createInput("url", "URL do caderno", topic.questionNotebook?.url ?? "");
+    const notebookNameInput = DomHelpers.createInput(
+      "text",
+      "Nome do caderno",
+      topic.questionNotebook?.name ?? ""
+    );
+    const notebookUrlInput = DomHelpers.createInput(
+      "url",
+      "URL do caderno",
+      topic.questionNotebook?.url ?? ""
+    );
     const solvedInput = DomHelpers.createCompactInput(
       "number",
       "Quest\xF5es resolvidas",
@@ -4783,7 +4833,10 @@ var TopicsTab = class {
         await this.onUpdate();
       }
     });
-    const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
+    const actions = DomHelpers.createElement(
+      "div",
+      "leif-inline-actions leif-inline-actions-compact"
+    );
     actions.appendChild(saveButton);
     actions.appendChild(cancelButton);
     const titleCell = DomHelpers.createElement("td", "leif-topic-title-cell");
@@ -4797,56 +4850,19 @@ var TopicsTab = class {
     );
     questionCell.appendChild(questionFields);
     tr.appendChild(questionCell);
-    const notebookEditor = DomHelpers.createElement("div", "leif-topic-notebook-editor leif-topic-notebook-editor-stacked");
+    const notebookEditor = DomHelpers.createElement(
+      "div",
+      "leif-topic-notebook-editor leif-topic-notebook-editor-stacked"
+    );
     notebookEditor.append(
       DomHelpers.createStrong("Caderno de quest\xF5es"),
       DomHelpers.createStackedLabel("Nome", notebookNameInput),
-      DomHelpers.createStackedLabel("URL", notebookUrlInput)
+      DomHelpers.createUrlField("URL", notebookUrlInput)
     );
     tr.appendChild(DomHelpers.createCell(null, notebookEditor));
     const actionsCell = DomHelpers.createCell(null, actions);
     actionsCell.classList.add("leif-actions-cell");
     tr.appendChild(actionsCell);
-    return tr;
-  }
-  renderDetailRow(topic, progress) {
-    const tr = DomHelpers.createElement("tr");
-    tr.className = "leif-detail-row";
-    const td = DomHelpers.createElement("td");
-    td.colSpan = 4;
-    const content = DomHelpers.createElement("div", "leif-detail-content leif-topic-detail");
-    const notebook = topic.questionNotebook;
-    content.appendChild(DomHelpers.createSectionSubtitle("Caderno de quest\xF5es"));
-    if (!notebook) {
-      content.appendChild(DomHelpers.createParagraph("Nenhum caderno conectado ainda."));
-    } else {
-      const list = DomHelpers.createElement("div", "leif-detail-list");
-      const row = DomHelpers.createElement("div", "leif-detail-list-item");
-      const info = DomHelpers.createElement("div", "leif-material-info");
-      const title = DomHelpers.createElement("span", "leif-material-title");
-      title.textContent = notebook.name;
-      const stats = DomHelpers.createElement("span", "leif-material-type");
-      stats.textContent = this.formatQuestionProgress(topic, progress);
-      info.append(stats, title);
-      row.appendChild(info);
-      if (notebook.url) {
-        const link = DomHelpers.createElement("a", "leif-material-open-link");
-        link.href = notebook.url;
-        link.textContent = "Abrir";
-        link.target = "_blank";
-        link.rel = "noopener noreferrer";
-        link.dataset.topicNotebookUrl = topic.id;
-        link.addEventListener("click", (event) => {
-          event.preventDefault();
-          window.open(notebook.url, "_blank", "noopener");
-        });
-        row.appendChild(link);
-      }
-      list.appendChild(row);
-      content.appendChild(list);
-    }
-    td.appendChild(content);
-    tr.appendChild(td);
     return tr;
   }
   renderCreateTopicForm(subjectId) {
@@ -4923,7 +4939,10 @@ var WallTab = class {
   constructor(dataStore, onUpdate) {
     this.dataStore = dataStore;
     this.onUpdate = onUpdate;
-    this.updateContestWallUseCase = new UpdateContestWallUseCase(dataStore, new EntityRepositoryFactory(dataStore));
+    this.updateContestWallUseCase = new UpdateContestWallUseCase(
+      dataStore,
+      new EntityRepositoryFactory(dataStore)
+    );
   }
   async render(container, data) {
     container.appendChild(DomHelpers.createSectionTitle("Mural"));
@@ -4964,10 +4983,7 @@ var WallTab = class {
       "URL da prova",
       activeContest.wall.examLinks[0]?.url ?? ""
     );
-    const notes = DomHelpers.createTextarea(
-      "Notas do concurso",
-      activeContest.wall.notes ?? ""
-    );
+    const notes = DomHelpers.createTextarea("Notas do concurso", activeContest.wall.notes ?? "");
     notes.rows = 8;
     notes.classList.add("leif-wall-notes");
     const form = DomHelpers.createForm(async () => {
@@ -5004,7 +5020,9 @@ var WallTab = class {
     const notesCard = DomHelpers.createElement("section", "leif-wall-card leif-wall-primary");
     notesCard.append(
       DomHelpers.createSectionSubtitle("Notas"),
-      DomHelpers.createParagraph("Use este espa\xE7o para pesos, datas, cortes, estrat\xE9gia e qualquer lembrete que voc\xEA queira revisar sem procurar em outro lugar."),
+      DomHelpers.createParagraph(
+        "Use este espa\xE7o para pesos, datas, cortes, estrat\xE9gia e qualquer lembrete que voc\xEA queira revisar sem procurar em outro lugar."
+      ),
       DomHelpers.createStackedLabel("Notas", notes)
     );
     const noticeCard = DomHelpers.createElement("section", "leif-wall-card");
@@ -5012,14 +5030,16 @@ var WallTab = class {
       DomHelpers.createSectionSubtitle("Edital"),
       DomHelpers.createParagraph("Guarde o link do edital ou da p\xE1gina oficial do concurso."),
       DomHelpers.createLabel("Nome", noticeLabel),
-      DomHelpers.createLabel("Link", noticeUrl)
+      DomHelpers.createUrlField("Link", noticeUrl)
     );
     const examCard = DomHelpers.createElement("section", "leif-wall-card");
     examCard.append(
       DomHelpers.createSectionSubtitle("Prova"),
-      DomHelpers.createParagraph("Deixe aqui a prova anterior, o espelho ou outro material de refer\xEAncia."),
+      DomHelpers.createParagraph(
+        "Deixe aqui a prova anterior, o espelho ou outro material de refer\xEAncia."
+      ),
       DomHelpers.createLabel("Nome", examLabel),
-      DomHelpers.createLabel("Link", examUrl)
+      DomHelpers.createUrlField("Link", examUrl)
     );
     const referenceGrid = DomHelpers.createElement("div", "leif-wall-reference-grid");
     referenceGrid.append(noticeCard, examCard);
@@ -5035,9 +5055,7 @@ var WallTab = class {
   renderSnapshotsCard(activeContest, data) {
     const card = DomHelpers.createCard("Resumo das mat\xE9rias");
     if (activeContest.wall.subjectSnapshots.length === 0) {
-      card.appendChild(
-        DomHelpers.createParagraph("Ainda n\xE3o h\xE1 resumo salvo para as mat\xE9rias.")
-      );
+      card.appendChild(DomHelpers.createParagraph("Ainda n\xE3o h\xE1 resumo salvo para as mat\xE9rias."));
     } else {
       const subjectMap = new Map(data.subjects.map((s) => [s.id, s.name]));
       const itemMap = new Map(data.studyItems.map((item) => [item.id, item.title]));
@@ -5050,8 +5068,14 @@ var WallTab = class {
         titleGroup.appendChild(title);
         const metrics = DomHelpers.createElement("div", "leif-wall-snapshot-meta");
         metrics.append(
-          DomHelpers.createMetric("Peso", snapshot.weight !== void 0 ? String(snapshot.weight) : "\u2014"),
-          DomHelpers.createMetric("Pontua\xE7\xE3o", snapshot.score !== void 0 ? String(snapshot.score) : "\u2014"),
+          DomHelpers.createMetric(
+            "Peso",
+            snapshot.weight !== void 0 ? String(snapshot.weight) : "\u2014"
+          ),
+          DomHelpers.createMetric(
+            "Pontua\xE7\xE3o",
+            snapshot.score !== void 0 ? String(snapshot.score) : "\u2014"
+          ),
           DomHelpers.createMetric(
             "Itens alvo",
             snapshot.targetItems?.map((itemId) => itemMap.get(itemId) ?? itemId).join(", ") ?? "\u2014"

@@ -146,10 +146,7 @@ export class DomHelpers {
    * @param options - Array of [value, label] pairs
    * @param selectedValue - Optional value to pre-select
    */
-  static createSelect(
-    options: Array<[string, string]>,
-    selectedValue?: string
-  ): HTMLSelectElement {
+  static createSelect(options: Array<[string, string]>, selectedValue?: string): HTMLSelectElement {
     const select = document.createElement("select");
 
     options.forEach(([value, label]) => {
@@ -197,6 +194,21 @@ export class DomHelpers {
     span.textContent = text;
     label.append(span, control);
     return label;
+  }
+
+  /**
+   * Creates a full-width URL field with a quiet link affordance.
+   */
+  static createUrlField(text: string, input: HTMLInputElement): HTMLElement {
+    const field = this.createElement("label", "leif-url-field");
+    const label = this.createElement("span", "leif-field-label");
+    const control = this.createElement("span", "leif-url-control");
+    const icon = this.createIcon("link");
+    icon.setAttribute("aria-hidden", "true");
+    label.textContent = text;
+    control.append(icon, input);
+    field.append(label, control);
+    return field;
   }
 
   /**
@@ -436,12 +448,8 @@ export class DomHelpers {
     onDelete: () => void | Promise<void>
   ): HTMLElement {
     const actions = this.createElement("div", "leif-inline-actions leif-inline-actions-compact");
-    actions.appendChild(
-      this.createIconButton("edit", t("action.edit"), { onClick: onEdit })
-    );
-    actions.appendChild(
-      this.createIconButton("delete", t("action.delete"), { onClick: onDelete })
-    );
+    actions.appendChild(this.createIconButton("edit", t("action.edit"), { onClick: onEdit }));
+    actions.appendChild(this.createIconButton("delete", t("action.delete"), { onClick: onDelete }));
     return actions;
   }
 
@@ -505,10 +513,7 @@ export class DomHelpers {
    * Error-boundary helper: runs an async action and surfaces any failure
    * through notifyError so callers don't repeat try/catch + Notice boilerplate.
    */
-  static runGuarded(
-    action: () => void | Promise<void>,
-    fallbackMessage: string
-  ): Promise<void> {
+  static runGuarded(action: () => void | Promise<void>, fallbackMessage: string): Promise<void> {
     return (async () => {
       try {
         await action();
@@ -527,22 +532,31 @@ export class DomHelpers {
   static createProgressBar(readed: number, total?: number): HTMLElement {
     const container = this.createElement("div", "leif-progress-bar-container");
 
-    const bar = this.createElement("div", "leif-progress-bar");
-    const fill = this.createElement("div", "leif-progress-fill");
-
     if (total !== undefined && total > 0) {
       const percentage = Math.min(100, Math.round((readed / total) * 100));
-      fill.style.width = `${percentage}%`;
-
-      if (readed >= total) {
-        fill.classList.add("is-complete");
-      }
-
       const label = this.createElement("div", "leif-progress-label");
       const text = this.createElement("span", "leif-progress-value");
       text.textContent = `${readed}/${total} (${percentage}%)`;
       label.appendChild(text);
-      container.appendChild(bar);
+
+      if (readed >= total) {
+        const complete = this.createElement("span", "leif-progress-complete");
+        const completeText = this.createElement("span");
+        completeText.textContent = "Concluído";
+        complete.append(this.createIcon("check-circle-2"), completeText);
+        label.appendChild(complete);
+      } else {
+        const bar = this.createElement("div", "leif-progress-bar");
+        const fill = this.createElement("div", "leif-progress-fill");
+        fill.style.width = `${percentage}%`;
+        bar.setAttribute("role", "progressbar");
+        bar.setAttribute("aria-valuemin", "0");
+        bar.setAttribute("aria-valuemax", String(total));
+        bar.setAttribute("aria-valuenow", String(Math.min(readed, total)));
+        bar.appendChild(fill);
+        container.appendChild(bar);
+      }
+
       container.appendChild(label);
     } else {
       const label = this.createElement("div", "leif-progress-label");
@@ -552,7 +566,6 @@ export class DomHelpers {
       container.appendChild(label);
     }
 
-    bar.appendChild(fill);
     return container;
   }
 }

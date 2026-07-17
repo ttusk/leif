@@ -65,21 +65,21 @@ describe("Leif visual system", () => {
     expect(styles).toMatch(/\.leif-view\s*{[^}]*height:\s*100%;[^}]*overflow-y:\s*auto;/s);
     expect(styles).toMatch(/\.leif-body\s*{[^}]*min-width:\s*0;[^}]*max-width:\s*980px;/s);
     expect(styles).toMatch(/\.leif-table-wrapper\s*{[^}]*overflow:\s*auto;/s);
+    expect(styles).not.toMatch(/\.leif-table-wrapper\s*{[^}]*scrollbar-gutter:\s*stable;/s);
     expect(styles).toMatch(/\.leif-table thead th\s*{[^}]*position:\s*sticky;/s);
   });
 
-  it("uses restrained surfaces to separate primary work from supporting content", () => {
+  it("uses a flat hierarchy with only purposeful containers", () => {
     const styles = readStyles();
 
     expect(styles).toMatch(
       /\.leif-next-activity\s*{[^}]*background:\s*var\(--leif-surface\);[^}]*border:\s*1px solid var\(--leif-border\);/s
     );
+    expect(styles).not.toContain(".leif-next-activity::before");
     expect(styles).toMatch(
-      /\.leif-next-activity::before\s*{[^}]*background:\s*var\(--leif-accent\);/s
+      /\.leif-card\s*{[^}]*padding:\s*0;[^}]*background:\s*transparent;[^}]*border:\s*0;/s
     );
-    expect(styles).toMatch(
-      /\.leif-card\s*{[^}]*background:\s*var\(--leif-surface-raised\);[^}]*border:\s*1px solid var\(--leif-border\);/s
-    );
+    expect(styles).toMatch(/\.leif-next-activity-next\s*{[^}]*border-top:\s*0;/s);
     expect(styles).toMatch(/\.leif-empty-state\s*{[^}]*border-style:\s*dashed;/s);
   });
 
@@ -96,15 +96,25 @@ describe("Leif visual system", () => {
     expect(styles).toMatch(/@media\s*\(forced-colors:\s*active\)/);
   });
 
-  it("keeps progress visually distinct without hard-coded brand colors", () => {
+  it("shows partial progress visually and completion as a compact status", () => {
     const styles = readStyles();
 
     expect(styles).toMatch(
       /\.leif-progress-bar\s*{[^}]*background:\s*var\(--background-modifier-border\);/s
     );
     expect(styles).toMatch(/\.leif-progress-fill\s*{[^}]*background:\s*var\(--leif-accent\);/s);
+    expect(styles).toMatch(/\.leif-progress-complete\s*{[^}]*color:\s*var\(--text-success\);/s);
+  });
+
+  it("styles URL controls as full-width icon fields", () => {
+    const styles = readStyles();
+
     expect(styles).toMatch(
-      /\.leif-progress-fill\.is-complete\s*{[^}]*background:\s*var\(--interactive-success\);/s
+      /\.leif-url-field\s*{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/s
+    );
+    expect(styles).toMatch(/\.leif-url-control\s*{[^}]*position:\s*relative;/s);
+    expect(styles).toMatch(
+      /\.leif-url-control input\s*{[^}]*width:\s*100%;[^}]*padding-inline-start:/s
     );
   });
 });

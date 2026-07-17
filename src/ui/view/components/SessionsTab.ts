@@ -40,7 +40,10 @@ export class SessionsTab {
     private readonly onUpdate: () => Promise<void>
   ) {
     const repositoryFactory = new EntityRepositoryFactory(dataStore);
-    this.registerStudySessionUseCase = new RegisterStudySessionUseCase(dataStore, repositoryFactory);
+    this.registerStudySessionUseCase = new RegisterStudySessionUseCase(
+      dataStore,
+      repositoryFactory
+    );
     this.deleteStudySessionUseCase = new DeleteStudySessionUseCase(dataStore, repositoryFactory);
     this.getActiveContestSummaryUseCase = new GetActiveContestSummaryUseCase(dataStore);
     this.listSubjectsForActiveContestUseCase = new ListSubjectsForActiveContestUseCase(dataStore);
@@ -96,11 +99,8 @@ export class SessionsTab {
       nextInfo.textContent = `Depois vem ${afterRecommendedSubject.name}`;
       cycleContext.appendChild(nextInfo);
     }
-    container.appendChild(cycleContext);
-
-    // Cycle action button
-    const cycleAction = DomHelpers.createElement("div", "leif-cycle-action");
-    cycleAction.appendChild(
+    const cycleActions = DomHelpers.createElement("div", "leif-cycle-context-actions");
+    cycleActions.appendChild(
       DomHelpers.createButton("Marcar como estudado", {
         className: "mod-cta",
         icon: "refresh-cw",
@@ -115,7 +115,8 @@ export class SessionsTab {
         }
       })
     );
-    container.appendChild(cycleAction);
+    cycleContext.appendChild(cycleActions);
+    container.appendChild(cycleContext);
 
     if (this.isCreatingSession) {
       container.appendChild(this.renderCreateSessionForm(data));
@@ -188,10 +189,7 @@ export class SessionsTab {
 
   private renderHistoryFilters(subjects: LeifPluginData["subjects"]): HTMLElement {
     const subjectSelect = DomHelpers.createSelect(
-      [
-        ["", "Todas"],
-        ...subjects.map((subject): [string, string] => [subject.id, subject.name])
-      ],
+      [["", "Todas"], ...subjects.map((subject): [string, string] => [subject.id, subject.name])],
       this.historySubjectFilter
     );
     const typeSelect = DomHelpers.createSelect(
@@ -265,10 +263,12 @@ export class SessionsTab {
     tr.dataset.sessionId = session.id;
     const subjectName =
       data.subjects.find((subject) => subject.id === session.subjectId)?.name ?? "—";
-    const topicName =
-      data.topics.find((topic) => topic.id === session.topicId)?.name ?? "—";
+    const topicName = data.topics.find((topic) => topic.id === session.topicId)?.name ?? "—";
 
-    const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
+    const actions = DomHelpers.createElement(
+      "div",
+      "leif-inline-actions leif-inline-actions-compact"
+    );
     actions.appendChild(
       DomHelpers.createIconButton("edit", "Editar", {
         onClick: async () => {
@@ -345,9 +345,18 @@ export class SessionsTab {
     tr.className = "leif-editing-row";
     tr.dataset.sessionId = session.id;
 
-    const countLabel = session.type === StudySessionType.QUESTIONS ? "Questões resolvidas" : "Páginas/quantidade";
-    const countInput = DomHelpers.createCompactInput("number", countLabel, String(session.pagesOrCount ?? 0));
-    const correctInput = DomHelpers.createCompactInput("number", "Acertos", String(session.correctAnswers ?? 0));
+    const countLabel =
+      session.type === StudySessionType.QUESTIONS ? "Questões resolvidas" : "Páginas/quantidade";
+    const countInput = DomHelpers.createCompactInput(
+      "number",
+      countLabel,
+      String(session.pagesOrCount ?? 0)
+    );
+    const correctInput = DomHelpers.createCompactInput(
+      "number",
+      "Acertos",
+      String(session.correctAnswers ?? 0)
+    );
 
     const saveButton = DomHelpers.createIconButton("save", "Salvar", {
       onClick: async () => {
@@ -355,7 +364,8 @@ export class SessionsTab {
           await this.updateStudySessionUseCase.execute({
             sessionId: session.id,
             pagesOrCount: Number(countInput.value),
-            correctAnswers: session.type === StudySessionType.QUESTIONS ? Number(correctInput.value) : undefined
+            correctAnswers:
+              session.type === StudySessionType.QUESTIONS ? Number(correctInput.value) : undefined
           });
           this.editingSessionId = null;
           await this.onUpdate();
@@ -372,14 +382,16 @@ export class SessionsTab {
       }
     });
 
-    const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
+    const actions = DomHelpers.createElement(
+      "div",
+      "leif-inline-actions leif-inline-actions-compact"
+    );
     actions.appendChild(saveButton);
     actions.appendChild(cancelButton);
 
     const subjectName =
       data.subjects.find((subject) => subject.id === session.subjectId)?.name ?? "—";
-    const topicName =
-      data.topics.find((topic) => topic.id === session.topicId)?.name ?? "—";
+    const topicName = data.topics.find((topic) => topic.id === session.topicId)?.name ?? "—";
     const resultFields = DomHelpers.createElement("div", "leif-session-result-editor");
     resultFields.append(DomHelpers.createStackedLabel(countLabel, countInput));
     if (session.type === StudySessionType.QUESTIONS) {
@@ -399,7 +411,11 @@ export class SessionsTab {
 
   private renderCreateSessionForm(data: LeifPluginData): HTMLElement {
     const activeContest = data.contests.find((contest) => contest.id === data.activeContestId);
-    if (!activeContest) return DomHelpers.createEmptyState("Sem concurso escolhido", "Escolha um concurso antes de registrar.");
+    if (!activeContest)
+      return DomHelpers.createEmptyState(
+        "Sem concurso escolhido",
+        "Escolha um concurso antes de registrar."
+      );
 
     const subjects = data.subjects.filter((subject) => subject.contestId === activeContest.id);
 
@@ -409,7 +425,8 @@ export class SessionsTab {
         const rawCount = Number(countInput.value);
         const rawCorrect = Number(correctInput.value);
 
-        const pagesOrCount = sessionType === StudySessionType.QUESTIONS ? rawCount : rawCount || undefined;
+        const pagesOrCount =
+          sessionType === StudySessionType.QUESTIONS ? rawCount : rawCount || undefined;
         const correctAnswers =
           sessionType === StudySessionType.QUESTIONS ? Math.min(rawCorrect, rawCount) : undefined;
 

@@ -18,7 +18,7 @@ type TopicStudyProgress = {
 
 /**
  * Topics tab component with unified CRUD pattern.
- * Table with inline editing + expandable detail rows for question notebooks.
+ * Table with inline editing and direct question-notebook links.
  */
 export class TopicsTab {
   private readonly createTopicUseCase: CreateTopicUseCase;
@@ -27,7 +27,6 @@ export class TopicsTab {
 
   private selectedSubjectId: string | null = null;
   private editingTopicId: string | null = null;
-  private expandedTopicId: string | null = null;
   private isCreatingTopic = false;
   private pendingDeleteTopicId: string | null = null;
 
@@ -81,8 +80,7 @@ export class TopicsTab {
       container.appendChild(this.renderCreateTopicForm(subject.id));
     }
 
-    const topics = data.topics
-      .filter((topic) => topic.subjectId === subject.id);
+    const topics = data.topics.filter((topic) => topic.subjectId === subject.id);
     const progressByTopic = this.getProgressByTopic(data);
 
     const card = DomHelpers.createCard(`Assuntos de ${subject.name}`);
@@ -102,16 +100,10 @@ export class TopicsTab {
 
     topics.forEach((topic) => {
       const isEditing = this.editingTopicId === topic.id;
-      const isExpanded = this.expandedTopicId === topic.id;
-
       if (isEditing) {
         tbody.appendChild(this.renderEditableRow(topic, progressByTopic.get(topic.id)));
       } else {
         tbody.appendChild(this.renderDisplayRow(topic, progressByTopic.get(topic.id)));
-      }
-
-      if (isExpanded && !isEditing) {
-        tbody.appendChild(this.renderDetailRow(topic, progressByTopic.get(topic.id)));
       }
     });
 
@@ -122,21 +114,9 @@ export class TopicsTab {
   private renderDisplayRow(topic: Topic, progress?: TopicStudyProgress): HTMLElement {
     const tr = DomHelpers.createElement("tr");
     tr.dataset.topicId = topic.id;
-    const hasDetails = Boolean(topic.questionNotebook);
-
-    const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
-    actions.appendChild(
-      DomHelpers.createIconButton(
-        this.expandedTopicId === topic.id ? "collapse" : "expand",
-        this.expandedTopicId === topic.id ? "Recolher" : "Expandir",
-        {
-          className: `clickable-icon ${hasDetails ? "" : "leif-expand-button"}`,
-          onClick: async () => {
-            this.expandedTopicId = this.expandedTopicId === topic.id ? null : topic.id;
-            await this.onUpdate();
-          }
-        }
-      )
+    const actions = DomHelpers.createElement(
+      "div",
+      "leif-inline-actions leif-inline-actions-compact"
     );
     actions.appendChild(
       DomHelpers.createIconButton("edit", "Editar", {
@@ -224,8 +204,16 @@ export class TopicsTab {
 
     const nameInput = DomHelpers.createInput("text", "Nome do assunto", topic.name);
     nameInput.classList.add("leif-topic-name-input");
-    const notebookNameInput = DomHelpers.createInput("text", "Nome do caderno", topic.questionNotebook?.name ?? "");
-    const notebookUrlInput = DomHelpers.createInput("url", "URL do caderno", topic.questionNotebook?.url ?? "");
+    const notebookNameInput = DomHelpers.createInput(
+      "text",
+      "Nome do caderno",
+      topic.questionNotebook?.name ?? ""
+    );
+    const notebookUrlInput = DomHelpers.createInput(
+      "url",
+      "URL do caderno",
+      topic.questionNotebook?.url ?? ""
+    );
     const solvedInput = DomHelpers.createCompactInput(
       "number",
       "Questões resolvidas",
@@ -273,7 +261,10 @@ export class TopicsTab {
       }
     });
 
-    const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
+    const actions = DomHelpers.createElement(
+      "div",
+      "leif-inline-actions leif-inline-actions-compact"
+    );
     actions.appendChild(saveButton);
     actions.appendChild(cancelButton);
 
@@ -290,65 +281,20 @@ export class TopicsTab {
     questionCell.appendChild(questionFields);
     tr.appendChild(questionCell);
 
-    const notebookEditor = DomHelpers.createElement("div", "leif-topic-notebook-editor leif-topic-notebook-editor-stacked");
+    const notebookEditor = DomHelpers.createElement(
+      "div",
+      "leif-topic-notebook-editor leif-topic-notebook-editor-stacked"
+    );
     notebookEditor.append(
       DomHelpers.createStrong("Caderno de questões"),
       DomHelpers.createStackedLabel("Nome", notebookNameInput),
-      DomHelpers.createStackedLabel("URL", notebookUrlInput)
+      DomHelpers.createUrlField("URL", notebookUrlInput)
     );
 
     tr.appendChild(DomHelpers.createCell(null, notebookEditor));
     const actionsCell = DomHelpers.createCell(null, actions);
     actionsCell.classList.add("leif-actions-cell");
     tr.appendChild(actionsCell);
-
-    return tr;
-  }
-
-  private renderDetailRow(topic: Topic, progress?: TopicStudyProgress): HTMLElement {
-    const tr = DomHelpers.createElement("tr");
-    tr.className = "leif-detail-row";
-
-    const td = DomHelpers.createElement("td");
-    td.colSpan = 4;
-
-    const content = DomHelpers.createElement("div", "leif-detail-content leif-topic-detail");
-    const notebook = topic.questionNotebook;
-    content.appendChild(DomHelpers.createSectionSubtitle("Caderno de questões"));
-
-    if (!notebook) {
-      content.appendChild(DomHelpers.createParagraph("Nenhum caderno conectado ainda."));
-    } else {
-      const list = DomHelpers.createElement("div", "leif-detail-list");
-      const row = DomHelpers.createElement("div", "leif-detail-list-item");
-      const info = DomHelpers.createElement("div", "leif-material-info");
-      const title = DomHelpers.createElement("span", "leif-material-title");
-      title.textContent = notebook.name;
-      const stats = DomHelpers.createElement("span", "leif-material-type");
-      stats.textContent = this.formatQuestionProgress(topic, progress);
-      info.append(stats, title);
-      row.appendChild(info);
-
-      if (notebook.url) {
-        const link = DomHelpers.createElement("a", "leif-material-open-link");
-        link.href = notebook.url;
-        link.textContent = "Abrir";
-        link.target = "_blank";
-        link.rel = "noopener noreferrer";
-        link.dataset.topicNotebookUrl = topic.id;
-        link.addEventListener("click", (event) => {
-          event.preventDefault();
-          window.open(notebook.url, "_blank", "noopener");
-        });
-        row.appendChild(link);
-      }
-
-      list.appendChild(row);
-      content.appendChild(list);
-    }
-
-    td.appendChild(content);
-    tr.appendChild(td);
 
     return tr;
   }
@@ -427,9 +373,7 @@ export class TopicsTab {
     const correct = progress?.correctAnswers ?? topic.questionNotebook?.correctAnswers ?? 0;
 
     if (solved === 0) {
-      return progress?.pdfPages
-        ? `0 resolvidas · ${progress.pdfPages} pág. PDF`
-        : "0 resolvidas";
+      return progress?.pdfPages ? `0 resolvidas · ${progress.pdfPages} pág. PDF` : "0 resolvidas";
     }
 
     const questionProgress = `${correct}/${solved} acertos`;

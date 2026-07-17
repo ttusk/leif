@@ -259,7 +259,11 @@ describe("LeifView", () => {
     expect(
       nextActivity?.querySelector(".leif-next-activity-meta .leif-next-activity-next")
     ).toBeNull();
-    expect(nextActivity?.querySelector(":scope > .leif-next-activity-next")).not.toBeNull();
+    const nextSubject = nextActivity?.querySelector(":scope > .leif-next-activity-next");
+    expect(nextSubject).not.toBeNull();
+    expect(nextSubject?.previousElementSibling).toBe(
+      nextActivity?.querySelector(".leif-next-activity-meta")
+    );
   });
 
   it("guides the user when today's page has no active subject yet", async () => {
@@ -877,7 +881,13 @@ describe("LeifView", () => {
     sessionsTabButton.click();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(leaf.containerEl.textContent).toContain("Marcar como estudado");
+    const cycleContext = leaf.containerEl.querySelector(".leif-cycle-context");
+    const finishButton = Array.from(cycleContext?.querySelectorAll("button") ?? []).find((button) =>
+      button.textContent?.includes("Marcar como estudado")
+    );
+
+    expect(finishButton).toBeDefined();
+    expect(leaf.containerEl.querySelector(".leif-cycle-action")).toBeNull();
   });
 
   it("shows the recommended subject name in the cycle-advance notice", async () => {
@@ -1512,11 +1522,11 @@ describe("LeifView", () => {
 
     const completedProgressBar = completedRow.querySelector(".leif-progress-bar");
     const partialProgressBar = partialRow.querySelector(".leif-progress-bar");
-    expect(completedProgressBar).not.toBeNull();
+    const completeStatus = completedRow.querySelector(".leif-progress-complete");
+    expect(completedProgressBar).toBeNull();
     expect(partialProgressBar).not.toBeNull();
-    expect(
-      completedProgressBar?.querySelector<HTMLElement>(".leif-progress-fill")?.style.width
-    ).toBe("100%");
+    expect(completeStatus?.textContent).toContain("Concluído");
+    expect(completeStatus?.querySelector(".leif-icon")).not.toBeNull();
     expect(partialProgressBar?.querySelector<HTMLElement>(".leif-progress-fill")?.style.width).toBe(
       "0%"
     );
@@ -1960,21 +1970,9 @@ describe("LeifView", () => {
     const topicRow = leaf.containerEl.querySelector<HTMLTableRowElement>(
       "tr[data-topic-id='topic-caderno']"
     );
-    const expandButton = topicRow?.querySelector<HTMLButtonElement>("button[title='Expandir']");
-
-    if (!expandButton) {
-      throw new Error("Topic expand button was not rendered.");
-    }
-
-    expandButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const detailRow = leaf.containerEl.querySelector<HTMLElement>(".leif-topic-detail");
-    const notebookFormInDetail = detailRow?.querySelector<HTMLFormElement>("form");
-
-    expect(detailRow?.textContent).toContain("Caderno de questões");
-    expect(detailRow?.textContent).toContain("Nenhum caderno conectado ainda.");
-    expect(notebookFormInDetail).toBeNull();
+    expect(topicRow?.querySelector("button[title='Expandir']")).toBeNull();
+    expect(topicRow?.querySelector("button[title='Recolher']")).toBeNull();
+    expect(leaf.containerEl.querySelector(".leif-topic-detail")).toBeNull();
 
     const editButton = topicRow?.querySelector<HTMLButtonElement>("button[title='Editar']");
 
@@ -2006,6 +2004,7 @@ describe("LeifView", () => {
     expect(nameInput.classList.contains("leif-topic-name-input")).toBe(true);
     expect(notebookEditor?.textContent).toContain("Caderno de questões");
     expect(notebookEditor?.classList.contains("leif-topic-notebook-editor-stacked")).toBe(true);
+    expect(notebookUrl.closest(".leif-url-field")).not.toBeNull();
 
     nameInput.value = "Orações coordenadas";
     notebookName.value = "Tec Concursos - Coordenadas";

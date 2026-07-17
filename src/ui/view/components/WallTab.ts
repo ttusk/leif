@@ -15,7 +15,10 @@ export class WallTab {
     private readonly dataStore: PluginDataStore,
     private readonly onUpdate: () => Promise<void>
   ) {
-    this.updateContestWallUseCase = new UpdateContestWallUseCase(dataStore, new EntityRepositoryFactory(dataStore));
+    this.updateContestWallUseCase = new UpdateContestWallUseCase(
+      dataStore,
+      new EntityRepositoryFactory(dataStore)
+    );
   }
 
   async render(container: HTMLElement, data: LeifPluginData): Promise<void> {
@@ -41,7 +44,9 @@ export class WallTab {
     container.appendChild(this.renderSnapshotsCard(activeContest, data));
   }
 
-  private renderWallForm(activeContest: NonNullable<LeifPluginData["contests"][number]>): HTMLElement {
+  private renderWallForm(
+    activeContest: NonNullable<LeifPluginData["contests"][number]>
+  ): HTMLElement {
     const noticeLabel = DomHelpers.createInput(
       "text",
       "Rótulo do edital",
@@ -62,10 +67,7 @@ export class WallTab {
       "URL da prova",
       activeContest.wall.examLinks[0]?.url ?? ""
     );
-    const notes = DomHelpers.createTextarea(
-      "Notas do concurso",
-      activeContest.wall.notes ?? ""
-    );
+    const notes = DomHelpers.createTextarea("Notas do concurso", activeContest.wall.notes ?? "");
     notes.rows = 8;
     notes.classList.add("leif-wall-notes");
 
@@ -112,7 +114,9 @@ export class WallTab {
     const notesCard = DomHelpers.createElement("section", "leif-wall-card leif-wall-primary");
     notesCard.append(
       DomHelpers.createSectionSubtitle("Notas"),
-      DomHelpers.createParagraph("Use este espaço para pesos, datas, cortes, estratégia e qualquer lembrete que você queira revisar sem procurar em outro lugar."),
+      DomHelpers.createParagraph(
+        "Use este espaço para pesos, datas, cortes, estratégia e qualquer lembrete que você queira revisar sem procurar em outro lugar."
+      ),
       DomHelpers.createStackedLabel("Notas", notes)
     );
 
@@ -121,15 +125,17 @@ export class WallTab {
       DomHelpers.createSectionSubtitle("Edital"),
       DomHelpers.createParagraph("Guarde o link do edital ou da página oficial do concurso."),
       DomHelpers.createLabel("Nome", noticeLabel),
-      DomHelpers.createLabel("Link", noticeUrl)
+      DomHelpers.createUrlField("Link", noticeUrl)
     );
 
     const examCard = DomHelpers.createElement("section", "leif-wall-card");
     examCard.append(
       DomHelpers.createSectionSubtitle("Prova"),
-      DomHelpers.createParagraph("Deixe aqui a prova anterior, o espelho ou outro material de referência."),
+      DomHelpers.createParagraph(
+        "Deixe aqui a prova anterior, o espelho ou outro material de referência."
+      ),
       DomHelpers.createLabel("Nome", examLabel),
-      DomHelpers.createLabel("Link", examUrl)
+      DomHelpers.createUrlField("Link", examUrl)
     );
 
     const referenceGrid = DomHelpers.createElement("div", "leif-wall-reference-grid");
@@ -153,9 +159,7 @@ export class WallTab {
   ): HTMLElement {
     const card = DomHelpers.createCard("Resumo das matérias");
     if (activeContest.wall.subjectSnapshots.length === 0) {
-      card.appendChild(
-        DomHelpers.createParagraph("Ainda não há resumo salvo para as matérias.")
-      );
+      card.appendChild(DomHelpers.createParagraph("Ainda não há resumo salvo para as matérias."));
     } else {
       const subjectMap = new Map(data.subjects.map((s) => [s.id, s.name]));
       const itemMap = new Map(data.studyItems.map((item) => [item.id, item.title]));
@@ -169,8 +173,14 @@ export class WallTab {
 
         const metrics = DomHelpers.createElement("div", "leif-wall-snapshot-meta");
         metrics.append(
-          DomHelpers.createMetric("Peso", snapshot.weight !== undefined ? String(snapshot.weight) : "—"),
-          DomHelpers.createMetric("Pontuação", snapshot.score !== undefined ? String(snapshot.score) : "—"),
+          DomHelpers.createMetric(
+            "Peso",
+            snapshot.weight !== undefined ? String(snapshot.weight) : "—"
+          ),
+          DomHelpers.createMetric(
+            "Pontuação",
+            snapshot.score !== undefined ? String(snapshot.score) : "—"
+          ),
           DomHelpers.createMetric(
             "Itens alvo",
             snapshot.targetItems?.map((itemId) => itemMap.get(itemId) ?? itemId).join(", ") ?? "—"

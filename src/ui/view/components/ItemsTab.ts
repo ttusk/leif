@@ -36,8 +36,13 @@ export class ItemsTab {
   ) {
     const repositoryFactory = new EntityRepositoryFactory(dataStore);
     this.createStudyItemUseCase = new CreateStudyItemUseCase(dataStore, repositoryFactory);
-    this.addStudyItemResourceReferenceUseCase = new AddStudyItemResourceReferenceUseCase(dataStore, repositoryFactory);
-    this.getActiveContestProgressDashboardUseCase = new GetActiveContestProgressDashboardUseCase(dataStore);
+    this.addStudyItemResourceReferenceUseCase = new AddStudyItemResourceReferenceUseCase(
+      dataStore,
+      repositoryFactory
+    );
+    this.getActiveContestProgressDashboardUseCase = new GetActiveContestProgressDashboardUseCase(
+      dataStore
+    );
     this.deleteStudyItemUseCase = new DeleteStudyItemUseCase(dataStore, repositoryFactory);
     this.updateStudyItemUseCase = new UpdateStudyItemUseCase(dataStore, repositoryFactory);
   }
@@ -109,9 +114,7 @@ export class ItemsTab {
     ]);
 
     items.forEach((item) => {
-      const itemProgress = subjectProgress?.items.find(
-        (entry) => entry.studyItemId === item.id
-      );
+      const itemProgress = subjectProgress?.items.find((entry) => entry.studyItemId === item.id);
       const isEditing = this.editingItemId === item.id;
       const isExpanded = this.expandedItemId === item.id;
 
@@ -139,7 +142,10 @@ export class ItemsTab {
     tr.dataset.itemId = item.id;
     const refs = item.resourceReferences ?? [];
 
-    const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
+    const actions = DomHelpers.createElement(
+      "div",
+      "leif-inline-actions leif-inline-actions-compact"
+    );
     const hasRefs = refs.length > 0;
     actions.appendChild(
       DomHelpers.createIconButton(
@@ -216,8 +222,16 @@ export class ItemsTab {
 
     const titleInput = DomHelpers.createCompactInput("text", "Título", item.title);
     const weightInput = DomHelpers.createCompactInput("number", "Peso", String(item.weight ?? 0));
-    const questionInput = DomHelpers.createCompactInput("number", "Qts", String(item.questionCount ?? 0));
-    const totalPagesInput = DomHelpers.createCompactInput("number", "Total", String(item.totalPages ?? ""));
+    const questionInput = DomHelpers.createCompactInput(
+      "number",
+      "Qts",
+      String(item.questionCount ?? 0)
+    );
+    const totalPagesInput = DomHelpers.createCompactInput(
+      "number",
+      "Total",
+      String(item.totalPages ?? "")
+    );
     titleInput.classList.add("leif-resource-edit-input");
     weightInput.classList.add("leif-resource-edit-input");
     questionInput.classList.add("leif-resource-edit-input");
@@ -249,7 +263,10 @@ export class ItemsTab {
       }
     });
 
-    const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
+    const actions = DomHelpers.createElement(
+      "div",
+      "leif-inline-actions leif-inline-actions-compact"
+    );
     actions.appendChild(saveButton);
     actions.appendChild(cancelButton);
 
@@ -295,22 +312,19 @@ export class ItemsTab {
       });
       materialSection.appendChild(list);
     } else {
-      materialSection.appendChild(
-        DomHelpers.createParagraph("Nenhum material vinculado ainda.")
-      );
+      materialSection.appendChild(DomHelpers.createParagraph("Nenhum material vinculado ainda."));
     }
 
     const addSection = DomHelpers.createElement("section", "leif-resource-material-section");
     addSection.append(
       DomHelpers.createSectionSubtitle("Adicionar novo material"),
-      DomHelpers.createParagraph("Use esta área para anexar PDF, vídeo ou link ao recurso em edição."),
+      DomHelpers.createParagraph(
+        "Use esta área para anexar PDF, vídeo ou link ao recurso em edição."
+      ),
       this.renderAddMaterialForm(item)
     );
 
-    content.append(
-      materialSection,
-      addSection
-    );
+    content.append(materialSection, addSection);
 
     td.appendChild(content);
     tr.appendChild(td);
@@ -324,12 +338,6 @@ export class ItemsTab {
 
     const progressBar = DomHelpers.createProgressBar(readed, total);
     cell.appendChild(progressBar);
-
-    if (progress?.completed) {
-      const badge = DomHelpers.createElement("span", "leif-pages-completed");
-      badge.textContent = "✓ Concluído";
-      cell.appendChild(badge);
-    }
 
     return cell;
   }
@@ -372,9 +380,7 @@ export class ItemsTab {
       });
       content.appendChild(list);
     } else {
-      content.appendChild(
-        DomHelpers.createParagraph("Nenhum material vinculado ainda.")
-      );
+      content.appendChild(DomHelpers.createParagraph("Nenhum material vinculado ainda."));
     }
 
     return content;
@@ -382,11 +388,14 @@ export class ItemsTab {
 
   private renderMaterialEditor(item: StudyItem, reference: ResourceReference): HTMLElement {
     const titleInput = DomHelpers.createInput("text", "Título", reference.title);
-    const typeSelect = DomHelpers.createSelect([
-      ["pdf", "PDF"],
-      ["video", "Vídeo"],
-      ["link", "Link"]
-    ], reference.type);
+    const typeSelect = DomHelpers.createSelect(
+      [
+        ["pdf", "PDF"],
+        ["video", "Vídeo"],
+        ["link", "Link"]
+      ],
+      reference.type
+    );
     const urlInput = DomHelpers.createInput("url", "URL", reference.url ?? "");
 
     const row = DomHelpers.createElement("div", "leif-resource-material-editor");
@@ -395,7 +404,7 @@ export class ItemsTab {
     row.append(
       this.renderMaterialField("Título", titleInput),
       this.renderMaterialField("Tipo", typeSelect),
-      this.renderMaterialField("URL", urlInput)
+      DomHelpers.createUrlField("URL", urlInput)
     );
 
     const actions = DomHelpers.createElement("div", "leif-resource-material-editor-actions");
@@ -455,7 +464,7 @@ export class ItemsTab {
     form.append(
       this.renderMaterialField("Título", titleInput),
       this.renderMaterialField("Tipo", typeSelect),
-      this.renderMaterialField("URL", urlInput),
+      DomHelpers.createUrlField("URL", urlInput),
       DomHelpers.createElement("div", "leif-form-actions")
     );
 
@@ -500,7 +509,9 @@ export class ItemsTab {
     try {
       await this.updateStudyItemUseCase.execute({
         itemId: item.id,
-        resourceReferences: (item.resourceReferences ?? []).filter((reference) => reference.id !== referenceId)
+        resourceReferences: (item.resourceReferences ?? []).filter(
+          (reference) => reference.id !== referenceId
+        )
       });
       await this.onUpdate();
     } catch (error) {
