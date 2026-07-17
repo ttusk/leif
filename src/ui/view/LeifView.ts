@@ -43,7 +43,7 @@ export class LeifView extends ItemView {
     private readonly dataStore: PluginDataStore
   ) {
     super(leaf);
-    this.dashboardTab = new DashboardTab(dataStore, () => this.refresh());
+    this.dashboardTab = new DashboardTab(dataStore, (tabId) => this.selectTab(tabId));
     this.contestsTab = new ContestsTab(dataStore, () => this.refresh());
     this.cycleTab = new CycleTab(dataStore, () => this.refresh());
     this.itemsTab = new ItemsTab(dataStore, () => this.refresh());

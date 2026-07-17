@@ -692,6 +692,12 @@ form.leif-card,
   border-left: 1px solid var(--leif-border);
 }
 
+.leif-next-activity-action {
+  grid-column: 1 / -1;
+  justify-self: start;
+  margin-top: 2px;
+}
+
 .leif-next-activity-label,
 .leif-cycle-context-label {
   color: var(--leif-text-muted);

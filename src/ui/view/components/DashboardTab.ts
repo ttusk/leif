@@ -4,6 +4,7 @@ import { GetActiveContestProgressDashboardUseCase } from "@/application/use-case
 import { GetActiveCycleSnapshotUseCase } from "@/application/use-cases/GetActiveCycleSnapshotUseCase";
 import type { Subject } from "@/domain/entities/Subject";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
+import type { LeifTabId } from "@/ui/constants";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 
 /**
@@ -16,7 +17,7 @@ export class DashboardTab {
 
   constructor(
     private readonly dataStore: PluginDataStore,
-    private readonly onUpdate: () => Promise<void>
+    private readonly onNavigate: (tabId: LeifTabId) => Promise<void>
   ) {
     this.getActiveCycleSnapshotUseCase = new GetActiveCycleSnapshotUseCase(dataStore);
     this.getActiveContestSummaryUseCase = new GetActiveContestSummaryUseCase(dataStore);
@@ -73,7 +74,7 @@ export class DashboardTab {
         stage: recommendedSubject?.currentStage,
         nextSubjectName: afterRecommendedSubject?.name,
         nextItemName: itemMap.get(afterRecommendedItemId ?? ""),
-        registerHint: recommendedSubject ? "Registre o estudo na aba Registros." : undefined
+        canRegisterStudy: Boolean(recommendedSubject)
       })
     );
 
@@ -165,7 +166,7 @@ export class DashboardTab {
     stage?: string;
     nextSubjectName?: string;
     nextItemName?: string;
-    registerHint?: string;
+    canRegisterStudy?: boolean;
   }): HTMLElement {
     const panel = DomHelpers.createElement("section", "leif-next-activity");
     const intro = DomHelpers.createElement("div", "leif-next-activity-intro");
@@ -186,10 +187,14 @@ export class DashboardTab {
       this.renderActivityMeta("Etapa", activity.stage?.trim() ? activity.stage : "sem etapa")
     );
 
-    if (activity.registerHint) {
-      const hint = DomHelpers.createElement("span", "leif-next-activity-item");
-      hint.textContent = activity.registerHint;
-      meta.appendChild(hint);
+    if (activity.canRegisterStudy) {
+      meta.appendChild(
+        DomHelpers.createButton("Ir para Registros", {
+          icon: "arrow-right",
+          className: "leif-next-activity-action",
+          onClick: () => this.onNavigate("sessions")
+        })
+      );
     }
 
     panel.append(intro, meta);

@@ -266,6 +266,27 @@ describe("LeifView", () => {
     );
   });
 
+  it("opens Registros from the dashboard study panel", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiData(dataStore);
+
+    const { leaf } = await openLeifView(dataStore);
+    const nextActivity = leaf.containerEl.querySelector<HTMLElement>(".leif-next-activity");
+    const registerButton = Array.from(nextActivity?.querySelectorAll("button") ?? []).find(
+      (button) => button.textContent?.includes("Ir para Registros")
+    );
+
+    expect(nextActivity?.textContent).not.toContain("Registre o estudo na aba Registros");
+    expect(registerButton).not.toBeUndefined();
+
+    registerButton?.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const sessionsTab = leaf.containerEl.querySelector<HTMLElement>("[data-tab='sessions']");
+    expect(sessionsTab?.getAttribute("aria-selected")).toBe("true");
+    expect(leaf.containerEl.querySelector("#leif-tabpanel")?.textContent).toContain("Registros");
+  });
+
   it("guides the user when today's page has no active subject yet", async () => {
     const dataStore = new InMemoryPluginDataStore();
     const factory = new EntityRepositoryFactory(dataStore);

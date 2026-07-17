@@ -3233,9 +3233,9 @@ var GetActiveContestProgressDashboardUseCase = class {
 
 // src/ui/view/components/DashboardTab.ts
 var DashboardTab = class {
-  constructor(dataStore, onUpdate) {
+  constructor(dataStore, onNavigate) {
     this.dataStore = dataStore;
-    this.onUpdate = onUpdate;
+    this.onNavigate = onNavigate;
     this.getActiveCycleSnapshotUseCase = new GetActiveCycleSnapshotUseCase(dataStore);
     this.getActiveContestSummaryUseCase = new GetActiveContestSummaryUseCase(dataStore);
     this.getActiveContestProgressDashboardUseCase = new GetActiveContestProgressDashboardUseCase(
@@ -3281,7 +3281,7 @@ var DashboardTab = class {
         stage: recommendedSubject?.currentStage,
         nextSubjectName: afterRecommendedSubject?.name,
         nextItemName: itemMap.get(afterRecommendedItemId ?? ""),
-        registerHint: recommendedSubject ? "Registre o estudo na aba Registros." : void 0
+        canRegisterStudy: Boolean(recommendedSubject)
       })
     );
     const subjectSummaryCard = DomHelpers.createCard("Resumo por mat\xE9ria");
@@ -3362,10 +3362,14 @@ var DashboardTab = class {
       ),
       this.renderActivityMeta("Etapa", activity.stage?.trim() ? activity.stage : "sem etapa")
     );
-    if (activity.registerHint) {
-      const hint = DomHelpers.createElement("span", "leif-next-activity-item");
-      hint.textContent = activity.registerHint;
-      meta.appendChild(hint);
+    if (activity.canRegisterStudy) {
+      meta.appendChild(
+        DomHelpers.createButton("Ir para Registros", {
+          icon: "arrow-right",
+          className: "leif-next-activity-action",
+          onClick: () => this.onNavigate("sessions")
+        })
+      );
     }
     panel.append(intro, meta);
     if (activity.nextSubjectName || activity.nextItemName) {
@@ -5098,7 +5102,7 @@ var LeifView = class extends import_obsidian6.ItemView {
     this.activeTab = "dashboard";
     this.selectedSubjectId = null;
     this.tabButtons = /* @__PURE__ */ new Map();
-    this.dashboardTab = new DashboardTab(dataStore, () => this.refresh());
+    this.dashboardTab = new DashboardTab(dataStore, (tabId) => this.selectTab(tabId));
     this.contestsTab = new ContestsTab(dataStore, () => this.refresh());
     this.cycleTab = new CycleTab(dataStore, () => this.refresh());
     this.itemsTab = new ItemsTab(dataStore, () => this.refresh());
