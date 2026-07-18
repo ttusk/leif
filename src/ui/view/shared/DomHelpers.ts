@@ -15,11 +15,7 @@ export class DomHelpers {
     tagName: K,
     className?: string
   ): HTMLElementTagNameMap[K] {
-    const element = document.createElement(tagName);
-    if (className) {
-      element.className = className;
-    }
-    return element;
+    return createEl(tagName, className ? { cls: className } : undefined);
   }
 
   /**
@@ -98,7 +94,7 @@ export class DomHelpers {
    * Creates a strong (bold) text element.
    */
   static createStrong(text: string): HTMLElement {
-    const strong = document.createElement("strong");
+    const strong = this.createElement("strong");
     strong.textContent = text;
     return strong;
   }
@@ -134,7 +130,7 @@ export class DomHelpers {
    * Creates an input element.
    */
   static createInput(type: string, placeholder: string, value = ""): HTMLInputElement {
-    const input = document.createElement("input");
+    const input = this.createElement("input");
     input.type = type;
     input.placeholder = placeholder;
     input.value = value;
@@ -147,10 +143,10 @@ export class DomHelpers {
    * @param selectedValue - Optional value to pre-select
    */
   static createSelect(options: Array<[string, string]>, selectedValue?: string): HTMLSelectElement {
-    const select = document.createElement("select");
+    const select = this.createElement("select");
 
     options.forEach(([value, label]) => {
-      const option = document.createElement("option");
+      const option = this.createElement("option");
       option.value = value;
       option.textContent = label;
       if (value === selectedValue) {
@@ -166,7 +162,7 @@ export class DomHelpers {
    * Creates a textarea element.
    */
   static createTextarea(placeholder: string, value = ""): HTMLTextAreaElement {
-    const textarea = document.createElement("textarea");
+    const textarea = this.createElement("textarea");
     textarea.placeholder = placeholder;
     textarea.value = value;
     return textarea;
@@ -302,7 +298,7 @@ export class DomHelpers {
       type?: "button" | "submit" | "reset";
     } = {}
   ): HTMLButtonElement {
-    const button = document.createElement("button");
+    const button = this.createElement("button");
     button.type = options.type || "button";
     button.className = options.className || "";
 
@@ -319,7 +315,9 @@ export class DomHelpers {
     }
 
     if (options.onClick) {
-      button.addEventListener("click", options.onClick);
+      button.addEventListener("click", (event) => {
+        void options.onClick?.(event);
+      });
     }
 
     return button;
@@ -341,7 +339,7 @@ export class DomHelpers {
       onClick?: (event: MouseEvent) => void | Promise<void>;
     } = {}
   ): HTMLButtonElement {
-    const button = document.createElement("button");
+    const button = this.createElement("button");
     button.type = "button";
     button.className = options.className || "clickable-icon";
     button.setAttribute("aria-label", title);
@@ -354,7 +352,9 @@ export class DomHelpers {
     }
 
     if (options.onClick) {
-      button.addEventListener("click", options.onClick);
+      button.addEventListener("click", (event) => {
+        void options.onClick?.(event);
+      });
     }
 
     if (typeof setTooltip === "function") {
@@ -370,11 +370,11 @@ export class DomHelpers {
    * Creates a form element.
    */
   static createForm(onSubmit?: (event: Event) => void | Promise<void>): HTMLFormElement {
-    const form = document.createElement("form");
+    const form = this.createElement("form");
     if (onSubmit) {
       form.addEventListener("submit", (event) => {
         event.preventDefault();
-        onSubmit(event);
+        void onSubmit(event);
       });
     }
     return form;
@@ -393,7 +393,7 @@ export class DomHelpers {
   ): void {
     select.innerHTML = "";
     options.forEach(([value, label]) => {
-      const option = document.createElement("option");
+      const option = this.createElement("option");
       option.value = value;
       option.textContent = label;
       if (selectedValue !== undefined && value === selectedValue) {

@@ -133,8 +133,8 @@ export class LeifView extends ItemView {
       label.textContent = tab.label;
       button.append(icon, label);
       button.dataset.tab = tab.id;
-      button.addEventListener("click", async () => {
-        await this.selectTab(tab.id);
+      button.addEventListener("click", () => {
+        void this.selectTab(tab.id);
       });
       button.setAttribute("role", "tab");
       button.id = `leif-tab-${tab.id}`;

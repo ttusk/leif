@@ -16,7 +16,17 @@ describe("community release readiness", () => {
     expect(versions[version]).toBe(manifest.minAppVersion);
     expect(manifest.description).not.toBe("A bússola do seu estudo.");
     expect(manifest.authorUrl).toBe("https://github.com/ttusk");
+    expect(read("README.md")).toContain("## Instalação");
     expect(read("README.md")).toContain("## Como usar");
+  });
+
+  it("uses APIs and DOM patterns supported by the declared Obsidian version", () => {
+    const viewRegistration = read("src/ui/view/registerLeifView.ts");
+    const domHelpers = read("src/ui/view/shared/DomHelpers.ts");
+
+    expect(viewRegistration).not.toContain("workspace.revealLeaf");
+    expect(domHelpers).not.toContain("document.createElement");
+    expect(domHelpers).not.toMatch(/addEventListener\([^,]+,\s*options\.onClick\)/);
   });
 
   it("keeps demo and compiled artifacts out of the source repository", () => {

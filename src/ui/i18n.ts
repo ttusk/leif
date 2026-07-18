@@ -29,7 +29,7 @@ const ptBR = {
 
 export type TranslationKey = keyof typeof ptBR;
 
-const bundle: Record<string, string> = ptBR as unknown as Record<string, string>;
+const bundle: Record<string, string> = ptBR;
 
 export function t(key: TranslationKey): string {
   return bundle[key] ?? key;

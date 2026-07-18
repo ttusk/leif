@@ -1123,7 +1123,6 @@ form.leif-card,
   gap: 4px;
   overflow-x: auto;
   padding-bottom: 3px;
-  scrollbar-width: thin;
 }
 
 .leif-view.is-narrow .leif-tab-button {
@@ -1277,7 +1276,6 @@ form.leif-card,
     gap: 4px;
     overflow-x: auto;
     padding-bottom: 3px;
-    scrollbar-width: thin;
   }
 
   .leif-tab-button {

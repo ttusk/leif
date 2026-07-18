@@ -43,6 +43,7 @@ describe("Leif visual system", () => {
     expect(styles).toMatch(
       /\.leif-view\.is-narrow\s+\.leif-tab-bar\s*{[^}]*flex-direction:\s*row;[^}]*overflow-x:\s*auto;/s
     );
+    expect(styles).not.toContain("scrollbar-width");
   });
 
   it("gives semantic tabs a native, visible active state", () => {

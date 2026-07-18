@@ -14,7 +14,7 @@ describe("LeifPlugin", () => {
 
     const registeredPlugin = plugin as unknown as Plugin;
     expect(registeredPlugin.settingTabs).toHaveLength(0);
-    expect(registeredPlugin.commands.map((command) => command.id)).toEqual(["leif-open-view"]);
+    expect(registeredPlugin.commands.map((command) => command.id)).toEqual(["open-view"]);
     expect(registeredPlugin.commands[0]?.name).toBe("Abrir painel");
   });
 });

@@ -1,6 +1,17 @@
 const notices: string[] = [];
 const registeredIcons = new Map<string, string>();
 
+globalThis.createEl = ((tagName, options) => {
+  const element = document.createElement(tagName);
+  const className = typeof options === "string" ? options : options?.cls;
+
+  if (className) {
+    element.className = Array.isArray(className) ? className.join(" ") : className;
+  }
+
+  return element;
+}) as typeof createEl;
+
 type ViewCreator = (leaf: WorkspaceLeaf) => ItemView;
 
 export class Notice {
@@ -72,7 +83,7 @@ export class Workspace {
     return this.getLeaf();
   }
 
-  async revealLeaf(_leaf: WorkspaceLeaf): Promise<void> {
+  setActiveLeaf(_leaf: WorkspaceLeaf, _params?: { focus?: boolean }): void {
     // Test stub.
   }
 

@@ -10,9 +10,11 @@ export const LEIF_ICON = "compass";
 export function registerLeifView(plugin: Obsidian.Plugin, dataStore: PluginDataStore): void {
   plugin.registerView(LEIF_VIEW_TYPE, (leaf) => new LeifView(leaf, dataStore));
 
-  plugin.addRibbonIcon(LEIF_ICON, "Abrir Leif", () => openLeifView(plugin));
+  plugin.addRibbonIcon(LEIF_ICON, "Abrir Leif", () => {
+    void openLeifView(plugin);
+  });
   plugin.addCommand({
-    id: "leif-open-view",
+    id: "open-view",
     name: t("command.openView"),
     callback: async () => {
       await openLeifView(plugin);
@@ -29,5 +31,5 @@ export async function openLeifView(plugin: Obsidian.Plugin): Promise<void> {
     active: true
   });
 
-  await plugin.app.workspace.revealLeaf(leaf);
+  plugin.app.workspace.setActiveLeaf(leaf, { focus: true });
 }

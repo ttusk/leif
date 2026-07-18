@@ -209,21 +209,21 @@ export class SessionsTab {
     fromInput.dataset.sessionFilter = "from";
     toInput.dataset.sessionFilter = "to";
 
-    subjectSelect.addEventListener("change", async () => {
+    subjectSelect.addEventListener("change", () => {
       this.historySubjectFilter = subjectSelect.value;
-      await this.onUpdate();
+      void this.onUpdate();
     });
-    typeSelect.addEventListener("change", async () => {
+    typeSelect.addEventListener("change", () => {
       this.historyTypeFilter = typeSelect.value;
-      await this.onUpdate();
+      void this.onUpdate();
     });
-    fromInput.addEventListener("change", async () => {
+    fromInput.addEventListener("change", () => {
       this.historyFromFilter = fromInput.value;
-      await this.onUpdate();
+      void this.onUpdate();
     });
-    toInput.addEventListener("change", async () => {
+    toInput.addEventListener("change", () => {
       this.historyToFilter = toInput.value;
-      await this.onUpdate();
+      void this.onUpdate();
     });
 
     const filters = DomHelpers.createElement("div", "leif-session-filters");

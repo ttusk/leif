@@ -80,7 +80,7 @@ async function openLeifView(dataStore: PluginDataStore): Promise<{
   const plugin = new Plugin(app);
   registerLeifView(plugin as never, dataStore);
 
-  const openCommand = plugin.commands.find((command) => command.id === "leif-open-view");
+  const openCommand = plugin.commands.find((command) => command.id === "open-view");
 
   if (!openCommand) {
     throw new Error("Open view command was not registered.");
@@ -155,8 +155,8 @@ describe("LeifView", () => {
 
     expect(plugin.ribbonIcons).toHaveLength(1);
     expect(plugin.ribbonIcons[0]?.title).toBe("Abrir Leif");
-    expect(plugin.commands.map((command) => command.id)).toContain("leif-open-view");
-    expect(plugin.commands.find((command) => command.id === "leif-open-view")?.name).toBe(
+    expect(plugin.commands.map((command) => command.id)).toContain("open-view");
+    expect(plugin.commands.find((command) => command.id === "open-view")?.name).toBe(
       "Abrir painel"
     );
     expect(leaf.containerEl.textContent).toContain("Hoje");
