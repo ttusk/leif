@@ -20,7 +20,9 @@ export class AdvanceCycleUseCase {
     this.guard = new ActiveContestGuard(dataStore);
   }
 
-  async execute(): Promise<ActiveCycleSnapshot & { currentSubjectId: string | null; currentItemId: string | null }> {
+  async execute(): Promise<
+    ActiveCycleSnapshot & { currentSubjectId: string | null; currentItemId: string | null }
+  > {
     const activeContestId = await this.guard.requireActiveContest();
 
     const contestSubjects = await this.guard.getActiveContestSubjects();
@@ -41,9 +43,7 @@ export class AdvanceCycleUseCase {
       throw new ValidationError(`Contest "${activeContestId}" has no active subjects.`);
     }
 
-    const subjectItems = data.studyItems.filter(
-      (item) => item.subjectId === nextSubject.id
-    );
+    const subjectItems = data.studyItems.filter((item) => item.subjectId === nextSubject.id);
     const isCompleted = this.progressService.buildCompletionPredicate(
       subjectItems,
       data.studySessions
@@ -62,13 +62,8 @@ export class AdvanceCycleUseCase {
       )
     });
 
-    const subjectAfter = this.cycleService.getNextActiveSubject(
-      contestSubjects,
-      nextSubject.id
-    );
-    const subjectAfterItems = data.studyItems.filter(
-      (item) => item.subjectId === subjectAfter?.id
-    );
+    const subjectAfter = this.cycleService.getNextActiveSubject(contestSubjects, nextSubject.id);
+    const subjectAfterItems = data.studyItems.filter((item) => item.subjectId === subjectAfter?.id);
     const isSubjectAfterCompleted = this.progressService.buildCompletionPredicate(
       subjectAfterItems,
       data.studySessions

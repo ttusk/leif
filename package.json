@@ -1,11 +1,19 @@
 {
   "name": "leif",
   "version": "0.1.0",
-  "description": "Plugin de Obsidian para acompanhar ciclo de estudos para concursos.",
+  "description": "Organize concursos, ciclos, editais, materiais e sessões de estudo no Obsidian.",
+  "main": "main.js",
+  "author": {
+    "name": "Luiz Gustavo",
+    "url": "https://github.com/ttusk"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ttusk/leif.git"
+  },
   "license": "MIT",
   "scripts": {
-    "build": "node scripts/generate-sample-data.mjs && node esbuild.config.mjs production",
-    "sample:data": "node scripts/generate-sample-data.mjs",
+    "build": "npm run typecheck && node esbuild.config.mjs production",
     "dev": "node esbuild.config.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
@@ -13,7 +21,9 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "verify:release": "node scripts/verify-release.mjs",
+    "release:check": "npm run lint && npm test && npm run format:check && npm run build && npm run verify:release"
   },
   "devDependencies": {
     "@types/node": "^24.0.1",

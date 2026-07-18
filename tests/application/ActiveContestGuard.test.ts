@@ -33,7 +33,14 @@ describe("ActiveContestGuard", () => {
     await store.save({
       ...data,
       activeContestId: "contest-1",
-      contests: [{ id: "contest-1", name: "TRT", subjectIds: [], wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] } }]
+      contests: [
+        {
+          id: "contest-1",
+          name: "TRT",
+          subjectIds: [],
+          wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] }
+        }
+      ]
     });
 
     const guard = new ActiveContestGuard(store);
@@ -54,11 +61,45 @@ describe("ActiveContestGuard", () => {
     await store.save({
       ...data,
       activeContestId: "contest-1",
-      contests: [{ id: "contest-1", name: "TRT", subjectIds: [], wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] } }],
+      contests: [
+        {
+          id: "contest-1",
+          name: "TRT",
+          subjectIds: [],
+          wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] }
+        }
+      ],
       subjects: [
-        { id: "sub-2", contestId: "contest-1", name: "Constitutional", order: 2, isActive: true, plannedStudyMinutes: 45, itemIds: [], topicIds: [] },
-        { id: "sub-1", contestId: "contest-1", name: "Portuguese", order: 1, isActive: true, plannedStudyMinutes: 60, itemIds: [], topicIds: [] },
-        { id: "sub-3", contestId: "contest-2", name: "Tax", order: 1, isActive: true, plannedStudyMinutes: 30, itemIds: [], topicIds: [] }
+        {
+          id: "sub-2",
+          contestId: "contest-1",
+          name: "Constitutional",
+          order: 2,
+          isActive: true,
+          plannedStudyMinutes: 45,
+          itemIds: [],
+          topicIds: []
+        },
+        {
+          id: "sub-1",
+          contestId: "contest-1",
+          name: "Portuguese",
+          order: 1,
+          isActive: true,
+          plannedStudyMinutes: 60,
+          itemIds: [],
+          topicIds: []
+        },
+        {
+          id: "sub-3",
+          contestId: "contest-2",
+          name: "Tax",
+          order: 1,
+          isActive: true,
+          plannedStudyMinutes: 30,
+          itemIds: [],
+          topicIds: []
+        }
       ]
     });
 
@@ -75,10 +116,35 @@ describe("ActiveContestGuard", () => {
     await store.save({
       ...data,
       activeContestId: "contest-1",
-      contests: [{ id: "contest-1", name: "TRT", subjectIds: [], wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] } }],
+      contests: [
+        {
+          id: "contest-1",
+          name: "TRT",
+          subjectIds: [],
+          wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] }
+        }
+      ],
       subjects: [
-        { id: "sub-1", contestId: "contest-1", name: "Portuguese", order: 1, isActive: true, plannedStudyMinutes: 60, itemIds: [], topicIds: [] },
-        { id: "sub-2", contestId: "contest-1", name: "Constitutional", order: 2, isActive: false, plannedStudyMinutes: 45, itemIds: [], topicIds: [] }
+        {
+          id: "sub-1",
+          contestId: "contest-1",
+          name: "Portuguese",
+          order: 1,
+          isActive: true,
+          plannedStudyMinutes: 60,
+          itemIds: [],
+          topicIds: []
+        },
+        {
+          id: "sub-2",
+          contestId: "contest-1",
+          name: "Constitutional",
+          order: 2,
+          isActive: false,
+          plannedStudyMinutes: 45,
+          itemIds: [],
+          topicIds: []
+        }
       ]
     });
 

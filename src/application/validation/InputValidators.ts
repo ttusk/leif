@@ -34,14 +34,6 @@ function requireNonNegative(value: number | undefined, fieldName: string): strin
   return undefined;
 }
 
-function requireNonNegativeInteger(value: number | undefined, fieldName: string): string | undefined {
-  if (value === undefined) return undefined;
-  if (!Number.isInteger(value)) {
-    return `${fieldName} must be an integer`;
-  }
-  return requireNonNegative(value, fieldName);
-}
-
 function requirePositive(value: number | undefined, fieldName: string): string | undefined {
   if (value === undefined || value <= 0) {
     return `${fieldName} must be greater than zero`;
@@ -65,7 +57,11 @@ function requireValidUrl(value: string | undefined, fieldName: string): string |
   }
 }
 
-function requireMinLength(value: string | undefined, min: number, fieldName: string): string | undefined {
+function requireMinLength(
+  value: string | undefined,
+  min: number,
+  fieldName: string
+): string | undefined {
   if (value && value.length < min) {
     return `${fieldName} must be at least ${min} characters`;
   }
@@ -114,7 +110,13 @@ export class CreateSubjectValidator {
  * Validates input for creating a study item.
  */
 export class CreateStudyItemValidator {
-  validate(input: { subjectId: string; title: string; weight?: number; questionCount?: number; totalPages?: number }): ValidationResult {
+  validate(input: {
+    subjectId: string;
+    title: string;
+    weight?: number;
+    questionCount?: number;
+    totalPages?: number;
+  }): ValidationResult {
     return collectErrors(
       requireNonEmpty(input.subjectId, "Subject ID"),
       requireNonEmpty(input.title, "Title"),
@@ -142,7 +144,13 @@ export class CreateTopicValidator {
  * Validates input for registering a study session.
  */
 export class RegisterStudySessionValidator {
-  validate(input: { id: string; contestId: string; type: string; studiedAt: string; pagesOrCount?: number }): ValidationResult {
+  validate(input: {
+    id: string;
+    contestId: string;
+    type: string;
+    studiedAt: string;
+    pagesOrCount?: number;
+  }): ValidationResult {
     return collectErrors(
       requireNonEmpty(input.id, "ID"),
       requireNonEmpty(input.contestId, "Contest ID"),
@@ -172,9 +180,7 @@ export class ReorderSubjectsValidator {
  */
 export class SetActiveContestValidator {
   validate(input: { contestId: string }): ValidationResult {
-    return collectErrors(
-      requireNonEmpty(input.contestId, "Contest ID")
-    );
+    return collectErrors(requireNonEmpty(input.contestId, "Contest ID"));
   }
 }
 
@@ -183,9 +189,7 @@ export class SetActiveContestValidator {
  */
 export class SetSubjectActiveStateValidator {
   validate(input: { subjectId: string; isActive: boolean }): ValidationResult {
-    return collectErrors(
-      requireNonEmpty(input.subjectId, "Subject ID")
-    );
+    return collectErrors(requireNonEmpty(input.subjectId, "Subject ID"));
   }
 }
 
@@ -193,7 +197,11 @@ export class SetSubjectActiveStateValidator {
  * Validates input for updating a subject's configuration.
  */
 export class UpdateSubjectConfigurationValidator {
-  validate(input: { subjectId: string; plannedStudyMinutes?: number; currentStage?: string }): ValidationResult {
+  validate(input: {
+    subjectId: string;
+    plannedStudyMinutes?: number;
+    currentStage?: string;
+  }): ValidationResult {
     return collectErrors(
       requireNonEmpty(input.subjectId, "Subject ID"),
       requireNonNegative(input.plannedStudyMinutes, "Planned study minutes")
@@ -206,9 +214,7 @@ export class UpdateSubjectConfigurationValidator {
  */
 export class DeleteStudySessionValidator {
   validate(input: { sessionId: string }): ValidationResult {
-    return collectErrors(
-      requireNonEmpty(input.sessionId, "Session ID")
-    );
+    return collectErrors(requireNonEmpty(input.sessionId, "Session ID"));
   }
 }
 
@@ -216,13 +222,20 @@ export class DeleteStudySessionValidator {
  * Validates input for adding a resource reference to a study item.
  */
 export class AddStudyItemResourceReferenceValidator {
-  validate(input: { studyItemId: string; resourceReference: { id: string; title: string; type: string } }): ValidationResult {
+  validate(input: {
+    studyItemId: string;
+    resourceReference: { id: string; title: string; type: string };
+  }): ValidationResult {
     return collectErrors(
       requireNonEmpty(input.studyItemId, "Study item ID"),
       requireNonEmpty(input.resourceReference.id, "Resource reference ID"),
       requireNonEmpty(input.resourceReference.title, "Resource reference title"),
       requireNonEmpty(input.resourceReference.type, "Resource reference type"),
-      requireOneOf(input.resourceReference.type, ["pdf", "video", "link"], "Resource reference type")
+      requireOneOf(
+        input.resourceReference.type,
+        ["pdf", "video", "link"],
+        "Resource reference type"
+      )
     );
   }
 }
@@ -231,7 +244,10 @@ export class AddStudyItemResourceReferenceValidator {
  * Validates input for linking a question notebook.
  */
 export class LinkQuestionNotebookValidator {
-  validate(input: { topicId: string; questionNotebook: { id: string; name: string; url: string } }): ValidationResult {
+  validate(input: {
+    topicId: string;
+    questionNotebook: { id: string; name: string; url: string };
+  }): ValidationResult {
     return collectErrors(
       requireNonEmpty(input.topicId, "Topic ID"),
       requireNonEmpty(input.questionNotebook.id, "Question notebook ID"),
@@ -246,10 +262,7 @@ export class LinkQuestionNotebookValidator {
  */
 export class UpdateContestWallValidator {
   validate(input: { contestId: string; wall?: Wall }): ValidationResult {
-    const wallLinks = [
-      ...(input.wall?.noticeLinks ?? []),
-      ...(input.wall?.examLinks ?? [])
-    ];
+    const wallLinks = [...(input.wall?.noticeLinks ?? []), ...(input.wall?.examLinks ?? [])];
 
     return collectErrors(
       requireNonEmpty(input.contestId, "Contest ID"),

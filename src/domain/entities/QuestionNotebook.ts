@@ -17,6 +17,7 @@ export class QuestionNotebook {
     if (!url?.trim()) throw new ValidationError("QuestionNotebook URL is required");
     if (solvedQuestions < 0) throw new ValidationError("Solved questions cannot be negative");
     if (correctAnswers < 0) throw new ValidationError("Correct answers cannot be negative");
-    if (correctAnswers > solvedQuestions) throw new ValidationError("Correct answers cannot exceed solved questions");
+    if (correctAnswers > solvedQuestions)
+      throw new ValidationError("Correct answers cannot exceed solved questions");
   }
 }

@@ -120,8 +120,15 @@ describe("AdvanceCycleUseCase", () => {
       plannedStudyMinutes: 45
     });
 
-    const completedCurrentSubjectItem = await createStudyItem.execute({ subjectId: "subject-1", title: "Sintaxe", totalPages: 10 });
-    const upcomingSubjectItem = await createStudyItem.execute({ subjectId: "subject-2", title: "Controle de constitucionalidade" });
+    const completedCurrentSubjectItem = await createStudyItem.execute({
+      subjectId: "subject-1",
+      title: "Sintaxe",
+      totalPages: 10
+    });
+    const upcomingSubjectItem = await createStudyItem.execute({
+      subjectId: "subject-2",
+      title: "Controle de constitucionalidade"
+    });
 
     await registerStudySession.execute({
       id: "session-1",

@@ -17,7 +17,16 @@ describe("DataMigrationService", () => {
 
   it("deduplicates entities by id and keeps the first occurrence", () => {
     const base = createDefaultLeifPluginData();
-    const subject = { id: "subject-1", contestId: "c1", name: "Portuguese", order: 1, isActive: true, plannedStudyMinutes: 60, itemIds: [], topicIds: [] };
+    const subject = {
+      id: "subject-1",
+      contestId: "c1",
+      name: "Portuguese",
+      order: 1,
+      isActive: true,
+      plannedStudyMinutes: 60,
+      itemIds: [],
+      topicIds: []
+    };
     const data: LeifPluginData = {
       ...base,
       subjects: [subject, { ...subject, name: "Duplicate" }]

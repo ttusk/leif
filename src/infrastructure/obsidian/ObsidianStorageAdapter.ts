@@ -14,4 +14,3 @@ export class ObsidianStorageAdapter implements PersistentStorageAdapter<LeifPlug
     await this.plugin.saveData(data);
   }
 }
-

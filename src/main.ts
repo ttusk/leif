@@ -2,7 +2,6 @@ import { Plugin } from "obsidian";
 
 import { PluginDataStore } from "@/infrastructure/persistence/PluginDataStore";
 import { ObsidianStorageAdapter } from "@/infrastructure/obsidian/ObsidianStorageAdapter";
-import { registerCommands } from "@/ui/commands/registerCommands";
 import { registerLeifView } from "@/ui/view/registerLeifView";
 
 export default class LeifPlugin extends Plugin {
@@ -13,6 +12,5 @@ export default class LeifPlugin extends Plugin {
     await this.dataStore.load();
 
     registerLeifView(this, this.dataStore);
-    registerCommands(this, this.dataStore);
   }
 }

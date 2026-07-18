@@ -39,7 +39,8 @@ export class GetActiveCycleSnapshotUseCase {
 
     const contestSubjects = await this.guard.getActiveContestSubjects();
 
-    const currentSubject = contestSubjects.find((subject) => subject.id === currentState.currentSubjectId) ?? null;
+    const currentSubject =
+      contestSubjects.find((subject) => subject.id === currentState.currentSubjectId) ?? null;
     const nextSubject = this.cycleService.getNextActiveSubject(
       contestSubjects,
       currentState.currentSubjectId ?? undefined
@@ -62,7 +63,7 @@ export class GetActiveCycleSnapshotUseCase {
       nextItemId: subjectForNextItem
         ? this.cycleService.getNextItemId(
             subjectForNextItem,
-            currentSubject ? currentState.currentItemId ?? undefined : undefined,
+            currentSubject ? (currentState.currentItemId ?? undefined) : undefined,
             isCompleted
           )
         : null

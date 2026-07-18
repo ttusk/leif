@@ -3,7 +3,8 @@
   "name": "Leif",
   "version": "0.1.0",
   "minAppVersion": "1.5.0",
-  "description": "A bússola do seu estudo.",
+  "description": "Organize concursos, ciclos, editais, materiais e sessões de estudo.",
   "author": "Luiz Gustavo",
+  "authorUrl": "https://github.com/ttusk",
   "isDesktopOnly": false
 }

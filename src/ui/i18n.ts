@@ -8,21 +8,7 @@
  */
 
 const ptBR = {
-  "command.openView": "Abrir painel do Leif",
-  "command.showActiveContest": "Mostrar concurso ativo",
-  "command.seedDemoData": "Criar dados de demonstração",
-  "command.switchActiveContest": "Trocar concurso ativo",
-  "command.showActiveContestSubjects": "Mostrar matérias do concurso ativo",
-  "command.reorderActiveContestSubjects": "Reordenar matérias do concurso ativo",
-  "command.toggleFirstSubjectActive": "Ativar/desativar primeira matéria",
-  "command.updateFirstSubjectConfig": "Atualizar configuração da primeira matéria",
-  "command.advanceCycle": "Avançar ciclo",
-  "command.showCycleSnapshot": "Mostrar estado do ciclo",
-  "command.showActiveContestWall": "Mostrar mural do concurso ativo",
-  "command.showActiveContestSummary": "Mostrar resumo do concurso ativo",
-  "command.registerDemoQuestionSession": "Registrar sessão de questões de demonstração",
-  "command.registerDemoVideoSession": "Registrar sessão de vídeo de demonstração",
-  "command.resetPluginData": "Redefinir dados do plugin",
+  "command.openView": "Abrir painel",
 
   "tab.dashboard": "Hoje",
   "tab.contests": "Concursos",

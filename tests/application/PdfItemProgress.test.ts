@@ -8,7 +8,7 @@ import { UpdateStudyItemUseCase } from "@/application/use-cases/UpdateStudyItemU
 import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
 import { PluginDataStore } from "@/infrastructure/persistence/PluginDataStore";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
-import { seedMinimalContest } from "@/infrastructure/persistence/Seeder";
+import { seedMinimalContest } from "../fixtures/seedMinimalContest";
 
 class InMemoryStorageAdapter implements PersistentStorageAdapter<LeifPluginData> {
   private data: LeifPluginData | null;
@@ -40,7 +40,9 @@ describe("GetActiveContestProgressDashboardUseCase - PDF completion", () => {
 
     const item = await createItem.execute({ subjectId, title: "Sintaxe" });
 
-    await expect(updateItem.execute({ itemId: item.id, title: "Concordância" })).resolves.toMatchObject({
+    await expect(
+      updateItem.execute({ itemId: item.id, title: "Concordância" })
+    ).resolves.toMatchObject({
       id: item.id,
       title: "Concordância"
     });

@@ -3,9 +3,13 @@ name: Build and Test
 on:
   push:
     branches: [master]
+    tags: ["*"]
   pull_request:
     branches: [master]
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -23,14 +27,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Lint
-        run: npm run lint
-
-      - name: Run tests
-        run: npm test
-
-      - name: Build plugin
-        run: npm run build
+      - name: Verify release
+        run: npm run release:check
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
@@ -45,6 +43,8 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -62,7 +62,7 @@ jobs:
         run: npm run build
 
       - name: Create release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
             main.js

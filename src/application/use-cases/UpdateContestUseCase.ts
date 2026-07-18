@@ -30,7 +30,8 @@ export class UpdateContestUseCase {
         ...contest.wall,
         notes: input.notes ?? contest.wall.notes
       },
-      examPlan: input.examPlan !== undefined ? this.normalizeExamPlan(input.examPlan) : contest.examPlan
+      examPlan:
+        input.examPlan !== undefined ? this.normalizeExamPlan(input.examPlan) : contest.examPlan
     }));
   }
 

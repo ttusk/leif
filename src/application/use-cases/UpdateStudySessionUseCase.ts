@@ -35,7 +35,8 @@ export class UpdateStudySessionUseCase {
 
     return await this.sessionRepository.update(input.sessionId, (session) => {
       const newCount = input.pagesOrCount !== undefined ? input.pagesOrCount : session.pagesOrCount;
-      const newCorrect = input.correctAnswers !== undefined ? input.correctAnswers : session.correctAnswers;
+      const newCorrect =
+        input.correctAnswers !== undefined ? input.correctAnswers : session.correctAnswers;
 
       if (newCorrect !== undefined && newCount !== undefined && newCorrect > newCount) {
         throw new ValidationError("correctAnswers cannot exceed pagesOrCount");

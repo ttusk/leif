@@ -49,9 +49,8 @@ export class UpdateStudyItemUseCase {
       weight: input.weight !== undefined ? input.weight : item.weight,
       questionCount: input.questionCount !== undefined ? input.questionCount : item.questionCount,
       totalPages: input.totalPages !== undefined ? input.totalPages : item.totalPages,
-      resourceReferences: input.resourceReferences !== undefined
-        ? input.resourceReferences
-        : item.resourceReferences
+      resourceReferences:
+        input.resourceReferences !== undefined ? input.resourceReferences : item.resourceReferences
     }));
   }
 }

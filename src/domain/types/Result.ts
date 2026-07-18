@@ -2,9 +2,7 @@
  * Result type for better error handling.
  * Represents either a successful value or an error.
  */
-export type Result<T, E = Error> = 
-  | { success: true; value: T }
-  | { success: false; error: E };
+export type Result<T, E = Error> = { success: true; value: T } | { success: false; error: E };
 
 /**
  * Result factory methods for creating success and error results.

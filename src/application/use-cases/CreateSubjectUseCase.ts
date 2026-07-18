@@ -35,13 +35,15 @@ export class CreateSubjectUseCase {
       throw new ValidationError(validation.errors.join(", "));
     }
 
-    const contest = await this.contestRepository.findById(input.contestId);
+    await this.contestRepository.findById(input.contestId);
 
-    const contestSubjects = (await this.subjectRepository.findAll())
-      .filter((subject) => subject.contestId === input.contestId);
-    const nextOrder = contestSubjects.length === 0
-      ? 1
-      : Math.max(...contestSubjects.map((subject) => subject.order)) + 1;
+    const contestSubjects = (await this.subjectRepository.findAll()).filter(
+      (subject) => subject.contestId === input.contestId
+    );
+    const nextOrder =
+      contestSubjects.length === 0
+        ? 1
+        : Math.max(...contestSubjects.map((subject) => subject.order)) + 1;
 
     const subject = new Subject(
       input.id,

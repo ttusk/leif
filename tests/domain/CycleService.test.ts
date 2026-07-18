@@ -57,11 +57,7 @@ describe("CycleService", () => {
     };
 
     it("skips items whose read pages meet or exceed totalPages", () => {
-      const next = service.getNextItemId(
-        subject,
-        "item-1",
-        isCompleted
-      );
+      const next = service.getNextItemId(subject, "item-1", isCompleted);
 
       expect(next).toBe("item-2");
     });
@@ -77,11 +73,7 @@ describe("CycleService", () => {
     });
 
     it("returns null when every item is completed", () => {
-      const next = service.getNextItemId(
-        subject,
-        "item-1",
-        () => true
-      );
+      const next = service.getNextItemId(subject, "item-1", () => true);
 
       expect(next).toBeNull();
     });

@@ -75,7 +75,9 @@ describe("Contest management", () => {
 
     await setActiveContest.execute({ contestId: "contest-2" });
 
-    await expect(listSubjects.execute()).resolves.toMatchObject([{ id: "subject-2", contestId: "contest-2" }]);
+    await expect(listSubjects.execute()).resolves.toMatchObject([
+      { id: "subject-2", contestId: "contest-2" }
+    ]);
   });
 
   it("stores optional exam planning metadata for a contest", async () => {

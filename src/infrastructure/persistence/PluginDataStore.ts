@@ -1,9 +1,6 @@
 import type { PluginDataStore as PluginDataStorePort } from "@/application/ports/PluginDataStore";
 import type { PersistentStorageAdapter } from "@/application/ports/PersistentStorageAdapter";
-import {
-  createDefaultLeifPluginData,
-  type LeifPluginData
-} from "@/domain/types/LeifPluginData";
+import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
 import { DataMigrationService } from "@/infrastructure/persistence/DataMigrations";
 
 /**
@@ -19,7 +16,7 @@ export class PluginDataStore implements PluginDataStorePort {
 
   /**
    * Loads plugin data from storage, applying migrations if necessary.
-   * 
+   *
    * @returns The loaded and migrated plugin data
    */
   async load(): Promise<LeifPluginData> {
@@ -41,11 +38,10 @@ export class PluginDataStore implements PluginDataStorePort {
 
   /**
    * Saves plugin data to storage.
-   * 
+   *
    * @param data - The data to save
    */
   async save(data: LeifPluginData): Promise<void> {
     await this.storageAdapter.save(data);
   }
 }
-

@@ -32,7 +32,8 @@ export const ICON_NAMES = {
   download: "download"
 } as const;
 
-export type LeifTabId = "dashboard" | "contests" | "cycle" | "items" | "topics" | "sessions" | "wall";
+export type LeifTabId =
+  "dashboard" | "contests" | "cycle" | "items" | "topics" | "sessions" | "wall";
 
 export const TABS: Array<{ id: LeifTabId; label: string; icon: string }> = [
   { id: "dashboard", label: t("tab.dashboard"), icon: ICON_NAMES.dashboard },

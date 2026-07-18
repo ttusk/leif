@@ -54,8 +54,14 @@ export class DeleteStudySessionUseCase {
         ...topic,
         questionNotebook: {
           ...topic.questionNotebook,
-          solvedQuestions: Math.max(0, topic.questionNotebook.solvedQuestions - (session.pagesOrCount ?? 0)),
-          correctAnswers: Math.max(0, topic.questionNotebook.correctAnswers - (session.correctAnswers ?? 0))
+          solvedQuestions: Math.max(
+            0,
+            topic.questionNotebook.solvedQuestions - (session.pagesOrCount ?? 0)
+          ),
+          correctAnswers: Math.max(
+            0,
+            topic.questionNotebook.correctAnswers - (session.correctAnswers ?? 0)
+          )
         }
       };
     });

@@ -34,12 +34,7 @@ export class CreateTopicUseCase {
 
     await this.subjectRepository.findById(input.subjectId);
 
-    const topic = new Topic(
-      input.id,
-      input.subjectId,
-      input.name,
-      []
-    );
+    const topic = new Topic(input.id, input.subjectId, input.name, []);
 
     await this.topicRepository.create(topic);
 

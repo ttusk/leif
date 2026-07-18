@@ -6,8 +6,7 @@ export const StudySessionType = {
   QUESTIONS: "questions"
 } as const;
 
-export type StudySessionType =
-  (typeof StudySessionType)[keyof typeof StudySessionType];
+export type StudySessionType = (typeof StudySessionType)[keyof typeof StudySessionType];
 
 /**
  * Represents a registered study session.
@@ -31,9 +30,15 @@ export class StudySession {
     if (!contestId?.trim()) throw new ValidationError("StudySession contestId is required");
     if (!type) throw new ValidationError("StudySession type is required");
     if (!studiedAt?.trim()) throw new ValidationError("StudySession studiedAt is required");
-    if (pagesOrCount !== undefined && pagesOrCount < 0) throw new ValidationError("StudySession pagesOrCount cannot be negative");
-    if (correctAnswers !== undefined && correctAnswers < 0) throw new ValidationError("StudySession correctAnswers cannot be negative");
-    if (correctAnswers !== undefined && pagesOrCount !== undefined && correctAnswers > pagesOrCount) {
+    if (pagesOrCount !== undefined && pagesOrCount < 0)
+      throw new ValidationError("StudySession pagesOrCount cannot be negative");
+    if (correctAnswers !== undefined && correctAnswers < 0)
+      throw new ValidationError("StudySession correctAnswers cannot be negative");
+    if (
+      correctAnswers !== undefined &&
+      pagesOrCount !== undefined &&
+      correctAnswers > pagesOrCount
+    ) {
       throw new ValidationError("StudySession correctAnswers cannot exceed pagesOrCount");
     }
   }

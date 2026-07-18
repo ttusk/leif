@@ -47,10 +47,19 @@ describe("Study structure", () => {
     const getSnapshot = new GetActiveCycleSnapshotUseCase(store);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });
-    await createSubject.execute({ id: "subject-1", contestId: "contest-1", name: "Portuguese", plannedStudyMinutes: 60 });
+    await createSubject.execute({
+      id: "subject-1",
+      contestId: "contest-1",
+      name: "Portuguese",
+      plannedStudyMinutes: 60
+    });
     const item1 = await createStudyItem.execute({ subjectId: "subject-1", title: "Sintaxe" });
     const item2 = await createStudyItem.execute({ subjectId: "subject-1", title: "Pontuação" });
-    await createTopic.execute({ id: "topic-1", subjectId: "subject-1", name: "Orações subordinadas" });
+    await createTopic.execute({
+      id: "topic-1",
+      subjectId: "subject-1",
+      name: "Orações subordinadas"
+    });
 
     await advanceCycle.execute();
 
@@ -71,7 +80,12 @@ describe("Study structure", () => {
     const getSnapshot = new GetActiveCycleSnapshotUseCase(store);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });
-    await createSubject.execute({ id: "subject-1", contestId: "contest-1", name: "Portuguese", plannedStudyMinutes: 60 });
+    await createSubject.execute({
+      id: "subject-1",
+      contestId: "contest-1",
+      name: "Portuguese",
+      plannedStudyMinutes: 60
+    });
     const item1 = await createStudyItem.execute({ subjectId: "subject-1", title: "Sintaxe" });
     await createStudyItem.execute({ subjectId: "subject-1", title: "Pontuação" });
 
@@ -95,9 +109,18 @@ describe("Study structure", () => {
     const registerStudySession = new RegisterStudySessionUseCase(store, factory);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });
-    await createSubject.execute({ id: "subject-1", contestId: "contest-1", name: "Portuguese", plannedStudyMinutes: 60 });
+    await createSubject.execute({
+      id: "subject-1",
+      contestId: "contest-1",
+      name: "Portuguese",
+      plannedStudyMinutes: 60
+    });
     const item1 = await createStudyItem.execute({ subjectId: "subject-1", title: "Sintaxe" });
-    await createTopic.execute({ id: "topic-1", subjectId: "subject-1", name: "Orações subordinadas" });
+    await createTopic.execute({
+      id: "topic-1",
+      subjectId: "subject-1",
+      name: "Orações subordinadas"
+    });
 
     await addStudyItemResourceReference.execute({
       studyItemId: item1.id,
@@ -177,8 +200,17 @@ describe("Study structure", () => {
     const deleteStudySession = new DeleteStudySessionUseCase(store, factory);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });
-    await createSubject.execute({ id: "subject-1", contestId: "contest-1", name: "Portuguese", plannedStudyMinutes: 60 });
-    await createTopic.execute({ id: "topic-1", subjectId: "subject-1", name: "Orações subordinadas" });
+    await createSubject.execute({
+      id: "subject-1",
+      contestId: "contest-1",
+      name: "Portuguese",
+      plannedStudyMinutes: 60
+    });
+    await createTopic.execute({
+      id: "topic-1",
+      subjectId: "subject-1",
+      name: "Orações subordinadas"
+    });
     await linkQuestionNotebook.execute({
       topicId: "topic-1",
       questionNotebook: {
@@ -221,8 +253,18 @@ describe("Study structure", () => {
     const getSnapshot = new GetActiveCycleSnapshotUseCase(store);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });
-    await createSubject.execute({ id: "subject-1", contestId: "contest-1", name: "Portuguese", plannedStudyMinutes: 60 });
-    await createSubject.execute({ id: "subject-2", contestId: "contest-1", name: "Constitutional Law", plannedStudyMinutes: 45 });
+    await createSubject.execute({
+      id: "subject-1",
+      contestId: "contest-1",
+      name: "Portuguese",
+      plannedStudyMinutes: 60
+    });
+    await createSubject.execute({
+      id: "subject-2",
+      contestId: "contest-1",
+      name: "Constitutional Law",
+      plannedStudyMinutes: 45
+    });
 
     await advanceCycle.execute();
     await registerStudySession.execute({

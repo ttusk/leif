@@ -10,14 +10,13 @@ import { CreateSubjectUseCase } from "@/application/use-cases/CreateSubjectUseCa
 import { CreateTopicUseCase } from "@/application/use-cases/CreateTopicUseCase";
 import { LinkQuestionNotebookUseCase } from "@/application/use-cases/LinkQuestionNotebookUseCase";
 import { RegisterStudySessionUseCase } from "@/application/use-cases/RegisterStudySessionUseCase";
-import { SetActiveContestUseCase } from "@/application/use-cases/SetActiveContestUseCase";
 import { UpdateContestWallUseCase } from "@/application/use-cases/UpdateContestWallUseCase";
 import { UpdateStudyItemUseCase } from "@/application/use-cases/UpdateStudyItemUseCase";
 import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
 import { App, getRecordedNotices, Plugin, resetRecordedNotices } from "../mocks/obsidian";
 import { LEIF_VIEW_TYPE, registerLeifView } from "@/ui/view/registerLeifView";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
-import { seedMinimalContest } from "@/infrastructure/persistence/Seeder";
+import { seedMinimalContest } from "../fixtures/seedMinimalContest";
 
 class InMemoryPluginDataStore implements PluginDataStore {
   constructor(private data: LeifPluginData = createDefaultLeifPluginData()) {}
@@ -38,7 +37,6 @@ async function seedUiData(dataStore: PluginDataStore): Promise<EntityRepositoryF
   const createStudyItem = new CreateStudyItemUseCase(dataStore, factory);
   const updateContestWall = new UpdateContestWallUseCase(dataStore, factory);
   const registerStudySession = new RegisterStudySessionUseCase(dataStore, factory);
-  const setActiveContest = new SetActiveContestUseCase(dataStore, factory);
 
   await createContest.execute({ id: "contest-2", name: "SEFAZ" });
   const { contestId, subjectId } = await seedMinimalContest(dataStore);
@@ -159,7 +157,7 @@ describe("LeifView", () => {
     expect(plugin.ribbonIcons[0]?.title).toBe("Abrir Leif");
     expect(plugin.commands.map((command) => command.id)).toContain("leif-open-view");
     expect(plugin.commands.find((command) => command.id === "leif-open-view")?.name).toBe(
-      "Abrir painel do Leif"
+      "Abrir painel"
     );
     expect(leaf.containerEl.textContent).toContain("Hoje");
     expect(leaf.containerEl.textContent).toContain("Matérias");
@@ -234,7 +232,7 @@ describe("LeifView", () => {
 
   it("renders dashboard data from the active contest", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    const factory = await seedUiData(dataStore);
+    await seedUiData(dataStore);
 
     const { leaf } = await openLeifView(dataStore);
 
@@ -330,7 +328,7 @@ describe("LeifView", () => {
 
   it("switches the active contest from the contests tab and rerenders the dashboard", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    const factory = await seedUiData(dataStore);
+    await seedUiData(dataStore);
 
     const { leaf } = await openLeifView(dataStore);
     const contestsTabButton =
@@ -751,7 +749,7 @@ describe("LeifView", () => {
 
   it("uses clear form controls when editing contest name and notes", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    const factory = await seedUiData(dataStore);
+    await seedUiData(dataStore);
 
     const { leaf } = await openLeifView(dataStore);
     const contestsTabButton =
@@ -879,7 +877,7 @@ describe("LeifView", () => {
 
   it("formats session history dates with day, month and year", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    const factory = await seedUiData(dataStore);
+    await seedUiData(dataStore);
 
     const { leaf } = await openLeifView(dataStore);
     const sessionsTabButton =
@@ -899,7 +897,7 @@ describe("LeifView", () => {
 
   it("shows cycle advance button in sessions tab", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    const factory = await seedUiData(dataStore);
+    await seedUiData(dataStore);
 
     const { leaf } = await openLeifView(dataStore);
     const sessionsTabButton =
@@ -923,7 +921,7 @@ describe("LeifView", () => {
 
   it("shows the recommended subject name in the cycle-advance notice", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    const factory = await seedUiData(dataStore);
+    await seedUiData(dataStore);
 
     const { leaf } = await openLeifView(dataStore);
     const sessionsTabButton =
@@ -958,7 +956,7 @@ describe("LeifView", () => {
 
   it("deletes a session from recent history", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    const factory = await seedUiData(dataStore);
+    await seedUiData(dataStore);
 
     const { leaf } = await openLeifView(dataStore);
     const sessionsTabButton =
@@ -1457,7 +1455,7 @@ describe("LeifView", () => {
 
   it("uses user-facing labels for the session form type select", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    const factory = await seedUiData(dataStore);
+    await seedUiData(dataStore);
 
     const { leaf } = await openLeifView(dataStore);
     const sessionsTabButton =

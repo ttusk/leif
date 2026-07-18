@@ -20,9 +20,7 @@ export class SubjectPicker {
       .sort((left, right) => left.order - right.order);
 
     if (subjects.length === 0) return null;
-    return (
-      subjects.find((subject) => subject.id === selectedSubjectId) ?? subjects[0]
-    );
+    return subjects.find((subject) => subject.id === selectedSubjectId) ?? subjects[0];
   }
 
   static create(

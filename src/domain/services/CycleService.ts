@@ -8,7 +8,7 @@ export class CycleService {
   /**
    * Generic circular navigation through a collection.
    * Returns the next item in the cycle, wrapping around to the start.
-   * 
+   *
    * @param items - The collection to navigate through
    * @param currentItem - The current item (optional)
    * @param idGetter - Function to extract ID from an item
@@ -27,7 +27,7 @@ export class CycleService {
       return items[0];
     }
 
-    const currentIndex = items.findIndex(item => idGetter(item) === idGetter(currentItem));
+    const currentIndex = items.findIndex((item) => idGetter(item) === idGetter(currentItem));
 
     if (currentIndex === -1) {
       return items[0];
@@ -38,7 +38,7 @@ export class CycleService {
 
   /**
    * Gets the next active subject in the study cycle.
-   * 
+   *
    * @param subjects - All subjects
    * @param currentSubjectId - ID of the current subject (optional)
    * @returns The next active subject, or null if no active subjects exist
@@ -49,10 +49,10 @@ export class CycleService {
       .sort((left, right) => left.order - right.order);
 
     const currentSubject = currentSubjectId
-      ? activeSubjects.find(s => s.id === currentSubjectId)
+      ? activeSubjects.find((s) => s.id === currentSubjectId)
       : undefined;
 
-    return this.getNextInCycle(activeSubjects, currentSubject, s => s.id);
+    return this.getNextInCycle(activeSubjects, currentSubject, (s) => s.id);
   }
 
   /**
@@ -118,4 +118,3 @@ export class CycleService {
     return null;
   }
 }
-

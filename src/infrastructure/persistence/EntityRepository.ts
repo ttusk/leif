@@ -1,7 +1,11 @@
 import { NotFoundError, AlreadyExistsError } from "@/domain/errors/DomainErrors";
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import type { EntityRepositoryPort } from "@/application/ports/EntityRepository";
-import type { EntityCollections, EntityCollectionKey, LeifPluginData } from "@/domain/types/LeifPluginData";
+import type {
+  EntityCollections,
+  EntityCollectionKey,
+  LeifPluginData
+} from "@/domain/types/LeifPluginData";
 
 /**
  * Concrete {@link EntityRepositoryPort} backed by the plugin data store.
@@ -9,7 +13,9 @@ import type { EntityCollections, EntityCollectionKey, LeifPluginData } from "@/d
  *
  * @template K - The collection key in {@link LeifPluginData}
  */
-export class EntityRepository<K extends EntityCollectionKey> implements EntityRepositoryPort<EntityCollections[K]> {
+export class EntityRepository<K extends EntityCollectionKey> implements EntityRepositoryPort<
+  EntityCollections[K]
+> {
   constructor(
     private readonly dataStore: PluginDataStore,
     private readonly entityKey: K
@@ -84,7 +90,10 @@ export class EntityRepository<K extends EntityCollectionKey> implements EntityRe
    * @returns The updated entity
    * @throws {NotFoundError} If the entity is not found
    */
-  async update(id: string, updater: (entity: EntityCollections[K]) => EntityCollections[K]): Promise<EntityCollections[K]> {
+  async update(
+    id: string,
+    updater: (entity: EntityCollections[K]) => EntityCollections[K]
+  ): Promise<EntityCollections[K]> {
     const data = await this.dataStore.load();
     const entities = this.collection(data);
     const index = entities.findIndex((e) => e.id === id);

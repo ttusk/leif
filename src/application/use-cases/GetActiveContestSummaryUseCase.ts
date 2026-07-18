@@ -41,7 +41,9 @@ export class GetActiveContestSummaryUseCase {
         .filter((session) => session.type === StudySessionType.PDF)
         .reduce((total, session) => total + (session.pagesOrCount ?? 0), 0);
 
-      const questionSessions = subjectSessions.filter((session) => session.type === StudySessionType.QUESTIONS);
+      const questionSessions = subjectSessions.filter(
+        (session) => session.type === StudySessionType.QUESTIONS
+      );
       const questionProgressCount = questionSessions.reduce(
         (total, session) => total + (session.pagesOrCount ?? 0),
         0
@@ -51,7 +53,8 @@ export class GetActiveContestSummaryUseCase {
         0
       );
 
-      const rawAccuracy = questionProgressCount > 0 ? totalCorrectAnswers / questionProgressCount : 0;
+      const rawAccuracy =
+        questionProgressCount > 0 ? totalCorrectAnswers / questionProgressCount : 0;
 
       return {
         subjectId: subject.id,

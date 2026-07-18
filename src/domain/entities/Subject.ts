@@ -19,6 +19,7 @@ export class Subject {
     if (!contestId?.trim()) throw new ValidationError("Subject contestId is required");
     if (!name?.trim()) throw new ValidationError("Subject name is required");
     if (order < 0) throw new ValidationError("Subject order cannot be negative");
-    if (plannedStudyMinutes < 0) throw new ValidationError("Subject plannedStudyMinutes cannot be negative");
+    if (plannedStudyMinutes < 0)
+      throw new ValidationError("Subject plannedStudyMinutes cannot be negative");
   }
 }

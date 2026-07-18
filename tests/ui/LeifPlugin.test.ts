@@ -6,12 +6,15 @@ import LeifPlugin from "@/main";
 import { App, Plugin } from "../mocks/obsidian";
 
 describe("LeifPlugin", () => {
-  it("does not register an Obsidian settings tab", async () => {
+  it("registers only the production view command and no settings tab", async () => {
     const app = new App();
     const plugin = new LeifPlugin(app as never, {} as never);
 
     await plugin.onload();
 
-    expect((plugin as unknown as Plugin).settingTabs).toHaveLength(0);
+    const registeredPlugin = plugin as unknown as Plugin;
+    expect(registeredPlugin.settingTabs).toHaveLength(0);
+    expect(registeredPlugin.commands.map((command) => command.id)).toEqual(["leif-open-view"]);
+    expect(registeredPlugin.commands[0]?.name).toBe("Abrir painel");
   });
 });

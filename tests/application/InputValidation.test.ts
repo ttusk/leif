@@ -39,12 +39,20 @@ describe("Input Validators", () => {
 
   describe("CreateSubjectValidator", () => {
     it("validates a correct subject input", () => {
-      const result = new CreateSubjectValidator().validate({ id: "sub-1", name: "Portuguese", plannedStudyMinutes: 60 });
+      const result = new CreateSubjectValidator().validate({
+        id: "sub-1",
+        name: "Portuguese",
+        plannedStudyMinutes: 60
+      });
       expect(result.valid).toBe(true);
     });
 
     it("fails when plannedStudyMinutes is negative", () => {
-      const result = new CreateSubjectValidator().validate({ id: "sub-1", name: "Portuguese", plannedStudyMinutes: -1 });
+      const result = new CreateSubjectValidator().validate({
+        id: "sub-1",
+        name: "Portuguese",
+        plannedStudyMinutes: -1
+      });
       expect(result.valid).toBe(false);
       expect(result.errors).toContain("Planned study minutes cannot be negative");
     });
@@ -52,18 +60,29 @@ describe("Input Validators", () => {
 
   describe("CreateStudyItemValidator", () => {
     it("validates a correct study item input", () => {
-      const result = new CreateStudyItemValidator().validate({ subjectId: "sub-1", title: "Syntax" });
+      const result = new CreateStudyItemValidator().validate({
+        subjectId: "sub-1",
+        title: "Syntax"
+      });
       expect(result.valid).toBe(true);
     });
 
     it("fails when weight is negative", () => {
-      const result = new CreateStudyItemValidator().validate({ subjectId: "sub-1", title: "Syntax", weight: -1 });
+      const result = new CreateStudyItemValidator().validate({
+        subjectId: "sub-1",
+        title: "Syntax",
+        weight: -1
+      });
       expect(result.valid).toBe(false);
       expect(result.errors).toContain("Weight cannot be negative");
     });
 
     it("fails when totalPages is negative", () => {
-      const result = new CreateStudyItemValidator().validate({ subjectId: "sub-1", title: "Syntax", totalPages: -1 });
+      const result = new CreateStudyItemValidator().validate({
+        subjectId: "sub-1",
+        title: "Syntax",
+        totalPages: -1
+      });
       expect(result.valid).toBe(false);
       expect(result.errors).toContain("Total pages cannot be negative");
     });
@@ -71,7 +90,11 @@ describe("Input Validators", () => {
 
   describe("CreateTopicValidator", () => {
     it("validates a correct topic input", () => {
-      const result = new CreateTopicValidator().validate({ id: "topic-1", subjectId: "sub-1", name: "Subordinate clauses" });
+      const result = new CreateTopicValidator().validate({
+        id: "topic-1",
+        subjectId: "sub-1",
+        name: "Subordinate clauses"
+      });
       expect(result.valid).toBe(true);
     });
   });
@@ -79,14 +102,21 @@ describe("Input Validators", () => {
   describe("RegisterStudySessionValidator", () => {
     it("validates a correct session input", () => {
       const result = new RegisterStudySessionValidator().validate({
-        id: "session-1", contestId: "contest-1", type: "pdf", studiedAt: "2026-06-11"
+        id: "session-1",
+        contestId: "contest-1",
+        type: "pdf",
+        studiedAt: "2026-06-11"
       });
       expect(result.valid).toBe(true);
     });
 
     it("fails when a questions session has no positive count", () => {
       const result = new RegisterStudySessionValidator().validate({
-        id: "session-1", contestId: "contest-1", type: "questions", studiedAt: "2026-06-11", pagesOrCount: 0
+        id: "session-1",
+        contestId: "contest-1",
+        type: "questions",
+        studiedAt: "2026-06-11",
+        pagesOrCount: 0
       });
       expect(result.valid).toBe(false);
       expect(result.errors).toContain("Questions count must be greater than zero");
@@ -96,14 +126,16 @@ describe("Input Validators", () => {
   describe("ReorderSubjectsValidator", () => {
     it("validates a correct reorder input", () => {
       const result = new ReorderSubjectsValidator().validate({
-        contestId: "contest-1", subjectIdsInOrder: ["sub-1", "sub-2"]
+        contestId: "contest-1",
+        subjectIdsInOrder: ["sub-1", "sub-2"]
       });
       expect(result.valid).toBe(true);
     });
 
     it("fails when subjectIdsInOrder is empty", () => {
       const result = new ReorderSubjectsValidator().validate({
-        contestId: "contest-1", subjectIdsInOrder: []
+        contestId: "contest-1",
+        subjectIdsInOrder: []
       });
       expect(result.valid).toBe(false);
       expect(result.errors).toContain("Subject order list cannot be empty");
@@ -119,7 +151,10 @@ describe("Input Validators", () => {
 
   describe("SetSubjectActiveStateValidator", () => {
     it("validates a correct input", () => {
-      const result = new SetSubjectActiveStateValidator().validate({ subjectId: "sub-1", isActive: true });
+      const result = new SetSubjectActiveStateValidator().validate({
+        subjectId: "sub-1",
+        isActive: true
+      });
       expect(result.valid).toBe(true);
     });
   });

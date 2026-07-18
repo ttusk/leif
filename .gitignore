@@ -3,6 +3,8 @@ dist
 coverage
 .DS_Store
 *.tsbuildinfo
+main.js
+*.js.map
 
 
 # Local Obsidian vault config

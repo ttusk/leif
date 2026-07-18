@@ -47,7 +47,9 @@ describe("Contest wall and summary", () => {
       wall: {
         noticeLinks: [{ id: "notice-1", label: "Edital", url: "https://example.com/edital" }],
         examLinks: [{ id: "exam-1", label: "Prova anterior", url: "https://example.com/prova" }],
-        subjectSnapshots: [{ subjectId: "subject-1", weight: 2, score: 10, targetItems: ["item-1"] }],
+        subjectSnapshots: [
+          { subjectId: "subject-1", weight: 2, score: 10, targetItems: ["item-1"] }
+        ],
         notes: "Priorizar português e constitucional."
       }
     });
@@ -95,7 +97,12 @@ describe("Contest wall and summary", () => {
     const getSummary = new GetActiveContestSummaryUseCase(store);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });
-    await createSubject.execute({ id: "subject-1", contestId: "contest-1", name: "Portuguese", plannedStudyMinutes: 60 });
+    await createSubject.execute({
+      id: "subject-1",
+      contestId: "contest-1",
+      name: "Portuguese",
+      plannedStudyMinutes: 60
+    });
 
     // Inject corrupted legacy data directly (correctAnswers > pagesOrCount)
     const data = await store.load();
@@ -108,7 +115,7 @@ describe("Contest wall and summary", () => {
       pagesOrCount: 10,
       correctAnswers: 11,
       completed: true
-    } as any);
+    });
     await store.save(data);
 
     const summary = await getSummary.execute();
@@ -124,7 +131,12 @@ describe("Contest wall and summary", () => {
     const getSummary = new GetActiveContestSummaryUseCase(store);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });
-    await createSubject.execute({ id: "subject-1", contestId: "contest-1", name: "Portuguese", plannedStudyMinutes: 60 });
+    await createSubject.execute({
+      id: "subject-1",
+      contestId: "contest-1",
+      name: "Portuguese",
+      plannedStudyMinutes: 60
+    });
 
     await registerStudySession.execute({
       id: "session-pdf",
@@ -176,10 +188,30 @@ describe("Contest wall and summary", () => {
     const getProgressDashboard = new GetActiveContestProgressDashboardUseCase(store);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });
-    await createSubject.execute({ id: "subject-1", contestId: "contest-1", name: "Portuguese", plannedStudyMinutes: 60 });
-    await createSubject.execute({ id: "subject-2", contestId: "contest-1", name: "Constitutional Law", plannedStudyMinutes: 45 });
-    const item1 = await createStudyItem.execute({ subjectId: "subject-1", title: "Sintaxe", weight: 2, questionCount: 30 });
-    await createStudyItem.execute({ subjectId: "subject-1", title: "Pontuação", weight: 1, questionCount: 20 });
+    await createSubject.execute({
+      id: "subject-1",
+      contestId: "contest-1",
+      name: "Portuguese",
+      plannedStudyMinutes: 60
+    });
+    await createSubject.execute({
+      id: "subject-2",
+      contestId: "contest-1",
+      name: "Constitutional Law",
+      plannedStudyMinutes: 45
+    });
+    const item1 = await createStudyItem.execute({
+      subjectId: "subject-1",
+      title: "Sintaxe",
+      weight: 2,
+      questionCount: 30
+    });
+    await createStudyItem.execute({
+      subjectId: "subject-1",
+      title: "Pontuação",
+      weight: 1,
+      questionCount: 20
+    });
 
     await registerStudySession.execute({
       id: "session-1",

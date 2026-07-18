@@ -12,7 +12,7 @@ export class Notice {
 export class Plugin {
   app: App;
   commands: Array<{ id: string; name: string; callback: () => Promise<void> | void }> = [];
-  ribbonIcons: Array<{ icon: string; title: string; callback: (evt: MouseEvent) => any }> = [];
+  ribbonIcons: Array<{ icon: string; title: string; callback: (evt: MouseEvent) => unknown }> = [];
   settingTabs: PluginSettingTab[] = [];
   private storedData: unknown = null;
 
@@ -24,7 +24,7 @@ export class Plugin {
     this.commands.push(command);
   }
 
-  addRibbonIcon(icon: string, title: string, callback: (evt: MouseEvent) => any): HTMLElement {
+  addRibbonIcon(icon: string, title: string, callback: (evt: MouseEvent) => unknown): HTMLElement {
     this.ribbonIcons.push({ icon, title, callback });
     return document.createElement("div");
   }
@@ -126,7 +126,7 @@ export abstract class ItemView {
     // Test stub.
   }
 
-  addAction(_icon: string, _title: string, _callback: (evt: MouseEvent) => any): HTMLElement {
+  addAction(_icon: string, _title: string, _callback: (evt: MouseEvent) => unknown): HTMLElement {
     return document.createElement("button");
   }
 }

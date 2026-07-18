@@ -29,7 +29,11 @@ export class CreateContestUseCase {
       throw new ValidationError(validation.errors.join(", "));
     }
 
-    const contest = new Contest(input.id, input.name, [], { noticeLinks: [], examLinks: [], subjectSnapshots: [] });
+    const contest = new Contest(input.id, input.name, [], {
+      noticeLinks: [],
+      examLinks: [],
+      subjectSnapshots: []
+    });
 
     await this.contestRepository.create(contest);
 

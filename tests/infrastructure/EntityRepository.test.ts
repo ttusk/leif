@@ -31,7 +31,12 @@ describe("EntityRepository", () => {
     const store = createStore();
     const repo = new EntityRepository(store, "contests");
 
-    const contest = { id: "contest-1", name: "TRT", subjectIds: [], wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] } };
+    const contest = {
+      id: "contest-1",
+      name: "TRT",
+      subjectIds: [],
+      wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] }
+    };
     await repo.create(contest);
 
     const found = await repo.findById("contest-1");
@@ -49,7 +54,12 @@ describe("EntityRepository", () => {
     const store = createStore();
     const repo = new EntityRepository(store, "contests");
 
-    const contest = { id: "contest-1", name: "TRT", subjectIds: [], wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] } };
+    const contest = {
+      id: "contest-1",
+      name: "TRT",
+      subjectIds: [],
+      wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] }
+    };
     await repo.create(contest);
 
     await expect(repo.create(contest)).rejects.toThrow(AlreadyExistsError);
@@ -59,8 +69,18 @@ describe("EntityRepository", () => {
     const store = createStore();
     const repo = new EntityRepository(store, "contests");
 
-    await repo.create({ id: "contest-1", name: "TRT", subjectIds: [], wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] } });
-    await repo.create({ id: "contest-2", name: "SEFAZ", subjectIds: [], wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] } });
+    await repo.create({
+      id: "contest-1",
+      name: "TRT",
+      subjectIds: [],
+      wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] }
+    });
+    await repo.create({
+      id: "contest-2",
+      name: "SEFAZ",
+      subjectIds: [],
+      wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] }
+    });
 
     const all = await repo.findAll();
     expect(all).toHaveLength(2);
@@ -70,7 +90,12 @@ describe("EntityRepository", () => {
     const store = createStore();
     const repo = new EntityRepository(store, "contests");
 
-    await repo.create({ id: "contest-1", name: "TRT", subjectIds: [], wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] } });
+    await repo.create({
+      id: "contest-1",
+      name: "TRT",
+      subjectIds: [],
+      wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] }
+    });
 
     expect(await repo.exists("contest-1")).toBe(true);
     expect(await repo.exists("nonexistent")).toBe(false);
@@ -80,9 +105,17 @@ describe("EntityRepository", () => {
     const store = createStore();
     const repo = new EntityRepository(store, "contests");
 
-    await repo.create({ id: "contest-1", name: "TRT", subjectIds: [], wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] } });
+    await repo.create({
+      id: "contest-1",
+      name: "TRT",
+      subjectIds: [],
+      wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] }
+    });
 
-    const updated = await repo.update("contest-1", (contest) => ({ ...contest, name: "TRT Updated" }));
+    const updated = await repo.update("contest-1", (contest) => ({
+      ...contest,
+      name: "TRT Updated"
+    }));
     expect(updated.name).toBe("TRT Updated");
 
     const found = await repo.findById("contest-1");
@@ -93,7 +126,12 @@ describe("EntityRepository", () => {
     const store = createStore();
     const repo = new EntityRepository(store, "contests");
 
-    await repo.create({ id: "contest-1", name: "TRT", subjectIds: [], wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] } });
+    await repo.create({
+      id: "contest-1",
+      name: "TRT",
+      subjectIds: [],
+      wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] }
+    });
     await repo.delete("contest-1");
 
     expect(await repo.exists("contest-1")).toBe(false);
@@ -103,8 +141,20 @@ describe("EntityRepository", () => {
     const store = createStore();
     const repo = new EntityRepository(store, "contests");
 
-    await repo.create({ id: "contest-1", name: "TRT", subjectIds: [], wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] } });
-    await repo.replaceAll([{ id: "contest-2", name: "SEFAZ", subjectIds: [], wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] } }]);
+    await repo.create({
+      id: "contest-1",
+      name: "TRT",
+      subjectIds: [],
+      wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] }
+    });
+    await repo.replaceAll([
+      {
+        id: "contest-2",
+        name: "SEFAZ",
+        subjectIds: [],
+        wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] }
+      }
+    ]);
 
     const all = await repo.findAll();
     expect(all).toHaveLength(1);

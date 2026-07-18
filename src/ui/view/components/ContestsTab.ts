@@ -45,9 +45,7 @@ export class ContestsTab {
       })
     );
     container.appendChild(header);
-    container.appendChild(
-      DomHelpers.createParagraph("Escolha qual concurso está na mesa agora.")
-    );
+    container.appendChild(DomHelpers.createParagraph("Escolha qual concurso está na mesa agora."));
 
     if (this.isCreatingContest) {
       container.appendChild(this.renderCreateContestForm());
@@ -78,7 +76,10 @@ export class ContestsTab {
     card.dataset.contestCardId = contest.id;
     const isActive = data.activeContestId === contest.id;
 
-    const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
+    const actions = DomHelpers.createElement(
+      "div",
+      "leif-inline-actions leif-inline-actions-compact"
+    );
 
     if (!isActive) {
       actions.appendChild(
@@ -142,7 +143,10 @@ export class ContestsTab {
     const titleGroup = DomHelpers.createElement("div", "leif-contest-card-title-group");
     const title = DomHelpers.createElement("strong", "leif-contest-card-title");
     title.textContent = contest.name;
-    const status = DomHelpers.createElement("span", isActive ? "leif-status-active" : "leif-status-inactive");
+    const status = DomHelpers.createElement(
+      "span",
+      isActive ? "leif-status-active" : "leif-status-inactive"
+    );
     status.textContent = isActive ? "Estudando agora" : "Guardado";
     titleGroup.append(title, status);
     header.append(titleGroup, actions);
@@ -157,10 +161,14 @@ export class ContestsTab {
       meta.append(DomHelpers.createMetric("Banca", contest.examPlan.board));
     }
     if (contest.examPlan?.weeklyStudyHours !== undefined) {
-      meta.append(DomHelpers.createMetric("Carga", `${contest.examPlan.weeklyStudyHours} h/semana`));
+      meta.append(
+        DomHelpers.createMetric("Carga", `${contest.examPlan.weeklyStudyHours} h/semana`)
+      );
     }
     if (contest.examPlan?.weeklyQuestionGoal !== undefined) {
-      meta.append(DomHelpers.createMetric("Meta", `${contest.examPlan.weeklyQuestionGoal} questões/semana`));
+      meta.append(
+        DomHelpers.createMetric("Meta", `${contest.examPlan.weeklyQuestionGoal} questões/semana`)
+      );
     }
     if (meta.childElementCount === 0) {
       meta.append(DomHelpers.createMetric("Planejamento", "Sem dados de prova"));
@@ -176,17 +184,25 @@ export class ContestsTab {
 
     const nameInput = DomHelpers.createInput("text", "Nome do concurso", contest.name);
     const notesInput = DomHelpers.createTextarea("Notas do concurso", contest.wall.notes ?? "");
-    const examDateInput = DomHelpers.createInput("date", "Data da prova", contest.examPlan?.examDate ?? "");
+    const examDateInput = DomHelpers.createInput(
+      "date",
+      "Data da prova",
+      contest.examPlan?.examDate ?? ""
+    );
     const boardInput = DomHelpers.createInput("text", "Banca", contest.examPlan?.board ?? "");
     const weeklyStudyHoursInput = DomHelpers.createInput(
       "number",
       "Horas por semana",
-      contest.examPlan?.weeklyStudyHours !== undefined ? String(contest.examPlan.weeklyStudyHours) : ""
+      contest.examPlan?.weeklyStudyHours !== undefined
+        ? String(contest.examPlan.weeklyStudyHours)
+        : ""
     );
     const weeklyQuestionGoalInput = DomHelpers.createInput(
       "number",
       "Questões por semana",
-      contest.examPlan?.weeklyQuestionGoal !== undefined ? String(contest.examPlan.weeklyQuestionGoal) : ""
+      contest.examPlan?.weeklyQuestionGoal !== undefined
+        ? String(contest.examPlan.weeklyQuestionGoal)
+        : ""
     );
     notesInput.rows = 4;
 
@@ -219,7 +235,10 @@ export class ContestsTab {
       }
     });
 
-    const actions = DomHelpers.createElement("div", "leif-inline-actions leif-inline-actions-compact");
+    const actions = DomHelpers.createElement(
+      "div",
+      "leif-inline-actions leif-inline-actions-compact"
+    );
     actions.appendChild(saveButton);
     actions.appendChild(cancelButton);
 
@@ -233,15 +252,13 @@ export class ContestsTab {
       DomHelpers.createStackedLabel("Questões por semana", weeklyQuestionGoalInput)
     );
 
-    const status = DomHelpers.createElement("span", data.activeContestId === contest.id ? "leif-status-active" : "leif-status-inactive");
+    const status = DomHelpers.createElement(
+      "span",
+      data.activeContestId === contest.id ? "leif-status-active" : "leif-status-inactive"
+    );
     status.textContent = data.activeContestId === contest.id ? "Estudando agora" : "Guardado";
 
-    card.append(
-      DomHelpers.createSectionSubtitle("Editar concurso"),
-      fields,
-      status,
-      actions
-    );
+    card.append(DomHelpers.createSectionSubtitle("Editar concurso"), fields, status, actions);
 
     return card;
   }

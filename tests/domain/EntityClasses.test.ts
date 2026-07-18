@@ -8,23 +8,31 @@ import { Topic } from "@/domain/entities/Topic";
 import { StudySession } from "@/domain/entities/StudySession";
 import { QuestionNotebook } from "@/domain/entities/QuestionNotebook";
 import { ResourceReference } from "@/domain/entities/ResourceReference";
-import { WallLink, WallSubjectSnapshot, Wall, wallLinkKey } from "@/domain/entities/Wall";
+import { WallLink, Wall, wallLinkKey } from "@/domain/entities/Wall";
 import { ValidationError } from "@/domain/errors/DomainErrors";
 
 describe("Entity Classes", () => {
   describe("Contest", () => {
     it("creates a valid contest", () => {
-      const contest = new Contest("c-1", "TRT", [], { noticeLinks: [], examLinks: [], subjectSnapshots: [] });
+      const contest = new Contest("c-1", "TRT", [], {
+        noticeLinks: [],
+        examLinks: [],
+        subjectSnapshots: []
+      });
       expect(contest.id).toBe("c-1");
       expect(contest.name).toBe("TRT");
     });
 
     it("throws when id is empty", () => {
-      expect(() => new Contest("", "TRT", [], { noticeLinks: [], examLinks: [], subjectSnapshots: [] })).toThrow(ValidationError);
+      expect(
+        () => new Contest("", "TRT", [], { noticeLinks: [], examLinks: [], subjectSnapshots: [] })
+      ).toThrow(ValidationError);
     });
 
     it("throws when name is empty", () => {
-      expect(() => new Contest("c-1", "", [], { noticeLinks: [], examLinks: [], subjectSnapshots: [] })).toThrow(ValidationError);
+      expect(
+        () => new Contest("c-1", "", [], { noticeLinks: [], examLinks: [], subjectSnapshots: [] })
+      ).toThrow(ValidationError);
     });
 
     it("defaults wall to an empty Wall instance", () => {
@@ -89,11 +97,40 @@ describe("Entity Classes", () => {
     });
 
     it("throws when correctAnswers exceeds pagesOrCount", () => {
-      expect(() => new StudySession("s-1", "c-1", "questions", "2026-06-11", undefined, undefined, undefined, undefined, undefined, 10, 15)).toThrow(ValidationError);
+      expect(
+        () =>
+          new StudySession(
+            "s-1",
+            "c-1",
+            "questions",
+            "2026-06-11",
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            10,
+            15
+          )
+      ).toThrow(ValidationError);
     });
 
     it("throws when pagesOrCount is negative", () => {
-      expect(() => new StudySession("s-1", "c-1", "pdf", "2026-06-11", undefined, undefined, undefined, undefined, undefined, -1)).toThrow(ValidationError);
+      expect(
+        () =>
+          new StudySession(
+            "s-1",
+            "c-1",
+            "pdf",
+            "2026-06-11",
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            undefined,
+            -1
+          )
+      ).toThrow(ValidationError);
     });
   });
 
@@ -104,11 +141,15 @@ describe("Entity Classes", () => {
     });
 
     it("throws when correctAnswers exceeds solvedQuestions", () => {
-      expect(() => new QuestionNotebook("n-1", "Tec", "https://example.com", 10, 15)).toThrow(ValidationError);
+      expect(() => new QuestionNotebook("n-1", "Tec", "https://example.com", 10, 15)).toThrow(
+        ValidationError
+      );
     });
 
     it("throws when solvedQuestions is negative", () => {
-      expect(() => new QuestionNotebook("n-1", "Tec", "https://example.com", -1)).toThrow(ValidationError);
+      expect(() => new QuestionNotebook("n-1", "Tec", "https://example.com", -1)).toThrow(
+        ValidationError
+      );
     });
   });
 
@@ -126,11 +167,7 @@ describe("Entity Classes", () => {
 
   describe("Wall", () => {
     it("creates a valid wall", () => {
-      const wall = new Wall(
-        [new WallLink("l-1", "Edital", "https://example.com")],
-        [],
-        []
-      );
+      const wall = new Wall([new WallLink("l-1", "Edital", "https://example.com")], [], []);
       expect(wall.noticeLinks).toHaveLength(1);
     });
 

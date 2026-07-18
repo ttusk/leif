@@ -41,9 +41,24 @@ describe("Subject configuration", () => {
     const listSubjects = new ListSubjectsForActiveContestUseCase(store);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });
-    await createSubject.execute({ id: "subject-1", contestId: "contest-1", name: "Portuguese", plannedStudyMinutes: 60 });
-    await createSubject.execute({ id: "subject-2", contestId: "contest-1", name: "Constitutional Law", plannedStudyMinutes: 45 });
-    await createSubject.execute({ id: "subject-3", contestId: "contest-1", name: "Administrative Law", plannedStudyMinutes: 30 });
+    await createSubject.execute({
+      id: "subject-1",
+      contestId: "contest-1",
+      name: "Portuguese",
+      plannedStudyMinutes: 60
+    });
+    await createSubject.execute({
+      id: "subject-2",
+      contestId: "contest-1",
+      name: "Constitutional Law",
+      plannedStudyMinutes: 45
+    });
+    await createSubject.execute({
+      id: "subject-3",
+      contestId: "contest-1",
+      name: "Administrative Law",
+      plannedStudyMinutes: 30
+    });
 
     await reorderSubjects.execute({
       contestId: "contest-1",

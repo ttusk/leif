@@ -10,7 +10,7 @@ export class ActiveContestGuard {
 
   /**
    * Requires that an active contest exists.
-   * 
+   *
    * @returns The active contest ID
    * @throws {NoActiveContestError} If no active contest exists
    */
@@ -24,7 +24,7 @@ export class ActiveContestGuard {
 
   /**
    * Gets all subjects for the active contest, sorted by order.
-   * 
+   *
    * @returns Array of subjects for the active contest
    * @throws {NoActiveContestError} If no active contest exists
    */
@@ -32,18 +32,18 @@ export class ActiveContestGuard {
     const data = await this.dataStore.load();
     const activeContestId = await this.requireActiveContest();
     return data.subjects
-      .filter(s => s.contestId === activeContestId)
+      .filter((s) => s.contestId === activeContestId)
       .sort((a, b) => a.order - b.order);
   }
 
   /**
    * Gets only active subjects for the active contest, sorted by order.
-   * 
+   *
    * @returns Array of active subjects for the active contest
    * @throws {NoActiveContestError} If no active contest exists
    */
   async getActiveSubjects(): Promise<Subject[]> {
     const subjects = await this.getActiveContestSubjects();
-    return subjects.filter(s => s.isActive);
+    return subjects.filter((s) => s.isActive);
   }
 }

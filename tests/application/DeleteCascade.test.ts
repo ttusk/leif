@@ -45,14 +45,21 @@ describe("Delete cascade", () => {
     const deleteStudyItem = new DeleteStudyItemUseCase(store, factory);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });
-    await createSubject.execute({ id: "subject-1", contestId: "contest-1", name: "Portuguese", plannedStudyMinutes: 60 });
+    await createSubject.execute({
+      id: "subject-1",
+      contestId: "contest-1",
+      name: "Portuguese",
+      plannedStudyMinutes: 60
+    });
     const item = await createStudyItem.execute({ subjectId: "subject-1", title: "Sintaxe" });
 
     await deleteStudyItem.execute({ itemId: item.id });
 
     const data = await store.load();
     expect(data.studyItems).toHaveLength(0);
-    expect(data.subjects.find((subject) => subject.id === "subject-1")?.itemIds ?? []).not.toContain(item.id);
+    expect(
+      data.subjects.find((subject) => subject.id === "subject-1")?.itemIds ?? []
+    ).not.toContain(item.id);
   });
 
   it("throws NotFoundError when deleting a nonexistent study item", async () => {
@@ -72,14 +79,21 @@ describe("Delete cascade", () => {
     const deleteTopic = new DeleteTopicUseCase(store, factory);
 
     await createContest.execute({ id: "contest-1", name: "TRT" });
-    await createSubject.execute({ id: "subject-1", contestId: "contest-1", name: "Portuguese", plannedStudyMinutes: 60 });
+    await createSubject.execute({
+      id: "subject-1",
+      contestId: "contest-1",
+      name: "Portuguese",
+      plannedStudyMinutes: 60
+    });
     await createTopic.execute({ id: "topic-1", subjectId: "subject-1", name: "Orações" });
 
     await deleteTopic.execute({ topicId: "topic-1" });
 
     const data = await store.load();
     expect(data.topics).toHaveLength(0);
-    expect(data.subjects.find((subject) => subject.id === "subject-1")?.topicIds ?? []).not.toContain("topic-1");
+    expect(
+      data.subjects.find((subject) => subject.id === "subject-1")?.topicIds ?? []
+    ).not.toContain("topic-1");
   });
 
   it("throws NotFoundError when deleting a nonexistent topic", async () => {
@@ -103,12 +117,23 @@ describe("Delete cascade", () => {
 
     await createContest.execute({ id: "contest-1", name: "TRT" });
     await createContest.execute({ id: "contest-2", name: "SEFAZ" });
-    await createSubject.execute({ id: "subject-1", contestId: "contest-1", name: "Portuguese", plannedStudyMinutes: 60 });
+    await createSubject.execute({
+      id: "subject-1",
+      contestId: "contest-1",
+      name: "Portuguese",
+      plannedStudyMinutes: 60
+    });
     await createStudyItem.execute({ subjectId: "subject-1", title: "Sintaxe" });
     await createTopic.execute({ id: "topic-1", subjectId: "subject-1", name: "Orações" });
     await linkQuestionNotebook.execute({
       topicId: "topic-1",
-      questionNotebook: { id: "nb-1", name: "Caderno", url: "https://example.com", solvedQuestions: 0, correctAnswers: 0 }
+      questionNotebook: {
+        id: "nb-1",
+        name: "Caderno",
+        url: "https://example.com",
+        solvedQuestions: 0,
+        correctAnswers: 0
+      }
     });
     await registerStudySession.execute({
       id: "session-1",
@@ -142,7 +167,12 @@ describe("Delete cascade", () => {
 
     await createContest.execute({ id: "contest-1", name: "TRT" });
     await createContest.execute({ id: "contest-2", name: "SEFAZ" });
-    await createSubject.execute({ id: "subject-1", contestId: "contest-2", name: "Tax", plannedStudyMinutes: 45 });
+    await createSubject.execute({
+      id: "subject-1",
+      contestId: "contest-2",
+      name: "Tax",
+      plannedStudyMinutes: 45
+    });
 
     await deleteContest.execute({ contestId: "contest-2" });
 

@@ -38,10 +38,11 @@ export class CreateStudyItemUseCase {
       throw new ValidationError(validation.errors.join(", "));
     }
 
-    const subject = await this.subjectRepository.findById(input.subjectId);
+    await this.subjectRepository.findById(input.subjectId);
 
-    const subjectItems = (await this.studyItemRepository.findAll())
-      .filter((item) => item.subjectId === input.subjectId);
+    const subjectItems = (await this.studyItemRepository.findAll()).filter(
+      (item) => item.subjectId === input.subjectId
+    );
 
     const nextItem = new StudyItem(
       input.id ?? createId("item"),
