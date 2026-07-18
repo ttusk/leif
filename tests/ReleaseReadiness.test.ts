@@ -16,8 +16,11 @@ describe("community release readiness", () => {
     expect(versions[version]).toBe(manifest.minAppVersion);
     expect(manifest.description).not.toBe("A bússola do seu estudo.");
     expect(manifest.authorUrl).toBe("https://github.com/ttusk");
-    expect(read("README.md")).toContain("## Installation / Instalação");
-    expect(read("README.md")).toContain("## Usage / Como usar");
+    const readme = read("README.md");
+    expect(readme).toMatch(/^## Installation$/m);
+    expect(readme).toMatch(/^## Usage$/m);
+    expect(readme).toContain("Configurações → Plugins da comunidade");
+    expect(readme).toContain("Abrir painel");
   });
 
   it("uses APIs and DOM patterns supported by the declared Obsidian version", () => {
