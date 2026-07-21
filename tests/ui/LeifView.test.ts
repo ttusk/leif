@@ -697,6 +697,7 @@ describe("LeifView", () => {
     expect(titles).toEqual(["Notas", "Edital", "Prova"]);
     expect(leaf.containerEl.querySelector(".leif-wall-primary")).not.toBeNull();
     expect(leaf.containerEl.querySelector(".leif-wall-reference-grid")).not.toBeNull();
+    expect(leaf.containerEl.querySelectorAll(".leif-wall-reference-card")).toHaveLength(2);
     expect(leaf.containerEl.querySelector(".leif-wall-layout")).toBeNull();
     expect(leaf.containerEl.querySelector(".leif-wall-links")).toBeNull();
     expect(leaf.containerEl.querySelector(".leif-wall-card-wide")).toBeNull();

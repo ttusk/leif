@@ -57,6 +57,77 @@ describe("DataMigrationService", () => {
     expect(migrated.contests[0].subjectIds).toEqual(["s1", "s2"]);
   });
 
+  it("normalizes subject and study item order to one-based sequences per parent", () => {
+    const base = createDefaultLeifPluginData();
+    const data: LeifPluginData = {
+      ...base,
+      subjects: [
+        {
+          id: "subject-second",
+          contestId: "contest-1",
+          name: "Second",
+          order: 1,
+          isActive: true,
+          plannedStudyMinutes: 60,
+          itemIds: [],
+          topicIds: []
+        },
+        {
+          id: "subject-first",
+          contestId: "contest-1",
+          name: "First",
+          order: 0,
+          isActive: true,
+          plannedStudyMinutes: 60,
+          itemIds: [],
+          topicIds: []
+        },
+        {
+          id: "other-contest-subject",
+          contestId: "contest-2",
+          name: "Other",
+          order: 0,
+          isActive: true,
+          plannedStudyMinutes: 60,
+          itemIds: [],
+          topicIds: []
+        }
+      ],
+      studyItems: [
+        {
+          id: "item-second",
+          subjectId: "subject-first",
+          title: "Second item",
+          order: 1
+        },
+        {
+          id: "item-first",
+          subjectId: "subject-first",
+          title: "First item",
+          order: 0
+        }
+      ]
+    };
+
+    const migrated = service.migrate(data);
+    const subjectOrders = new Map(migrated.subjects.map((subject) => [subject.id, subject.order]));
+    const itemOrders = new Map(migrated.studyItems.map((item) => [item.id, item.order]));
+
+    expect(subjectOrders).toEqual(
+      new Map([
+        ["subject-first", 1],
+        ["subject-second", 2],
+        ["other-contest-subject", 1]
+      ])
+    );
+    expect(itemOrders).toEqual(
+      new Map([
+        ["item-first", 1],
+        ["item-second", 2]
+      ])
+    );
+  });
+
   it("is idempotent", () => {
     const data = { ...createDefaultLeifPluginData(), schemaVersion: 1 };
     const once = service.migrate(data);

@@ -158,4 +158,12 @@ describe("Leif visual system", () => {
       /\.leif-url-control input\s*{[^}]*width:\s*100%;[^}]*padding-inline-start:/s
     );
   });
+
+  it("aligns corresponding fields across the wall reference cards", () => {
+    const styles = readStyles();
+
+    expect(styles).toMatch(
+      /\.leif-wall-reference-card\s*{[^}]*display:\s*grid;[^}]*grid-template-rows:\s*subgrid;[^}]*grid-row:\s*span 4;/s
+    );
+  });
 });

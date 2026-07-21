@@ -121,6 +121,7 @@ export class WallTab {
     );
 
     const noticeCard = DomHelpers.createElement("section", "leif-wall-card");
+    noticeCard.classList.add("leif-wall-reference-card");
     noticeCard.append(
       DomHelpers.createSectionSubtitle("Edital"),
       DomHelpers.createParagraph("Guarde o link do edital ou da página oficial do concurso."),
@@ -129,6 +130,7 @@ export class WallTab {
     );
 
     const examCard = DomHelpers.createElement("section", "leif-wall-card");
+    examCard.classList.add("leif-wall-reference-card");
     examCard.append(
       DomHelpers.createSectionSubtitle("Prova"),
       DomHelpers.createParagraph(

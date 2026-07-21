@@ -51,8 +51,8 @@ describe("Entity Classes", () => {
       expect(subject.isActive).toBe(true);
     });
 
-    it("throws when order is negative", () => {
-      expect(() => new Subject("s-1", "c-1", "Portuguese", -1)).toThrow(ValidationError);
+    it("throws when order is less than one", () => {
+      expect(() => new Subject("s-1", "c-1", "Portuguese", 0)).toThrow(ValidationError);
     });
 
     it("throws when plannedStudyMinutes is negative", () => {
@@ -69,6 +69,10 @@ describe("Entity Classes", () => {
 
     it("throws when weight is negative", () => {
       expect(() => new StudyItem("i-1", "s-1", "Syntax", 1, -1)).toThrow(ValidationError);
+    });
+
+    it("throws when order is less than one", () => {
+      expect(() => new StudyItem("i-1", "s-1", "Syntax", 0)).toThrow(ValidationError);
     });
 
     it("accepts an optional totalPages", () => {

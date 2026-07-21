@@ -17,19 +17,51 @@ function deduplicateByKey<T>(items: T[], getKey: (item: T) => string): T[] {
 }
 
 /**
+ * Renumbers ordered children within each parent while preserving their
+ * effective order. Array position is used as the stable tie-breaker.
+ */
+function normalizeOrdersByParent<T extends { order: number }>(
+  items: T[],
+  getParentKey: (item: T) => string
+): T[] {
+  const groups = new Map<string, Array<{ item: T; sourceIndex: number }>>();
+
+  items.forEach((item, sourceIndex) => {
+    const parentKey = getParentKey(item);
+    const group = groups.get(parentKey) ?? [];
+    group.push({ item, sourceIndex });
+    groups.set(parentKey, group);
+  });
+
+  const normalizedOrders = new Map<T, number>();
+  groups.forEach((group) => {
+    group
+      .sort(
+        (left, right) => left.item.order - right.item.order || left.sourceIndex - right.sourceIndex
+      )
+      .forEach(({ item }, index) => normalizedOrders.set(item, index + 1));
+  });
+
+  return items.map((item) => ({ ...item, order: normalizedOrders.get(item) ?? 1 }));
+}
+
+/**
  * Deduplicates all entity arrays in the plugin data.
  * Also deduplicates subjectIds within each contest.
  */
 function deduplicatePluginData(data: LeifPluginData): LeifPluginData {
+  const subjects = deduplicateByKey(data.subjects, (subject) => subject.id);
+  const studyItems = deduplicateByKey(data.studyItems, (item) => item.id);
+
   return {
     ...data,
     contests: data.contests.map((contest) => ({
       ...contest,
       subjectIds: [...new Set(contest.subjectIds)]
     })),
-    subjects: deduplicateByKey(data.subjects, (s) => s.id),
+    subjects: normalizeOrdersByParent(subjects, (subject) => subject.contestId),
     topics: deduplicateByKey(data.topics, (t) => t.id),
-    studyItems: deduplicateByKey(data.studyItems, (i) => i.id),
+    studyItems: normalizeOrdersByParent(studyItems, (item) => item.subjectId),
     studySessions: deduplicateByKey(data.studySessions, (s) => s.id),
     contestStates: deduplicateByKey(data.contestStates, (s) => s.contestId)
   };
