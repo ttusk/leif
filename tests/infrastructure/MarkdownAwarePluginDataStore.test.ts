@@ -6,6 +6,7 @@ import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types
 import { MarkdownContestBundleCodec } from "@/infrastructure/markdown/MarkdownContestBundleCodec";
 import { MarkdownContestIndex } from "@/infrastructure/markdown/MarkdownContestIndex";
 import { MarkdownContestWriter } from "@/infrastructure/markdown/MarkdownContestWriter";
+import { MigrationSafetyService } from "@/application/services/MigrationSafetyService";
 import { MarkdownAwarePluginDataStore } from "@/infrastructure/persistence/MarkdownAwarePluginDataStore";
 import { PluginDataStore } from "@/infrastructure/persistence/PluginDataStore";
 
@@ -96,5 +97,36 @@ describe("MarkdownAwarePluginDataStore", () => {
     expect(reloaded.activeContestId).toBeNull();
     expect(adapter.data.subjects[0].name).toBe("Legacy name");
     expect(adapter.data.subjects[0].plannedStudyMinutes).toBe(60);
+  });
+
+  it("reports legacy JSON drift after Markdown activation without replacing Markdown", async () => {
+    const original = storedData();
+    const prepared = await new MigrationSafetyService().prepare(
+      original,
+      "contest-1",
+      "Leif/.backups/original.json",
+      "2026-07-21T20:00:00Z"
+    );
+    original.runtimeState!.migrationReceipts.push({
+      ...prepared.receipt,
+      status: "activated",
+      activatedAt: "2026-07-21T20:01:00Z"
+    });
+    const adapter = new MemoryAdapter(original);
+    adapter.data.subjects[0] = { ...adapter.data.subjects[0], name: "Downgrade edit" };
+    const files = new MemoryFiles();
+    new MarkdownContestBundleCodec()
+      .encode(storedData(), "contest-1")
+      .forEach((file) => files.files.set(file.path, file.content));
+    const store = new MarkdownAwarePluginDataStore(
+      new PluginDataStore(adapter),
+      new MarkdownContestIndex(files),
+      new MarkdownContestWriter(files)
+    );
+
+    expect((await store.load()).subjects[0].name).toBe("Legacy name");
+    expect(store.markdownDiagnostics).toEqual([
+      expect.objectContaining({ code: "legacy-source-drift" })
+    ]);
   });
 });

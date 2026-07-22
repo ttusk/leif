@@ -47,7 +47,7 @@ export class MigrationSafetyService {
 
     const backupContent = `${JSON.stringify(rawData, null, 2)}\n`;
     const backupChecksum = await sha256(backupContent);
-    const sourceChecksum = await this.semanticChecksum(rawData, contestId);
+    const sourceChecksum = await this.checksum(rawData, contestId);
 
     return {
       backupContent,
@@ -68,8 +68,8 @@ export class MigrationSafetyService {
     legacyData: LeifPluginData,
     markdownProjection: LeifPluginData
   ): Promise<MigrationReceipt> {
-    const sourceChecksum = await this.semanticChecksum(legacyData, receipt.contestId);
-    const targetChecksum = await this.semanticChecksum(markdownProjection, receipt.contestId);
+    const sourceChecksum = await this.checksum(legacyData, receipt.contestId);
+    const targetChecksum = await this.checksum(markdownProjection, receipt.contestId);
 
     if (receipt.status !== "backed-up" || receipt.sourceChecksum !== sourceChecksum) {
       throw new MigrationBlockedError("The migration source changed after backup.", [
@@ -197,7 +197,7 @@ export class MigrationSafetyService {
     return diagnostics;
   }
 
-  private async semanticChecksum(data: LeifPluginData, contestId: string): Promise<string> {
+  async checksum(data: LeifPluginData, contestId: string): Promise<string> {
     const subjectIds = new Set(
       data.subjects
         .filter((subject) => subject.contestId === contestId)

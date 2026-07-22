@@ -34,4 +34,9 @@ describe("ChangelogService", () => {
     const service = new ChangelogService(releases);
     expect(service.pendingRelease("2.1.0", runtime("2.0.0"))).toBeNull();
   });
+
+  it("does not show or rewrite changelog acknowledgement after a downgrade", () => {
+    const service = new ChangelogService(releases);
+    expect(service.pendingRelease("2.0.0", runtime("3.0.0"))).toBeNull();
+  });
 });

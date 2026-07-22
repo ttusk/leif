@@ -1,10 +1,12 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import { MigrationSafetyService } from "@/application/services/MigrationSafetyService";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import type { MarkdownIndexDiagnostic } from "@/infrastructure/markdown/MarkdownContestIndex";
 import { MarkdownContestIndex } from "@/infrastructure/markdown/MarkdownContestIndex";
 import { MarkdownContestWriter } from "@/infrastructure/markdown/MarkdownContestWriter";
 
 export class MarkdownAwarePluginDataStore implements PluginDataStore {
+  private readonly safety = new MigrationSafetyService();
   private transactionTail: Promise<void> = Promise.resolve();
   private diagnostics: readonly MarkdownIndexDiagnostic[] = [];
 
@@ -43,7 +45,22 @@ export class MarkdownAwarePluginDataStore implements PluginDataStore {
   private async loadCurrent(): Promise<LeifPluginData> {
     const json = await this.legacy.load();
     const markdown = await this.index.refresh(json.runtimeState!.markdownRoot);
-    this.diagnostics = markdown.diagnostics;
+    const diagnostics = [...markdown.diagnostics];
+    for (const [contestId, mode] of Object.entries(json.runtimeState!.contestStorage)) {
+      if (mode !== "vault-markdown") continue;
+      const receipt = [...json.runtimeState!.migrationReceipts]
+        .reverse()
+        .find((candidate) => candidate.contestId === contestId && candidate.status === "activated");
+      if (receipt && (await this.safety.checksum(json, contestId)) !== receipt.sourceChecksum) {
+        diagnostics.push({
+          path: receipt.backupPath,
+          code: "legacy-source-drift",
+          message:
+            "The legacy JSON changed after Markdown activation. Markdown remains authoritative; review downgrade or sync activity before rollback."
+        });
+      }
+    }
+    this.diagnostics = diagnostics;
     const markdownContestIds = markdownContestIdSet(json);
     return overlayMarkdown(json, markdown, markdownContestIds);
   }
