@@ -37,7 +37,7 @@ Documentos com IDs duplicados, conflitos de merge, relações inválidas ou sche
 
 Para recuperação, execute **Leif: Voltar concurso ativo ao JSON legado**. O rollback só é permitido quando o snapshot legado ainda corresponde ao checksum original e nunca apaga os arquivos Markdown.
 
-## Instalação
+## Installation
 
 ### Pelo Obsidian
 
@@ -50,7 +50,7 @@ Quando o Leif estiver disponível no diretório oficial, abra **Configurações 
 3. Reinicie o Obsidian ou recarregue os plugins em **Configurações → Plugins da comunidade**.
 4. Ative o **Leif**.
 
-## Uso
+## Usage
 
 Ative o Leif em **Plugins da comunidade** e abra o painel pelo ícone da faixa lateral ou pelo comando **Abrir painel**. Crie um concurso, organize suas matérias e recursos, registre cada estudo e consulte **Hoje** para seguir o ciclo.
 
