@@ -16,7 +16,10 @@ describe("Leif Native visual system", () => {
     expect(styles).toContain("--leif-accent: var(--interactive-accent)");
     expect(styles).toContain("--leif-text: var(--text-normal)");
     expect(styles).not.toMatch(/#[0-9a-f]{3,8}\b/i);
-    expect(styles).not.toMatch(/font-family:\s*(?!var\()/i);
+    const fontFamilies = Array.from(styles.matchAll(/font-family:\s*([^;]+);/gi)).map((match) =>
+      match[1].trim()
+    );
+    expect(fontFamilies.every((value) => value.startsWith("var("))).toBe(true);
     expect(styles).not.toContain("--leif-shadow");
   });
 
@@ -41,7 +44,9 @@ describe("Leif Native visual system", () => {
       /\.leif-view\s*{[^}]*container-name:\s*leif;[^}]*container-type:\s*inline-size;/s
     );
     expect(styles).toMatch(/\.leif-body\s*{[^}]*max-width:\s*960px;/s);
-    expect(styles).toMatch(/\.leif-view\.is-compact[\s\S]*\.leif-grid-2\s*{[^}]*grid-template-columns:\s*1fr;/s);
+    expect(styles).toMatch(
+      /\.leif-view\.is-compact[\s\S]*\.leif-grid-2\s*{[^}]*grid-template-columns:\s*1fr;/s
+    );
     expect(styles).toMatch(/\.leif-table-wrapper\s*{[^}]*overflow-x:\s*auto;/s);
   });
 
@@ -66,10 +71,10 @@ describe("Leif Native visual system", () => {
 
     expect(styles).toMatch(/\.leif-cycle-thread\s*{[^}]*list-style:\s*none;/s);
     expect(styles).toMatch(
-      /\.leif-cycle-step::before\s*{[^}]*width:\s*2px;[^}]*background:\s*var\(--leif-accent\);/s
+      /\.leif-cycle-thread-step::before\s*{[^}]*width:\s*2px;[^}]*background:\s*var\(--leif-accent\);/s
     );
     expect(styles).toMatch(
-      /\.leif-cycle-step\[data-cycle-state="next"\][^}]*color:\s*var\(--leif-text-muted\);/s
+      /\.leif-cycle-thread-step\[data-cycle-state="next"\][^}]*color:\s*var\(--leif-text-muted\);/s
     );
     expect(styles).not.toMatch(/\.leif-next-activity\s*{[^}]*box-shadow:/s);
   });
@@ -77,8 +82,12 @@ describe("Leif Native visual system", () => {
   it("stacks Mural sections and keeps long reference data readable", () => {
     const styles = readStyles();
 
-    expect(styles).toMatch(/\.leif-wall-read-view\s*{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/s);
-    expect(styles).toMatch(/\.leif-wall-editor\s*{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/s);
+    expect(styles).toMatch(
+      /\.leif-wall-read-view\s*{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/s
+    );
+    expect(styles).toMatch(
+      /\.leif-wall-editor\s*{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/s
+    );
     expect(styles).toMatch(/\.leif-wall-link-url\s*{[^}]*overflow-wrap:\s*anywhere;/s);
     expect(styles).not.toContain("grid-template-rows: subgrid");
   });
@@ -89,9 +98,7 @@ describe("Leif Native visual system", () => {
     expect(styles).toMatch(/\.leif-tab-button:focus-visible\s*{[^}]*outline:/s);
     expect(styles).toMatch(/@media\s*\(prefers-reduced-motion:\s*reduce\)/);
     expect(styles).toMatch(/@media\s*\(forced-colors:\s*active\)/);
-    expect(styles).toMatch(
-      /\.leif-view\.is-compact[\s\S]*button[^}]*min-height:\s*40px;/s
-    );
+    expect(styles).toMatch(/\.leif-view\.is-compact[\s\S]*button[^}]*min-height:\s*40px;/s);
   });
 
   it("keeps numeric progress scannable without metric-card styling", () => {
@@ -99,8 +106,6 @@ describe("Leif Native visual system", () => {
 
     expect(styles).toMatch(/\.leif-metric-value\s*{[^}]*font-variant-numeric:\s*tabular-nums;/s);
     expect(styles).toMatch(/\.leif-progress-fill\s*{[^}]*background:\s*var\(--leif-accent\);/s);
-    expect(styles).toMatch(
-      /\.leif-status-(active|inactive)\s*{[^}]*background:\s*transparent;/s
-    );
+    expect(styles).toMatch(/\.leif-status-(active|inactive)\s*{[^}]*background:\s*transparent;/s);
   });
 });
