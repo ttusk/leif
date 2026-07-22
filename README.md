@@ -1,7 +1,5 @@
 # Leif
 
-![Painel do Leif no Obsidian](assets/leif-dashboard.jpg)
-
 **A bússola do seu estudo.**
 
 Leif é um plugin para [Obsidian](https://obsidian.md/) que organiza estudos para concursos em um único painel. Ele reúne concursos, matérias, assuntos do edital, recursos e registros de estudo para mostrar o que estudar agora — e, desde a versão 2.0, guarda o conteúdo como **Markdown aberto** dentro do seu vault.
