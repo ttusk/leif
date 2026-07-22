@@ -17,7 +17,8 @@ describe("LeifPlugin", () => {
     expect(registeredPlugin.settingTabs).toHaveLength(0);
     expect(registeredPlugin.commands.map((command) => command.id)).toEqual([
       "open-view",
-      "migrate-active-contest-to-markdown"
+      "migrate-active-contest-to-markdown",
+      "rollback-active-contest-to-legacy-json"
     ]);
     expect(registeredPlugin.commands[0]?.name).toBe("Abrir painel");
   });

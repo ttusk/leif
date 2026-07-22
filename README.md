@@ -45,4 +45,6 @@ Leif cria também `Leif/AGENTS.md` e modelos em `Leif/templates/`. Agentes podem
 
 Documentos com IDs duplicados, conflitos de merge, relações inválidas ou schemas futuros são bloqueados para escrita. O índice mantém a última projeção válida durante a sessão e mostra o conteúdo Markdown como autoridade; uma alteração posterior no JSON legado é detectada como possível downgrade ou conflito de sync.
 
+Para recuperação, execute **Leif: Voltar concurso ativo ao JSON legado**. O rollback só é permitido quando o snapshot legado ainda corresponde ao checksum original e nunca apaga os arquivos Markdown.
+
 O contrato completo está em [`docs/markdown-storage-v1.md`](docs/markdown-storage-v1.md) e a decisão arquitetural em [`docs/adr/0001-markdown-is-the-study-content-authority.md`](docs/adr/0001-markdown-is-the-study-content-authority.md).

@@ -3,6 +3,7 @@ import { Plugin } from "obsidian";
 import { ChangelogService } from "@/application/services/ChangelogService";
 import type { PluginDataStore as PluginDataStorePort } from "@/application/ports/PluginDataStore";
 import { StagedMarkdownMigrationService } from "@/application/services/StagedMarkdownMigrationService";
+import { MarkdownRollbackService } from "@/application/services/MarkdownRollbackService";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { PluginDataStore } from "@/infrastructure/persistence/PluginDataStore";
 import { ObsidianStorageAdapter } from "@/infrastructure/obsidian/ObsidianStorageAdapter";
@@ -30,7 +31,12 @@ export default class LeifPlugin extends Plugin {
     const data = await this.dataStore.load();
 
     registerLeifView(this, this.dataStore);
-    registerMarkdownMigration(this, this.dataStore, migration);
+    registerMarkdownMigration(
+      this,
+      this.dataStore,
+      migration,
+      new MarkdownRollbackService(legacyStore)
+    );
 
     if (!data.runtimeState!.lastAcknowledgedVersion && isFreshInstall(data)) {
       await this.acknowledgeVersion(this.manifest.version);
