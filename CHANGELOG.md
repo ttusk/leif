@@ -35,4 +35,4 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 - Bloqueios de segurança reportados em português no painel.
 - Prévia de migração compacta, abas de navegação sem interferência do tema, progresso de assuntos e posições de reordenação em uma única linha, e estados de data e pendências mais claros.
 
-[2.0.0]: https://github.com/ttusk/leif/compare/1.0.2...master
+[2.0.0]: https://github.com/ttusk/leif/compare/1.0.2...2.0.0
