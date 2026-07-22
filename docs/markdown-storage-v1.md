@@ -11,16 +11,17 @@ This document defines the initial interoperability contract for humans, Leif, an
 
 ## Corruption-prevention invariants
 
-1. Before switching a concurso to Markdown, Leif creates an immutable backup and checksum.
-2. Export happens in a staging directory, not over existing user notes.
-3. Leif parses the staged Markdown and compares its domain projection with the source JSON.
-4. Authority changes only after semantic equivalence succeeds.
-5. Migration is idempotent and records a receipt that can recover an interrupted run.
-6. Duplicate IDs, ambiguous parents, future schemas, and merge-conflict markers block writes.
-7. Invalid documents do not prevent other concursos from loading; Leif keeps the last-known-good projection and reports diagnostics.
-8. Leif never silently chooses one of two conflicting records.
-9. Leif preserves unknown properties, prose, comments, attachments, and sections outside managed regions.
-10. Same-field concurrent edits abort rather than overwrite either writer.
+1. Before the first v2 write in an existing installation, Leif creates, reads back, and checksum-verifies a complete legacy backup. Failure stops startup before writable UI is registered.
+2. Before switching a concurso to Markdown, Leif creates an immutable backup and checksum.
+3. Export happens in a staging directory, not over existing user notes.
+4. Leif parses the staged Markdown and compares its domain projection with the source JSON.
+5. Authority changes only after semantic equivalence succeeds.
+6. Migration is idempotent and records a receipt that can recover an interrupted run.
+7. Duplicate IDs, ambiguous parents, future schemas, and merge-conflict markers block writes.
+8. Invalid documents do not prevent other concursos from loading; Leif keeps the last-known-good projection and reports diagnostics in the panel.
+9. Leif never silently chooses one of two conflicting records.
+10. Leif preserves unknown properties, prose, comments, attachments, and sections outside managed regions.
+11. Immediately before a staged folder swap, Leif fingerprints the source Markdown again. Concurrent edits abort the swap rather than overwrite either writer.
 
 ## Vault layout
 
@@ -98,6 +99,7 @@ Leif surfaces drafts and diagnostics on the next index refresh.
 ## Migration policy for existing users
 
 - Upgrading to v2 does not automatically migrate content.
+- A verified full legacy backup is created before v2 can persist runtime state or normalized ordering.
 - The existing JSON store remains fully usable.
 - Users can preview migration per concurso.
 - Preview reports duplicates, orphans, invalid references, and the files that will be created.
