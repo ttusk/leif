@@ -443,7 +443,16 @@ export class SessionsTab {
 
     const subjects = data.subjects.filter((subject) => subject.contestId === activeContest.id);
 
+    let isSubmitting = false;
+    let submitButton: HTMLButtonElement | null = null;
     const form = DomHelpers.createForm(async () => {
+      if (isSubmitting) return;
+      isSubmitting = true;
+      form.setAttribute("aria-busy", "true");
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = "Registrando…";
+      }
       try {
         const sessionType = typeSelect.value as StudySessionType;
         const rawCount = Number(countInput.value);
@@ -482,6 +491,13 @@ export class SessionsTab {
         await this.onUpdate();
       } catch (error) {
         DomHelpers.notifyError(error, "Não consegui salvar esse registro.");
+      } finally {
+        isSubmitting = false;
+        form.setAttribute("aria-busy", "false");
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = "Registrar";
+        }
       }
     });
 
@@ -594,6 +610,10 @@ export class SessionsTab {
     );
 
     const actions = form.querySelector(".leif-form-actions");
+    submitButton = DomHelpers.createButton("Registrar", {
+      type: "submit",
+      className: "mod-cta"
+    });
     actions?.append(
       DomHelpers.createButton("Cancelar", {
         onClick: async () => {
@@ -602,10 +622,7 @@ export class SessionsTab {
           await this.onUpdate();
         }
       }),
-      DomHelpers.createButton("Registrar", {
-        type: "submit",
-        className: "mod-cta"
-      })
+      submitButton
     );
 
     return form;

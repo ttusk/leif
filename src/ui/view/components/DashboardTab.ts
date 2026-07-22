@@ -124,29 +124,18 @@ export class DashboardTab {
 
   private renderExamPlanPanel(
     contest: NonNullable<LeifPluginData["contests"][number]>
-  ): HTMLElement | null {
+  ): HTMLElement {
     const plan = contest.examPlan;
-    if (
-      !plan?.examDate &&
-      !plan?.board &&
-      plan?.weeklyStudyHours === undefined &&
-      plan?.weeklyQuestionGoal === undefined
-    ) {
-      return null;
-    }
+    const examDate = this.parseExamDate(plan?.examDate);
 
-    const panel = DomHelpers.createElement("section", "leif-next-activity leif-exam-plan");
+    const panel = DomHelpers.createElement("section", "leif-exam-plan");
     const intro = DomHelpers.createElement("div", "leif-next-activity-intro");
     const label = DomHelpers.createElement("span", "leif-next-activity-label");
     label.textContent = "Prova";
     const title = DomHelpers.createElement("strong", "leif-next-activity-subject");
-    title.textContent = plan?.examDate
-      ? `Prova em ${this.formatDaysUntilExam(plan.examDate)}`
-      : "Planejamento da prova";
+    title.textContent = this.formatExamHeading(plan?.examDate, examDate);
     const details = DomHelpers.createElement("span", "leif-next-activity-item");
-    details.textContent = plan?.examDate
-      ? this.formatDate(plan.examDate)
-      : "Data ainda não definida";
+    details.textContent = examDate ? this.formatDate(plan!.examDate!) : (plan?.examDate ?? "");
     intro.append(label, title, details);
 
     const meta = DomHelpers.createElement("div", "leif-next-activity-meta");
@@ -290,26 +279,31 @@ export class DashboardTab {
     ).toLocaleDateString("pt-BR")}`;
   }
 
-  private formatDaysUntilExam(examDate: string): string {
+  private formatExamHeading(examDate: string | undefined, target: Date | null): string {
+    if (!examDate) return "Data da prova não definida";
+    if (!target) return "Data da prova inválida";
+
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const [year, month, day] = examDate.split("-").map(Number);
-
-    if (!year || !month || !day) {
-      return "data indefinida";
-    }
-
-    const target = new Date(year, month - 1, day);
     const days = Math.ceil((target.getTime() - today.getTime()) / 86400000);
 
-    if (days < 0) {
-      return "data já passou";
-    }
-    if (days === 0) {
-      return "hoje";
-    }
+    if (days < 0) return `Prova realizada em ${this.formatDate(examDate)}`;
+    if (days === 0) return "Prova hoje";
+    return `Prova em ${days} dias`;
+  }
 
-    return `${days} dias`;
+  private parseExamDate(value?: string): Date | null {
+    if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+    const [year, month, day] = value.split("-").map(Number);
+    const parsed = new Date(year, month - 1, day);
+    if (
+      parsed.getFullYear() !== year ||
+      parsed.getMonth() !== month - 1 ||
+      parsed.getDate() !== day
+    ) {
+      return null;
+    }
+    return parsed;
   }
 
   private formatDate(value: string): string {

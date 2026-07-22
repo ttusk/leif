@@ -562,6 +562,9 @@ form.leif-card,
 }
 
 .leif-exam-plan {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--size-4-3) var(--size-4-5);
   padding-bottom: var(--size-4-4);
   border-bottom: 1px solid var(--leif-border);
 }
