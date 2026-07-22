@@ -69,4 +69,21 @@ describe("ManagedMarkdownDocument", () => {
       expect.objectContaining({ code: "missing-region" })
     );
   });
+
+  it("patches managed properties while preserving unknown frontmatter and prose", () => {
+    const document = ManagedMarkdownDocument.parse(SOURCE);
+    const updated = document.replaceProperties(
+      new Map([
+        ["leif-type", "materia"],
+        ["leif-schema", "1"],
+        ["leif-id", "subject-1"],
+        ["name", "Língua Portuguesa"]
+      ]),
+      new Set(["leif-type", "leif-schema", "leif-id", "name", "stage"])
+    );
+
+    expect(updated).toContain('name: "Língua Portuguesa"');
+    expect(updated).toContain("custom-property: keep-me");
+    expect(updated).toContain("Anotações livres do usuário.");
+  });
 });

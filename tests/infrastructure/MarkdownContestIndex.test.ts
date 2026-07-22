@@ -39,6 +39,8 @@ describe("MarkdownContestIndex", () => {
     const codec = new MarkdownContestBundleCodec();
     const encoded = codec.encode(source(), "contest-1");
     encoded.forEach((file) => files.files.set(file.path, file.content));
+    const root = encoded[0].path.slice(0, -"/concurso.md".length);
+    files.files.set(`${root}/minhas-notas.md`, "# Nota livre\n\nNão gerenciada pelo Leif.\n");
     const index = new MarkdownContestIndex(files);
 
     const first = await index.refresh("Leif");

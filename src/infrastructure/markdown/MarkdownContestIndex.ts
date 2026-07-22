@@ -41,6 +41,7 @@ export class MarkdownContestIndex {
       let invalid = false;
       for (const path of bundlePaths) {
         const content = await this.files.read(path);
+        if (!/^---\r?\n[\s\S]*?^leif-type:\s*/m.test(content)) continue;
         try {
           ManagedMarkdownDocument.parse(content);
           bundle.push({ path, content });

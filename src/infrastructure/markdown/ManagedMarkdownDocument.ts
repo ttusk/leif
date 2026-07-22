@@ -96,6 +96,36 @@ export class ManagedMarkdownDocument {
       .replace(/^\r?\n|\r?\n$/g, "");
   }
 
+  get regionNames(): readonly string[] {
+    return [...this.regions.keys()];
+  }
+
+  replaceProperties(target: ReadonlyMap<string, string>, managedKeys: ReadonlySet<string>): string {
+    const match = this.source.match(/^(---\r?\n)([\s\S]*?)(\r?\n---(?:\r?\n|$))/);
+    if (!match) {
+      throw new MarkdownDocumentError("missing-frontmatter", "Document frontmatter is missing.");
+    }
+
+    const written = new Set<string>();
+    const lines = match[2].split(/\r?\n/).flatMap((line) => {
+      const separator = line.indexOf(":");
+      const key = separator > 0 ? line.slice(0, separator).trim() : "";
+      if (!managedKeys.has(key)) return [line];
+      const value = target.get(key);
+      if (value === undefined) return [];
+      written.add(key);
+      return [`${key}: ${renderPropertyValue(value)}`];
+    });
+    managedKeys.forEach((key) => {
+      const value = target.get(key);
+      if (value !== undefined && !written.has(key)) {
+        lines.push(`${key}: ${renderPropertyValue(value)}`);
+      }
+    });
+
+    return `${match[1]}${lines.join(this.newline)}${match[3]}${this.source.slice(match[0].length)}`;
+  }
+
   replaceRegion(name: string, content: string): string {
     const region = this.regions.get(name);
     if (!region) {
@@ -194,4 +224,9 @@ function unquote(value: string): string {
     return value.slice(1, -1).replace(/''/g, "'");
   }
   return value;
+}
+
+function renderPropertyValue(value: string): string {
+  if (/^(?:true|false|-?\d+(?:\.\d+)?)$/.test(value)) return value;
+  return JSON.stringify(value);
 }
