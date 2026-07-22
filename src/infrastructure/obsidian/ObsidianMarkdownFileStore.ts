@@ -27,6 +27,14 @@ export class ObsidianMarkdownFileStore implements MarkdownFileStore {
     return this.vault.read(file);
   }
 
+  async list(prefix: string): Promise<string[]> {
+    const normalized = normalizePath(prefix);
+    return this.vault
+      .getFiles()
+      .map((file) => file.path)
+      .filter((path) => path.startsWith(`${normalized}/`));
+  }
+
   async move(source: string, destination: string): Promise<void> {
     const normalizedSource = normalizePath(source);
     const normalizedDestination = normalizePath(destination);

@@ -35,6 +35,9 @@ class MemoryFileStore implements MarkdownFileStore {
     if (content === undefined) throw new Error(`missing: ${path}`);
     return content;
   }
+  async list(prefix: string): Promise<string[]> {
+    return [...this.files.keys()].filter((path) => path.startsWith(`${prefix}/`));
+  }
   async move(source: string, destination: string): Promise<void> {
     if (await this.exists(destination)) throw new Error(`exists: ${destination}`);
     const entries = [...this.files].filter(
