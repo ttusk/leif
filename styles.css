@@ -1471,3 +1471,38 @@ form.leif-card,
     background: Highlight;
   }
 }
+
+/* Update and migration modals */
+
+.leif-changelog,
+.leif-migration {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-3);
+  max-width: 680px;
+}
+
+.leif-changelog > h1,
+.leif-migration > h1 {
+  margin: 0;
+}
+
+.leif-changelog__notes {
+  max-height: min(52vh, 520px);
+  overflow-y: auto;
+  padding-inline-end: var(--size-4-2);
+}
+
+.leif-changelog__actions,
+.leif-migration__actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--size-4-2);
+  padding-top: var(--size-4-3);
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.leif-changelog__actions > a {
+  margin-inline-end: auto;
+}
