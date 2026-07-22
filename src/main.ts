@@ -1,6 +1,7 @@
 import { Plugin } from "obsidian";
 
 import { ChangelogService } from "@/application/services/ChangelogService";
+import { LegacyUpgradeBackupService } from "@/application/services/LegacyUpgradeBackupService";
 import type { PluginDataStore as PluginDataStorePort } from "@/application/ports/PluginDataStore";
 import { StagedMarkdownMigrationService } from "@/application/services/StagedMarkdownMigrationService";
 import { MarkdownRollbackService } from "@/application/services/MarkdownRollbackService";
@@ -20,8 +21,12 @@ export default class LeifPlugin extends Plugin {
   private dataStore!: PluginDataStorePort;
 
   override async onload(): Promise<void> {
-    const legacyStore = new PluginDataStore(new ObsidianStorageAdapter(this));
+    const storageAdapter = new ObsidianStorageAdapter(this);
     const markdownFiles = new ObsidianMarkdownFileStore(this.app.vault);
+    const rawData = await storageAdapter.load();
+    await new LegacyUpgradeBackupService(markdownFiles).ensureBackup(rawData);
+
+    const legacyStore = new PluginDataStore(storageAdapter);
     this.dataStore = new MarkdownAwarePluginDataStore(
       legacyStore,
       new MarkdownContestIndex(markdownFiles),

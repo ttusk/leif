@@ -45,10 +45,7 @@ describe("LeifPlugin", () => {
       subjectIds: [],
       wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] }
     });
-    existing.runtimeState = {
-      ...existing.runtimeState!,
-      lastAcknowledgedVersion: "1.0.2"
-    };
+    delete existing.runtimeState;
     await plugin.saveData(existing);
 
     await plugin.onload();
