@@ -1972,7 +1972,11 @@ describe("LeifView", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(getRecordedNotices()).toContain("SEFAZ agora é o concurso ativo.");
-    expect(leaf.containerEl.textContent).toContain("Estudando: SEFAZ");
+    const selector = leaf.containerEl.querySelector<HTMLButtonElement>(
+      "button.leif-contest-selector"
+    );
+    expect(selector?.textContent).toBe("SEFAZ");
+    expect(selector?.getAttribute("aria-haspopup")).toBe("menu");
   });
 
   it("gives the contest wall notes field enough room to write", async () => {

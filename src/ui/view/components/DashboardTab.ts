@@ -74,7 +74,10 @@ export class DashboardTab {
         stage: recommendedSubject?.currentStage,
         nextSubjectName: afterRecommendedSubject?.name,
         nextItemName: itemMap.get(afterRecommendedItemId ?? ""),
-        canRegisterStudy: Boolean(recommendedSubject)
+        canRegisterStudy: Boolean(recommendedSubject),
+        recommendationReason: recommendedSubject
+          ? this.buildRecommendationReason(data, recommendedSubject.id)
+          : undefined
       })
     );
 
@@ -167,6 +170,7 @@ export class DashboardTab {
     nextSubjectName?: string;
     nextItemName?: string;
     canRegisterStudy?: boolean;
+    recommendationReason?: string;
   }): HTMLElement {
     const panel = DomHelpers.createElement("section", "leif-next-activity");
     const intro = DomHelpers.createElement("div", "leif-next-activity-intro");
@@ -177,6 +181,11 @@ export class DashboardTab {
     const item = DomHelpers.createElement("span", "leif-next-activity-item");
     item.textContent = activity.itemName;
     intro.append(label, subject, item);
+    if (activity.recommendationReason) {
+      const reason = DomHelpers.createElement("span", "leif-recommendation-reason");
+      reason.textContent = activity.recommendationReason;
+      intro.appendChild(reason);
+    }
 
     const meta = DomHelpers.createElement("div", "leif-next-activity-meta");
     meta.append(
@@ -199,15 +208,36 @@ export class DashboardTab {
 
     panel.append(intro, meta);
 
-    if (activity.nextSubjectName || activity.nextItemName) {
-      const next = DomHelpers.createElement("div", "leif-next-activity-next");
-      next.textContent = [
-        activity.nextSubjectName ? `Próxima matéria: ${activity.nextSubjectName}` : undefined,
-        activity.nextItemName ? `item na fila: ${activity.nextItemName}` : undefined
-      ]
-        .filter(Boolean)
-        .join(" · ");
-      panel.appendChild(next);
+    if (activity.canRegisterStudy) {
+      const route = DomHelpers.createElement("ol", "leif-cycle-thread leif-next-activity-next");
+      route.setAttribute("aria-label", "Ordem atual do ciclo");
+
+      const current = DomHelpers.createElement("li", "leif-cycle-thread-step is-current");
+      current.dataset.cycleState = "current";
+      current.setAttribute("aria-current", "step");
+      const currentState = DomHelpers.createElement("span", "leif-cycle-thread-state");
+      currentState.textContent = "Agora";
+      const currentSubject = DomHelpers.createElement("strong", "leif-cycle-thread-subject");
+      currentSubject.textContent = activity.subjectName;
+      current.append(currentState, currentSubject);
+
+      route.appendChild(current);
+      if (activity.nextSubjectName || activity.nextItemName) {
+        const next = DomHelpers.createElement("li", "leif-cycle-thread-step is-next");
+        next.dataset.cycleState = "next";
+        const nextState = DomHelpers.createElement("span", "leif-cycle-thread-state");
+        nextState.textContent = "Próxima";
+        const nextDescription = DomHelpers.createElement("span", "leif-cycle-thread-subject");
+        nextDescription.textContent = [
+          activity.nextSubjectName ? `Próxima matéria: ${activity.nextSubjectName}` : undefined,
+          activity.nextItemName ? `item na fila: ${activity.nextItemName}` : undefined
+        ]
+          .filter(Boolean)
+          .join(" · ");
+        next.append(nextState, nextDescription);
+        route.appendChild(next);
+      }
+      panel.appendChild(route);
     }
 
     return panel;
@@ -215,6 +245,21 @@ export class DashboardTab {
 
   private renderActivityMeta(label: string, value: string): HTMLElement {
     return DomHelpers.createMetric(label, value);
+  }
+
+  private buildRecommendationReason(data: LeifPluginData, subjectId: string): string {
+    const lastSession = data.studySessions
+      .filter((session) => session.subjectId === subjectId)
+      .slice()
+      .sort((left, right) => right.studiedAt.localeCompare(left.studiedAt))[0];
+
+    if (!lastSession) {
+      return "Próxima no ciclo · ainda não estudada";
+    }
+
+    return `Próxima no ciclo · último estudo em ${new Date(
+      lastSession.studiedAt
+    ).toLocaleDateString("pt-BR")}`;
   }
 
   private formatDaysUntilExam(examDate: string): string {
