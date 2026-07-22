@@ -52,7 +52,9 @@ describe("community release readiness", () => {
     expect(source).not.toMatch(/from\s+["'](?:electron|node:|fs|path|os)["']/);
     expect(source).not.toMatch(/(?:window\.)?require\s*\(/);
     expect(source).not.toContain("Platform.isDesktop");
-    expect(read("styles.css")).toMatch(/\.leif-view\.is-compact[\s\S]*grid-template-columns:\s*1fr;/s);
+    expect(read("styles.css")).toMatch(
+      /\.leif-view\.is-compact[\s\S]*grid-template-columns:\s*1fr;/s
+    );
   });
 
   it("keeps demo and compiled artifacts out of the source repository", () => {

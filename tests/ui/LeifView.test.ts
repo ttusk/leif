@@ -2,10 +2,7 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type {
-  PluginDataDiagnostic,
-  PluginDataStore
-} from "@/application/ports/PluginDataStore";
+import type { PluginDataDiagnostic, PluginDataStore } from "@/application/ports/PluginDataStore";
 import { AddStudyItemResourceReferenceUseCase } from "@/application/use-cases/AddStudyItemResourceReferenceUseCase";
 import { CreateContestUseCase } from "@/application/use-cases/CreateContestUseCase";
 import { CreateStudyItemUseCase } from "@/application/use-cases/CreateStudyItemUseCase";

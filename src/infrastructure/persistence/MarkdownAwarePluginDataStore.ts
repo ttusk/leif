@@ -1,7 +1,4 @@
-import type {
-  PluginDataDiagnostic,
-  PluginDataStore
-} from "@/application/ports/PluginDataStore";
+import type { PluginDataDiagnostic, PluginDataStore } from "@/application/ports/PluginDataStore";
 import { MigrationSafetyService } from "@/application/services/MigrationSafetyService";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import type { MarkdownIndexDiagnostic } from "@/infrastructure/markdown/MarkdownContestIndex";

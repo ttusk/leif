@@ -1,7 +1,4 @@
-import {
-  createDefaultLeifPluginData,
-  type LeifPluginData
-} from "@/domain/types/LeifPluginData";
+import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
 
 function legacyCollection<T>(value: T[] | undefined, name: string): T[] {
   if (value === undefined) return [];

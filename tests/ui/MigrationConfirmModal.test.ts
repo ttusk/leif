@@ -10,10 +10,7 @@ describe("MigrationConfirmModal", () => {
   it("shows the read-only preflight file list before enabling migration", () => {
     const preview: MigrationPreview = {
       contestId: "contest-1",
-      files: [
-        "Leif/concursos/trt/concurso.md",
-        "Leif/concursos/trt/materias/portugues.md"
-      ],
+      files: ["Leif/concursos/trt/concurso.md", "Leif/concursos/trt/materias/portugues.md"],
       diagnostics: [],
       blocked: false
     };
@@ -51,13 +48,9 @@ describe("MigrationConfirmModal", () => {
       ],
       blocked: true
     };
-    const modal = new MigrationConfirmModal(
-      new App() as never,
-      "TRT",
-      "contest-1",
-      preview,
-      { migrate: vi.fn() } as never
-    );
+    const modal = new MigrationConfirmModal(new App() as never, "TRT", "contest-1", preview, {
+      migrate: vi.fn()
+    } as never);
 
     modal.open();
 

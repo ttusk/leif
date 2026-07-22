@@ -33,8 +33,6 @@
     }
   ],
   "topics": [],
-  "studyItems": [
-    { "id": "orphan-item", "subjectId": "missing", "title": "Órfão", "order": 0 }
-  ],
+  "studyItems": [{ "id": "orphan-item", "subjectId": "missing", "title": "Órfão", "order": 0 }],
   "studySessions": []
 }
