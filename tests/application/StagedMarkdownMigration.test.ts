@@ -84,6 +84,28 @@ function legacyData(): LeifPluginData {
 }
 
 describe("StagedMarkdownMigrationService", () => {
+  it("previews every target file and validation problem without writing anything", async () => {
+    const source = legacyData();
+    source.studyItems.push({ id: "orphan", subjectId: "missing", title: "Órfão", order: 1 });
+    const dataStore = new PluginDataStore(new MemoryDataAdapter(source));
+    const files = new MemoryFileStore();
+    const service = new StagedMarkdownMigrationService(dataStore, files);
+
+    const preview = await service.preview("contest-1");
+
+    expect(preview.blocked).toBe(true);
+    expect(preview.diagnostics).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "orphan-study-item" })])
+    );
+    expect(preview.files).toEqual(
+      expect.arrayContaining([
+        expect.stringMatching(/\/concurso\.md$/),
+        expect.stringMatching(/\/materias\/.*\.md$/)
+      ])
+    );
+    expect(files.files).toHaveLength(0);
+  });
+
   it("activates Markdown only after backup and staged read-back verification", async () => {
     const dataStore = new PluginDataStore(new MemoryDataAdapter(legacyData()));
     const files = new MemoryFileStore();

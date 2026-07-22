@@ -2,7 +2,10 @@
 
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import type {
+  PluginDataDiagnostic,
+  PluginDataStore
+} from "@/application/ports/PluginDataStore";
 import { AddStudyItemResourceReferenceUseCase } from "@/application/use-cases/AddStudyItemResourceReferenceUseCase";
 import { CreateContestUseCase } from "@/application/use-cases/CreateContestUseCase";
 import { CreateStudyItemUseCase } from "@/application/use-cases/CreateStudyItemUseCase";
@@ -21,6 +24,7 @@ import { seedMinimalContest } from "../fixtures/seedMinimalContest";
 class InMemoryPluginDataStore implements PluginDataStore {
   private nextMutationGate: Promise<void> | null = null;
   private releaseNextMutation: (() => void) | null = null;
+  private currentDiagnostics: readonly PluginDataDiagnostic[] = [];
 
   constructor(private data: LeifPluginData = createDefaultLeifPluginData()) {}
 
@@ -40,6 +44,14 @@ class InMemoryPluginDataStore implements PluginDataStore {
     const result = await mutation(draft);
     this.data = draft;
     return result;
+  }
+
+  diagnostics(): readonly PluginDataDiagnostic[] {
+    return this.currentDiagnostics;
+  }
+
+  setDiagnostics(diagnostics: readonly PluginDataDiagnostic[]): void {
+    this.currentDiagnostics = diagnostics;
   }
 
   pauseNextMutation(): () => void {
@@ -125,6 +137,27 @@ describe("LeifView", () => {
     document.body.innerHTML = "";
     resetRecordedNotices();
     vi.unstubAllGlobals();
+  });
+
+  it("surfaces protected Markdown diagnostics without hiding the active concurso", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedMinimalContest(dataStore);
+    dataStore.setDiagnostics([
+      {
+        path: "Leif/concursos/trt/concurso.md",
+        code: "merge-conflict",
+        message: "Resolva os marcadores de conflito antes de salvar."
+      }
+    ]);
+
+    const { leaf } = await openLeifView(dataStore);
+    const diagnostic = leaf.view!.contentEl.querySelector(".leif-diagnostics");
+
+    expect(diagnostic?.getAttribute("role")).toBe("alert");
+    expect(diagnostic?.textContent).toContain("Leif protegeu seus dados");
+    expect(diagnostic?.textContent).toContain("Leif/concursos/trt/concurso.md");
+    expect(diagnostic?.textContent).toContain("Resolva os marcadores de conflito");
+    expect(leaf.view!.contentEl.textContent).toContain("Hoje");
   });
 
   it("adapts navigation to the actual Obsidian pane width", async () => {
