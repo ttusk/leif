@@ -36,9 +36,14 @@ export class PluginDataStore implements PluginDataStorePort {
     const migratedData = this.migrationService.migrate(storedData);
 
     // Merge with defaults to ensure all required fields exist
+    const defaults = createDefaultLeifPluginData();
     return {
-      ...createDefaultLeifPluginData(),
-      ...migratedData
+      ...defaults,
+      ...migratedData,
+      runtimeState: {
+        ...defaults.runtimeState!,
+        ...migratedData.runtimeState
+      }
     };
   }
 

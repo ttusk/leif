@@ -1,5 +1,6 @@
 const notices: string[] = [];
 const registeredIcons = new Map<string, string>();
+const openModals: Modal[] = [];
 
 globalThis.createEl = ((tagName, options) => {
   const element = document.createElement(tagName);
@@ -22,13 +23,15 @@ export class Notice {
 
 export class Plugin {
   app: App;
+  manifest: { version: string };
   commands: Array<{ id: string; name: string; callback: () => Promise<void> | void }> = [];
   ribbonIcons: Array<{ icon: string; title: string; callback: (evt: MouseEvent) => unknown }> = [];
   settingTabs: PluginSettingTab[] = [];
   private storedData: unknown = null;
 
-  constructor(app = new App()) {
+  constructor(app = new App(), manifest: { version?: string } = {}) {
     this.app = app;
+    this.manifest = { version: manifest.version ?? "1.0.2" };
   }
 
   addCommand(command: { id: string; name: string; callback: () => Promise<void> | void }): void {
@@ -89,6 +92,51 @@ export class Workspace {
 
   getViewCreator(type: string): ViewCreator | undefined {
     return this.viewCreators.get(type);
+  }
+
+  onLayoutReady(callback: () => void): void {
+    callback();
+  }
+}
+
+export class Component {
+  load(): void {}
+
+  unload(): void {}
+}
+
+export class Modal extends Component {
+  readonly contentEl = document.createElement("div");
+
+  constructor(public readonly app: App) {
+    super();
+  }
+
+  open(): void {
+    openModals.push(this);
+    this.onOpen();
+  }
+
+  close(): void {
+    const index = openModals.indexOf(this);
+    if (index >= 0) openModals.splice(index, 1);
+    this.onClose();
+  }
+
+  onOpen(): void {}
+
+  onClose(): void {}
+}
+
+export class MarkdownRenderer {
+  static async render(
+    _app: App,
+    markdown: string,
+    element: HTMLElement,
+    _sourcePath: string,
+    _component: Component
+  ): Promise<void> {
+    element.textContent = markdown;
   }
 }
 
@@ -170,4 +218,12 @@ export function getRecordedNotices(): string[] {
 export function resetRecordedNotices(): void {
   notices.length = 0;
   registeredIcons.clear();
+}
+
+export function getOpenModals(): readonly Modal[] {
+  return openModals;
+}
+
+export function resetOpenModals(): void {
+  openModals.length = 0;
 }
