@@ -7,6 +7,8 @@ import { MarkdownContestWriter } from "@/infrastructure/markdown/MarkdownContest
 
 class MemoryFiles implements MarkdownFileStore {
   readonly files = new Map<string, string>();
+  onFirstStagedWrite?: () => void;
+  private stagedWriteObserved = false;
   async exists(path: string): Promise<boolean> {
     return (
       this.files.has(path) || [...this.files.keys()].some((file) => file.startsWith(`${path}/`))
@@ -15,6 +17,10 @@ class MemoryFiles implements MarkdownFileStore {
   async writeNew(path: string, content: string): Promise<void> {
     if (this.files.has(path)) throw new Error("exists");
     this.files.set(path, content);
+    if (!this.stagedWriteObserved && path.includes("/.staging/write-")) {
+      this.stagedWriteObserved = true;
+      this.onFirstStagedWrite?.();
+    }
   }
   async read(path: string): Promise<string> {
     return this.files.get(path)!;
@@ -87,5 +93,30 @@ describe("MarkdownContestWriter", () => {
     expect(finalSubject).toContain("Não apagar.");
     expect(files.files.get(`${contestRoot}/anexos/leitura.txt`)).toBe("conteúdo externo");
     expect([...files.files.keys()].some((path) => path.includes("/.backups/writes/"))).toBe(true);
+  });
+
+  it("aborts before swapping when an agent edits source Markdown during staging", async () => {
+    const files = new MemoryFiles();
+    const codec = new MarkdownContestBundleCodec();
+    const initial = data();
+    const encoded = codec.encode(initial, "contest-1");
+    encoded.forEach((file) => files.files.set(file.path, file.content));
+    const subjectPath = encoded.find((file) => file.path.includes("/materias/"))!.path;
+    files.onFirstStagedWrite = () => {
+      files.files.set(
+        subjectPath,
+        files.files.get(subjectPath)!.replace("# Português", "# Edição concorrente do agente")
+      );
+    };
+    const updated = data();
+    updated.subjects[0] = { ...updated.subjects[0], name: "Língua Portuguesa" };
+
+    await expect(
+      new MarkdownContestWriter(files).sync(updated, "contest-1", "Leif")
+    ).rejects.toThrow(/changed while Leif was preparing the write/i);
+
+    expect(files.files.get(subjectPath)).toContain("Edição concorrente do agente");
+    expect(files.files.get(subjectPath)).not.toContain('name: "Língua Portuguesa"');
+    expect([...files.files.keys()].some((path) => path.includes("/.backups/writes/"))).toBe(false);
   });
 });
