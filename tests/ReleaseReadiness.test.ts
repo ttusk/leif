@@ -26,7 +26,7 @@ describe("community release readiness", () => {
     const readme = read("README.md");
     expect(readme).toMatch(/^## Installation$/m);
     expect(readme).toMatch(/^## Usage$/m);
-    expect(readme).toContain("Configurações → Plugins da comunidade");
+    expect(readme).toContain("Settings → Community plugins");
     expect(readme).toContain("Abrir painel");
   });
 

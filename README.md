@@ -1,78 +1,78 @@
 # Leif
 
-**A bússola do seu estudo.**
+**Your study compass.**
 
-Leif é um plugin para [Obsidian](https://obsidian.md/) que organiza estudos para concursos em um único painel. Ele reúne concursos, matérias, assuntos do edital, recursos e registros de estudo para mostrar o que estudar agora — e, desde a versão 2.0, guarda o conteúdo como **Markdown aberto** dentro do seu vault.
+Leif is a plugin for [Obsidian](https://obsidian.md/) that organizes concurso study in a single panel. It brings together concursos, matérias, edital assuntos, recursos, and registros de estudo to show what to study now — and since version 2.0, it stores content as **open Markdown** inside your vault.
 
-## Funcionalidades
+## Features
 
-- **Hoje**: a recomendação do que estudar agora, seguindo o ciclo do concurso ativo. Registrar o estudo e avançar o ciclo acontecem no mesmo gesto.
-- **Concursos**: cada concurso tem ciclo, matérias e progresso próprios; alternar entre concursos é instantâneo.
-- **Matérias**: organize as matérias do ciclo, os assuntos do edital e os recursos de estudo (PDFs, vídeos e links).
-- **Registros**: o histórico de cada registro de estudo, com feedback visual direto no painel.
-- **Mural**: links oficiais e notas de planejamento do concurso, sempre à mão.
+- **Hoje**: the recommendation of what to study now, following the active concurso's cycle. Recording a study and advancing the cycle happen in one gesture.
+- **Concursos**: each concurso has its own cycle, matérias, and progress; switching between concursos is instant.
+- **Matérias**: organize the cycle's matérias, the edital's assuntos, and study recursos (PDFs, videos, and links).
+- **Registros**: the history of every registro de estudo, with direct visual feedback in the panel.
+- **Mural**: official links and planning notes for the concurso, always at hand.
 
-## Markdown aberto
+## Open Markdown
 
-No Leif 2.0, o conteúdo de estudo pode viver como Markdown legível no vault, em `Leif/concursos/<concurso>/` — arquivos pequenos para concursos, matérias, itens, assuntos, recursos, mural e registros mensais. Você edita no Obsidian, em outro editor ou com um agente de IA, dentro ou fora do Obsidian.
+Since Leif 2.0, study content can live as readable Markdown in the vault, under `Leif/concursos/<concurso>/` — small files for concursos, matérias, itens, assuntos, recursos, mural, and monthly registros. You can edit them in Obsidian, in another editor, or with an AI agent, with or without Obsidian running.
 
-Concursos existentes continuam no armazenamento legado até você optar pela migração, que é feita por concurso: selecione o concurso e execute **Leif: Migrar concurso ativo para Markdown** na paleta de comandos.
+Existing concursos keep using the legacy store until you opt in, per concurso: select the concurso and run **Leif: Migrar concurso ativo para Markdown** from the command palette.
 
-Antes da primeira escrita do v2 em uma instalação existente, o Leif cria e relê um backup completo identificado por checksum em `Leif/.backups/upgrades/`. Se não conseguir verificar esse arquivo, o plugin interrompe a inicialização antes de registrar qualquer interface que possa alterar os dados.
+Before the first v2 write on an existing installation, Leif creates and reads back a complete backup identified by checksum in `Leif/.backups/upgrades/`. If that file cannot be verified, the plugin stops startup before registering any interface that could alter data.
 
-Antes de trocar a fonte, o Leif:
+Before switching the source, Leif:
 
-1. mostra uma prévia dos arquivos e dos problemas que bloqueariam a migração;
-2. valida IDs e relacionamentos sem alterar os dados;
-3. cria um backup imutável com checksum em `Leif/.backups/`;
-4. escreve os arquivos em `Leif/.staging/`;
-5. relê o Markdown e compara todos os campos, relações e ordens;
-6. ativa o Markdown somente se a projeção for equivalente.
+1. shows a preview of the files and of the problems that would block migration;
+2. validates IDs and relationships without changing data;
+3. creates an immutable, checksummed backup in `Leif/.backups/`;
+4. writes the files into `Leif/.staging/`;
+5. rereads the Markdown and compares every field, relation, and order;
+6. activates Markdown only if the projection is equivalent.
 
-Leif cria também `Leif/AGENTS.md` e modelos em `Leif/templates/`. Agentes podem editar os mesmos arquivos sem executar o Obsidian, desde que preservem `leif-id`, block IDs `^leif-ref-...` e regiões `<!-- leif:... -->`. Texto, propriedades desconhecidas e notas fora das regiões gerenciadas são preservados.
+Leif also creates `Leif/AGENTS.md` and templates in `Leif/templates/`. Agents can edit the same files without running Obsidian, as long as they preserve `leif-id`, `^leif-ref-...` block IDs, and `<!-- leif:... -->` regions. Prose, unknown properties, and notes outside managed regions are preserved.
 
-Documentos com IDs duplicados, conflitos de merge, relações inválidas ou schemas futuros são bloqueados para escrita. Se uma pessoa, agente, Git ou sync alterar a fonte durante o staging, a escrita é cancelada e a edição externa permanece intacta. Uma alteração posterior no JSON legado é detectada como possível downgrade ou conflito de sync.
+Documents with duplicate IDs, merge conflicts, invalid relations, or future schemas are blocked from writing. If a person, agent, Git, or sync changes the source during staging, the write is cancelled and the external edit stays intact. A later change to the legacy JSON is detected as a possible downgrade or sync conflict.
 
-Para recuperação, execute **Leif: Voltar concurso ativo ao JSON legado**. O rollback só é permitido quando o snapshot legado ainda corresponde ao checksum original e nunca apaga os arquivos Markdown.
+For recovery, run **Leif: Voltar concurso ativo ao JSON legado**. Rollback is only allowed while the legacy snapshot still matches the original checksum and never deletes the Markdown files.
 
 ## Installation
 
-### Pelo Obsidian
+### From Obsidian
 
-Quando o Leif estiver disponível no diretório oficial, abra **Configurações → Plugins da comunidade → Explorar**, procure por **Leif**, selecione **Instalar** e depois **Ativar**.
+Once Leif is available in the official directory, open **Settings → Community plugins → Browse**, search for **Leif**, select **Install**, and then **Enable**.
 
-### Instalação manual
+### Manual install
 
-1. Baixe `main.js`, `manifest.json` e `styles.css` da mesma versão na página de releases.
-2. Crie a pasta `<seu-vault>/.obsidian/plugins/leif` e coloque os três arquivos nela.
-3. Reinicie o Obsidian ou recarregue os plugins em **Configurações → Plugins da comunidade**.
-4. Ative o **Leif**.
+1. Download `main.js`, `manifest.json`, and `styles.css` from the same release on the releases page.
+2. Create the folder `<your-vault>/.obsidian/plugins/leif` and place the three files in it.
+3. Restart Obsidian or reload plugins under **Settings → Community plugins**.
+4. Enable **Leif**.
 
 ## Usage
 
-Ative o Leif em **Plugins da comunidade** e abra o painel pelo ícone da faixa lateral ou pelo comando **Abrir painel**. Crie um concurso, organize suas matérias e recursos, registre cada estudo e consulte **Hoje** para seguir o ciclo.
+Enable Leif under **Community plugins** and open the panel from the ribbon icon or the **Abrir painel** command. Create a concurso, organize its matérias and recursos, record each study, and check **Hoje** to follow the cycle.
 
-## Privacidade
+## Privacy
 
-Os dados ficam localmente no vault. O Leif não exige conta, não envia telemetria e não faz requisições de rede.
+Data stays locally in the vault. Leif requires no account, sends no telemetry, and makes no network requests.
 
-## Desenvolvimento
+## Development
 
 ```bash
 npm install
-npm run dev             # build em modo watch
-npm test                # testes
-npm run release:check   # lint, testes, formato, build e verificação de release
+npm run dev             # watch-mode build
+npm test                # tests
+npm run release:check   # lint, tests, format, build, and release verification
 ```
 
-## Documentação
+## Documentation
 
-- [Contrato de armazenamento Markdown](docs/markdown-storage-v1.md)
-- [ADR: Markdown como autoridade do conteúdo de estudo](docs/adr/0001-markdown-is-the-study-content-authority.md)
+- [Markdown storage contract](docs/markdown-storage-v1.md)
+- [ADR: Markdown is the study content authority](docs/adr/0001-markdown-is-the-study-content-authority.md)
 - [Design system](docs/design-system.md)
 - [Changelog](CHANGELOG.md)
-- [Notas da versão 2.0](release-notes/2.0.0.md)
+- [2.0 release notes](release-notes/2.0.0.md)
 
-## Licença
+## License
 
-Distribuído sob a licença MIT. Veja [LICENSE](LICENSE).
+Distributed under the MIT license. See [LICENSE](LICENSE).
