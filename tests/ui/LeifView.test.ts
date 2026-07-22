@@ -189,6 +189,23 @@ describe("LeifView", () => {
     expect(contestSelector?.textContent).toContain("Escolha um concurso");
 
     expect(leaf.containerEl.querySelector(".leif-workspace")).not.toBeNull();
+    expect(leaf.containerEl.querySelector(".leif-title")).toBeNull();
+  });
+
+  it("guides first use with a real ordered setup sequence", async () => {
+    const { leaf } = await openLeifView(new InMemoryPluginDataStore());
+
+    const setup = leaf.containerEl.querySelector<HTMLOListElement>("ol.leif-setup-steps");
+    const steps = Array.from(setup?.querySelectorAll("li") ?? []).map((step) =>
+      step.textContent?.trim()
+    );
+
+    expect(leaf.containerEl.textContent).toContain("Comece por aqui");
+    expect(steps).toHaveLength(3);
+    expect(steps[0]).toContain("Criar ou escolher um concurso");
+    expect(steps[1]).toContain("Informar a data da prova");
+    expect(steps[2]).toContain("Adicionar e ordenar as matérias");
+    expect(leaf.containerEl.textContent).not.toContain("Nada escolhido ainda");
   });
 
   it("keeps setup sections under Plano and contest management in the global selector", async () => {
@@ -360,6 +377,55 @@ describe("LeifView", () => {
     const sessionsTab = leaf.containerEl.querySelector<HTMLElement>("[data-tab='sessions']");
     expect(sessionsTab?.getAttribute("aria-selected")).toBe("true");
     expect(leaf.containerEl.querySelector("#leif-tabpanel")?.textContent).toContain("Registros");
+  });
+
+  it("prefills the recommendation, advances after save, and offers a safe undo", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiData(dataStore);
+    const before = await dataStore.load();
+    const initialState = structuredClone(
+      before.contestStates.find((state) => state.contestId === before.activeContestId)
+    );
+
+    const { leaf } = await openLeifView(dataStore);
+    const registerButton = Array.from(leaf.containerEl.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Registrar estudo")
+    );
+    expect(registerButton).not.toBeUndefined();
+
+    registerButton?.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const form = leaf.containerEl.querySelector<HTMLFormElement>("form.leif-registration-form");
+    const subject = form?.querySelector<HTMLSelectElement>("[data-field='subject']");
+    const item = form?.querySelector<HTMLSelectElement>("[data-field='item']");
+    expect(subject?.value).toBe("subject-1");
+    expect(item?.value).toBe(before.studyItems[0]?.id);
+
+    form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const afterSave = await dataStore.load();
+    const advancedState = afterSave.contestStates.find(
+      (state) => state.contestId === afterSave.activeContestId
+    );
+    expect(advancedState?.currentSubjectId).toBe("subject-2");
+    expect(leaf.containerEl.textContent).toContain("Agora vem Constitutional Law");
+
+    const undo = Array.from(leaf.containerEl.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "Desfazer"
+    );
+    expect(undo).not.toBeUndefined();
+    undo?.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const afterUndo = await dataStore.load();
+    const restored = afterUndo.contestStates.find(
+      (state) => state.contestId === afterUndo.activeContestId
+    );
+    expect(restored).toEqual(initialState);
+    expect(afterUndo.studySessions).toHaveLength(afterSave.studySessions.length);
   });
 
   it("guides the user when today's page has no active subject yet", async () => {
