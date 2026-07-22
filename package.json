@@ -1,6 +1,6 @@
 {
   "name": "leif",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Organize concursos, ciclos, editais, materiais e sessões de estudo no Obsidian.",
   "main": "main.js",
   "author": {

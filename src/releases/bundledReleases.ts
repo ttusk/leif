@@ -2,6 +2,14 @@ import type { BundledReleaseNote } from "@/application/services/ChangelogService
 
 export const BUNDLED_RELEASES: readonly BundledReleaseNote[] = [
   {
+    version: "2.1.1",
+    title: "Leif 2.1.1",
+    body: `## Corrigido
+
+- Nos Registros, o próximo passo (Depois:) agora fica empilhado abaixo de Item: ao lado de Agora, em vez de alinhado à direita.`,
+    githubUrl: "https://github.com/ttusk/leif/releases/tag/2.1.1"
+  },
+  {
     version: "2.1.0",
     title: "Leif 2.1",
     body: `## Resumo da era 2.0

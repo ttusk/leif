@@ -4,6 +4,12 @@ Todas as mudanças notáveis do Leif são documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [2.1.1] - 2026-07-22
+
+### Corrigido
+
+- Nos Registros, o próximo passo (Depois:) agora fica empilhado abaixo de Item: ao lado de Agora, em vez de alinhado à direita.
+
 ## [2.1.0] - 2026-07-22
 
 ### Resumo da era 2.0
@@ -82,6 +88,7 @@ Consolida as mudanças das versões 2.0.0 a 2.0.3:
 - Bloqueios de segurança reportados em português no painel.
 - Prévia de migração compacta, abas de navegação sem interferência do tema, progresso de assuntos e posições de reordenação em uma única linha, e estados de data e pendências mais claros.
 
+[2.1.1]: https://github.com/ttusk/leif/compare/2.1.0...2.1.1
 [2.1.0]: https://github.com/ttusk/leif/compare/2.0.3...2.1.0
 [2.0.3]: https://github.com/ttusk/leif/compare/2.0.2...2.0.3
 [2.0.2]: https://github.com/ttusk/leif/compare/2.0.1...2.0.2
