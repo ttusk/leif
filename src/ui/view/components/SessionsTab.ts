@@ -93,20 +93,23 @@ export class SessionsTab {
         : null;
     const recommendedItemId = snapshot.currentItemId ?? snapshot.nextItemId;
     const cycleContext = DomHelpers.createElement("div", "leif-cycle-context");
+    const nowGroup = DomHelpers.createElement("div", "leif-cycle-context-now");
+    const nowLine = DomHelpers.createElement("span", "leif-cycle-context-now-line");
     const nowLabel = DomHelpers.createElement("span", "leif-cycle-context-label");
     nowLabel.textContent = "Agora: ";
     const nowValue = DomHelpers.createElement("span", "leif-cycle-context-value");
     nowValue.textContent = recommendedSubject?.name ?? "—";
-    cycleContext.appendChild(nowLabel);
-    cycleContext.appendChild(nowValue);
+    nowLine.append(nowLabel, nowValue);
+    nowGroup.appendChild(nowLine);
     if (recommendedItemId) {
       const itemLabel = DomHelpers.createElement("span", "leif-cycle-context-sublabel");
       itemLabel.textContent = `Item: ${itemMap.get(recommendedItemId) ?? recommendedItemId}`;
-      cycleContext.appendChild(itemLabel);
+      nowGroup.appendChild(itemLabel);
     }
+    cycleContext.appendChild(nowGroup);
     if (afterRecommendedSubject) {
       const nextInfo = DomHelpers.createElement("span", "leif-cycle-context-next");
-      nextInfo.textContent = `Depois vem ${afterRecommendedSubject.name}`;
+      nextInfo.textContent = `Depois: ${afterRecommendedSubject.name}`;
       cycleContext.appendChild(nextInfo);
     }
     const cycleActions = DomHelpers.createElement("div", "leif-cycle-context-actions");

@@ -1200,6 +1200,30 @@ describe("LeifView", () => {
     expect(leaf.containerEl.querySelector(".leif-cycle-action")).toBeNull();
   });
 
+  it("shows the current item as a subtitle of Agora and never labels the next subject Depois vem", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiData(dataStore);
+
+    const { leaf } = await openLeifView(dataStore);
+    const sessionsTabButton =
+      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='sessions']");
+
+    if (!sessionsTabButton) {
+      throw new Error("Sessions tab button was not rendered.");
+    }
+
+    sessionsTabButton.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const cycleContext = leaf.containerEl.querySelector<HTMLElement>(".leif-cycle-context");
+    const nowGroup = cycleContext?.querySelector<HTMLElement>(".leif-cycle-context-now");
+
+    expect(nowGroup).not.toBeNull();
+    expect(nowGroup?.querySelector(".leif-cycle-context-label")?.textContent).toContain("Agora:");
+    expect(nowGroup?.querySelector(".leif-cycle-context-sublabel")?.textContent).toContain("Item:");
+    expect(cycleContext?.textContent).not.toContain("Depois vem");
+  });
+
   it("shows the recommended subject name in the cycle-advance notice", async () => {
     const dataStore = new InMemoryPluginDataStore();
     await seedUiData(dataStore);

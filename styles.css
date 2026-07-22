@@ -792,6 +792,19 @@ form.leif-card,
   font-weight: var(--font-semibold);
 }
 
+.leif-cycle-context-now {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-1);
+  min-width: 0;
+}
+
+.leif-cycle-context-now-line {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--size-4-1);
+}
+
 .leif-cycle-context-sublabel,
 .leif-cycle-context-next {
   color: var(--leif-text-muted);
