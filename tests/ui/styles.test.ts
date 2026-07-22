@@ -108,4 +108,11 @@ describe("Leif Native visual system", () => {
     expect(styles).toMatch(/\.leif-progress-fill\s*{[^}]*background:\s*var\(--leif-accent\);/s);
     expect(styles).toMatch(/\.leif-status-(active|inactive)\s*{[^}]*background:\s*transparent;/s);
   });
+
+  it("keeps multi-digit reorder positions on one line", () => {
+    const styles = readStyles();
+
+    expect(styles).toMatch(/\.leif-order-control\s*{[^}]*white-space:\s*nowrap;/s);
+    expect(styles).toMatch(/\.leif-order-number\s*{[^}]*min-width:\s*2ch;/s);
+  });
 });
