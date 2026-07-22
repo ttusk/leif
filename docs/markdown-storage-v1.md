@@ -29,16 +29,28 @@ This document defines the initial interoperability contract for humans, Leif, an
 Leif/
 ├── README.md
 ├── AGENTS.md
+├── templates/
+│   ├── concurso.md
+│   ├── materia.md
+│   └── registro.md
+├── .backups/
+├── .staging/
 └── concursos/
     └── <concurso-slug>/
         ├── concurso.md
-        ├── materias/
-        │   └── <materia-slug>.md
-        └── registros/
-            └── YYYY-MM.md
+        ├── materias/<nome>-<id6>.md
+        ├── itens/<titulo>-<id6>.md
+        ├── assuntos/<nome>-<id6>.md
+        ├── recursos/<titulo>-<id6>.md
+        ├── mural/
+        │   ├── <tipo>-<rotulo>-<id6>.md
+        │   └── snapshot-<id6>.md
+        └── registros/YYYY-MM/<data>-<id6>.md
 ```
 
-Paths are presentation. Stable `leif-id` values are identity.
+Paths are presentation. Stable `leif-id` values are identity. The `<id6>` suffix is a short
+derivation of the `leif-id` that keeps filenames unique and human-readable. `.backups/` and
+`.staging/` are managed by Leif and must never be edited.
 
 ## Common document properties
 
@@ -54,7 +66,7 @@ leif-id: 01k0-example
 
 Required properties:
 
-- `leif-type`: `concurso`, `materia`, or `registros`.
+- `leif-type`: `concurso`, `materia`, `item`, `assunto`, `recurso`, `registro`, `mural-link`, or `mural-snapshot`.
 - `leif-schema`: document schema version.
 - `leif-id`: stable identity; changing a filename or path does not change it.
 
@@ -68,18 +80,21 @@ Leif recognizes structured content only inside paired markers.
 ## Matérias
 
 <!-- leif:subjects:start -->
-1. [[materias/lingua-portuguesa]]
-2. [[materias/raciocinio-logico]]
+1. [[materias/lingua-portuguesa-1a2b3c|Língua Portuguesa]] ^leif-ref-30316b30...
+2. [[materias/raciocinio-logico-4d5e6f|Raciocínio Lógico]] ^leif-ref-30316b31...
 <!-- leif:subjects:end -->
 ```
 
+Regions in use: `subjects` and `wall-notes` (concurso), `items` and `topics` (matéria),
+`resources` (item and assunto), and `target-items` (mural-snapshot).
+
 List position is order. Numeric `order` properties are not stored.
 
-Entries use stable Obsidian block IDs:
-
-```markdown
-- [ ] Compreensão e interpretação de textos ^leif-topic-01k0a
-```
+Every reference entry ends with an Obsidian block ID in the form `^leif-ref-<hex>`, where
+`<hex>` is the referenced document's `leif-id` encoded as lowercase hexadecimal. The block
+ID is the durable link between the list entry and the target document: paths, filenames, and
+link labels can change, but the `leif-id` cannot. Entries without a valid block ID are
+rejected on read.
 
 Leif UI writes patch only the targeted property or managed region. Free-form Markdown outside those boundaries belongs to the user.
 
