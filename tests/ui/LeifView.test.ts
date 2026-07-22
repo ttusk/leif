@@ -1203,6 +1203,11 @@ describe("LeifView", () => {
   it("shows the current item as a subtitle of Agora and never labels the next subject Depois vem", async () => {
     const dataStore = new InMemoryPluginDataStore();
     await seedUiData(dataStore);
+    const seeded = await dataStore.load();
+    seeded.subjects = seeded.subjects.map((subject) => ({ ...subject, isActive: true }));
+    const state = seeded.contestStates.find((s) => s.contestId === seeded.activeContestId);
+    if (state) seeded.contestStates = [{ ...state, currentSubjectId: "subject-1" }];
+    await dataStore.save(seeded);
 
     const { leaf } = await openLeifView(dataStore);
     const sessionsTabButton =
@@ -1221,6 +1226,7 @@ describe("LeifView", () => {
     expect(nowGroup).not.toBeNull();
     expect(nowGroup?.querySelector(".leif-cycle-context-label")?.textContent).toContain("Agora:");
     expect(nowGroup?.querySelector(".leif-cycle-context-sublabel")?.textContent).toContain("Item:");
+    expect(nowGroup?.querySelector(".leif-cycle-context-next")?.textContent).toContain("Depois:");
     expect(cycleContext?.textContent).not.toContain("Depois vem");
   });
 

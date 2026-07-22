@@ -106,12 +106,12 @@ export class SessionsTab {
       itemLabel.textContent = `Item: ${itemMap.get(recommendedItemId) ?? recommendedItemId}`;
       nowGroup.appendChild(itemLabel);
     }
-    cycleContext.appendChild(nowGroup);
     if (afterRecommendedSubject) {
       const nextInfo = DomHelpers.createElement("span", "leif-cycle-context-next");
       nextInfo.textContent = `Depois: ${afterRecommendedSubject.name}`;
-      cycleContext.appendChild(nextInfo);
+      nowGroup.appendChild(nextInfo);
     }
+    cycleContext.appendChild(nowGroup);
     const cycleActions = DomHelpers.createElement("div", "leif-cycle-context-actions");
     cycleActions.appendChild(
       DomHelpers.createButton("Marcar como estudado", {
