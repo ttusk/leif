@@ -109,10 +109,7 @@ export class LeifView extends ItemView {
 
     const header = DomHelpers.createElement("header", "leif-header");
     const titleGroup = DomHelpers.createElement("div", "leif-title-group");
-    titleGroup.append(
-      DomHelpers.createHeading("Leif", "compass"),
-      DomHelpers.createParagraph("Sua rota de estudos, sem sair do Obsidian.")
-    );
+    titleGroup.append(DomHelpers.createHeading("Leif", "compass"));
 
     this.headerActions = DomHelpers.createElement("div", "leif-header-actions");
     header.append(titleGroup, this.headerActions);
