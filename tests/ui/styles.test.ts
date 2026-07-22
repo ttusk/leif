@@ -6,164 +6,101 @@ function readStyles(): string {
   return readFileSync(resolve(process.cwd(), "styles.css"), "utf8");
 }
 
-describe("Leif visual system", () => {
-  it("builds the interface from Obsidian theme tokens", () => {
+describe("Leif Native visual system", () => {
+  it("aliases Obsidian theme tokens without shipping a Leif palette or font", () => {
     const styles = readStyles();
 
-    expect(styles).toContain("--leif-surface: var(--background-secondary)");
+    expect(styles).toContain("--leif-bg: var(--background-primary)");
+    expect(styles).toContain("--leif-bg-muted: var(--background-secondary)");
+    expect(styles).toContain("--leif-bg-editing: var(--background-primary-alt)");
     expect(styles).toContain("--leif-accent: var(--interactive-accent)");
     expect(styles).toContain("--leif-text: var(--text-normal)");
+    expect(styles).not.toMatch(/#[0-9a-f]{3,8}\b/i);
+    expect(styles).not.toMatch(/font-family:\s*(?!var\()/i);
+    expect(styles).not.toContain("--leif-shadow");
+  });
+
+  it("uses a horizontal text navigation instead of an internal app rail", () => {
+    const styles = readStyles();
+
+    expect(styles).toMatch(/\.leif-workspace\s*{[^}]*display:\s*block;/s);
+    expect(styles).toMatch(
+      /\.leif-tab-bar\s*{[^}]*display:\s*flex;[^}]*flex-direction:\s*row;[^}]*overflow-x:\s*auto;/s
+    );
+    expect(styles).toMatch(
+      /\.leif-tab-button\.is-active\s*{[^}]*border-bottom-color:\s*var\(--leif-accent\);/s
+    );
+    expect(styles).not.toMatch(/grid-template-columns:\s*minmax\(148px,\s*184px\)/);
+    expect(styles).not.toContain(".leif-tab-icon");
+  });
+
+  it("keeps content compact and lets the pane width drive reflow", () => {
+    const styles = readStyles();
+
     expect(styles).toMatch(
       /\.leif-view\s*{[^}]*container-name:\s*leif;[^}]*container-type:\s*inline-size;/s
     );
-    expect(styles).not.toMatch(/#[0-9a-f]{3,8}\b/i);
-    expect(styles).not.toMatch(/\.leif-(button|primary-button|input|select|textarea)\s*\{/);
+    expect(styles).toMatch(/\.leif-body\s*{[^}]*max-width:\s*960px;/s);
+    expect(styles).toMatch(/\.leif-view\.is-compact[\s\S]*\.leif-grid-2\s*{[^}]*grid-template-columns:\s*1fr;/s);
+    expect(styles).toMatch(/\.leif-table-wrapper\s*{[^}]*overflow-x:\s*auto;/s);
   });
 
-  it("uses a responsive workspace with a navigation rail on wide panes", () => {
+  it("uses proximity and sparse dividers instead of cards and shadows", () => {
     const styles = readStyles();
 
-    expect(styles).toMatch(
-      /\.leif-workspace\s*{[^}]*display:\s*grid;[^}]*grid-template-columns:\s*minmax\(148px,\s*184px\)\s+minmax\(0,\s*1fr\);/s
-    );
-    expect(styles).toMatch(
-      /\.leif-navigation\s*{[^}]*position:\s*sticky;[^}]*align-self:\s*start;/s
-    );
-    expect(styles).not.toContain(".leif-navigation-label");
-    expect(styles).toMatch(/\.leif-tab-bar\s*{[^}]*flex-direction:\s*column;/s);
-    expect(styles).toMatch(
-      /@media\s*\(max-width:\s*760px\)[\s\S]*\.leif-workspace\s*{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/s
-    );
-    expect(styles).toMatch(
-      /@media\s*\(max-width:\s*760px\)[\s\S]*\.leif-tab-bar\s*{[^}]*flex-direction:\s*row;[^}]*overflow-x:\s*auto;/s
-    );
-    expect(styles).toMatch(
-      /\.leif-view\.is-narrow\s+\.leif-workspace\s*{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\);/s
-    );
-    expect(styles).toMatch(
-      /\.leif-view\.is-narrow\s+\.leif-tab-bar\s*{[^}]*flex-direction:\s*row;[^}]*overflow-x:\s*auto;/s
-    );
-    expect(styles).not.toContain("scrollbar-width");
-  });
-
-  it("gives semantic tabs a native, visible active state", () => {
-    const styles = readStyles();
-
-    expect(styles).toMatch(
-      /\.leif-tab-button\s*{[^}]*min-height:\s*40px;[^}]*border-radius:\s*var\(--radius-s\);/s
-    );
-    expect(styles).toMatch(
-      /\.leif-tab-button\.is-active\s*{[^}]*background:\s*var\(--background-modifier-hover\);[^}]*color:\s*var\(--text-normal\);/s
-    );
-    expect(styles).toMatch(
-      /\.leif-tab-button:focus-visible\s*{[^}]*box-shadow:\s*0 0 0 2px var\(--background-modifier-border-focus\);/s
-    );
-    expect(styles).toMatch(/\.leif-tab-icon\s*{[^}]*color:\s*var\(--text-muted\);/s);
-  });
-
-  it("keeps content readable and data surfaces scrollable", () => {
-    const styles = readStyles();
-
-    expect(styles).toMatch(/\.leif-view\s*{[^}]*height:\s*100%;[^}]*overflow-y:\s*auto;/s);
-    expect(styles).toMatch(/\.leif-body\s*{[^}]*min-width:\s*0;[^}]*max-width:\s*980px;/s);
-    expect(styles).toMatch(/\.leif-table-wrapper\s*{[^}]*overflow:\s*auto;/s);
-    expect(styles).not.toMatch(/\.leif-table-wrapper\s*{[^}]*scrollbar-gutter:\s*stable;/s);
-    expect(styles).toMatch(/\.leif-table thead th\s*{[^}]*position:\s*sticky;/s);
-  });
-
-  it("uses a flat hierarchy with only purposeful containers", () => {
-    const styles = readStyles();
-
-    expect(styles).toMatch(
-      /\.leif-next-activity\s*{[^}]*background:\s*var\(--leif-surface\);[^}]*border:\s*1px solid var\(--leif-border\);/s
-    );
-    expect(styles).not.toContain(".leif-next-activity::before");
     expect(styles).toMatch(
       /\.leif-card\s*{[^}]*padding:\s*0;[^}]*background:\s*transparent;[^}]*border:\s*0;/s
     );
-    expect(styles).toMatch(/\.leif-next-activity-next\s*{[^}]*border-top:\s*0;/s);
-    expect(styles).toMatch(/\.leif-empty-state\s*{[^}]*border-style:\s*dashed;/s);
+    expect(styles).toMatch(
+      /\.leif-wall-editor\s*{[^}]*background:\s*var\(--leif-bg-editing\);[^}]*border:\s*1px solid var\(--leif-border-hover\);/s
+    );
+    expect(styles).toMatch(
+      /\.leif-empty-state\s*{[^}]*background:\s*var\(--leif-bg-muted\);[^}]*border:\s*0;/s
+    );
+    expect(styles).not.toMatch(/border-style:\s*dashed/);
+    expect(styles).not.toMatch(/box-shadow:\s*var\(--shadow/);
   });
 
-  it("supports touch targets, narrow forms, reduced motion, and forced colors", () => {
+  it("renders the Fio do ciclo as one semantic accent thread", () => {
     const styles = readStyles();
 
+    expect(styles).toMatch(/\.leif-cycle-thread\s*{[^}]*list-style:\s*none;/s);
     expect(styles).toMatch(
-      /@media\s*\(max-width:\s*760px\)[\s\S]*\.leif-inline-actions button[\s\S]*min-height:\s*40px;/s
+      /\.leif-cycle-step::before\s*{[^}]*width:\s*2px;[^}]*background:\s*var\(--leif-accent\);/s
     );
     expect(styles).toMatch(
-      /@media\s*\(max-width:\s*520px\)[\s\S]*\.leif-form-actions\s*{[^}]*flex-direction:\s*column-reverse;/s
+      /\.leif-cycle-step\[data-cycle-state="next"\][^}]*color:\s*var\(--leif-text-muted\);/s
     );
+    expect(styles).not.toMatch(/\.leif-next-activity\s*{[^}]*box-shadow:/s);
+  });
+
+  it("stacks Mural sections and keeps long reference data readable", () => {
+    const styles = readStyles();
+
+    expect(styles).toMatch(/\.leif-wall-read-view\s*{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/s);
+    expect(styles).toMatch(/\.leif-wall-editor\s*{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/s);
+    expect(styles).toMatch(/\.leif-wall-link-url\s*{[^}]*overflow-wrap:\s*anywhere;/s);
+    expect(styles).not.toContain("grid-template-rows: subgrid");
+  });
+
+  it("retains accessible focus, reduced motion, forced colors, and touch targets", () => {
+    const styles = readStyles();
+
+    expect(styles).toMatch(/\.leif-tab-button:focus-visible\s*{[^}]*outline:/s);
     expect(styles).toMatch(/@media\s*\(prefers-reduced-motion:\s*reduce\)/);
     expect(styles).toMatch(/@media\s*\(forced-colors:\s*active\)/);
+    expect(styles).toMatch(
+      /\.leif-view\.is-compact[\s\S]*button[^}]*min-height:\s*40px;/s
+    );
   });
 
-  it("shows partial progress visually and completion as a compact status", () => {
+  it("keeps numeric progress scannable without metric-card styling", () => {
     const styles = readStyles();
 
-    expect(styles).toMatch(
-      /\.leif-progress-bar\s*{[^}]*background:\s*var\(--background-modifier-border\);/s
-    );
+    expect(styles).toMatch(/\.leif-metric-value\s*{[^}]*font-variant-numeric:\s*tabular-nums;/s);
     expect(styles).toMatch(/\.leif-progress-fill\s*{[^}]*background:\s*var\(--leif-accent\);/s);
-    expect(styles).toMatch(/\.leif-progress-complete\s*{[^}]*color:\s*var\(--text-success\);/s);
-  });
-
-  it("shows the active contest as quiet green text instead of a filled pill", () => {
-    const styles = readStyles();
-
     expect(styles).toMatch(
-      /\.leif-status-active\s*{[^}]*padding:\s*0;[^}]*border-radius:\s*0;[^}]*background:\s*transparent;[^}]*color:\s*var\(--text-success\);/s
-    );
-  });
-
-  it("shows active and inactive subjects as flat semantic text", () => {
-    const styles = readStyles();
-
-    expect(styles).toMatch(
-      /\.leif-cycle-status\s*{[^}]*padding:\s*0;[^}]*border-radius:\s*0;[^}]*background:\s*transparent;/s
-    );
-    expect(styles).toMatch(
-      /\.leif-cycle-status\.leif-status-active\s*{[^}]*color:\s*var\(--text-success\);/s
-    );
-    expect(styles).toMatch(
-      /\.leif-cycle-status\.leif-status-inactive\s*{[^}]*color:\s*var\(--text-warning\);/s
-    );
-  });
-
-  it("centers shared icons against adjacent text", () => {
-    const styles = readStyles();
-
-    expect(styles).toMatch(/\.leif-icon\s*{[^}]*line-height:\s*0;/s);
-    expect(styles).toMatch(
-      /\.leif-icon\s*>\s*svg\s*{[^}]*display:\s*block;[^}]*width:\s*100%;[^}]*height:\s*100%;/s
-    );
-  });
-
-  it("keeps the subject picker flat around the native select", () => {
-    const styles = readStyles();
-
-    expect(styles).toMatch(
-      /\.leif-subject-picker\s*{[^}]*padding:\s*0;[^}]*border:\s*0;[^}]*background:\s*transparent;/s
-    );
-  });
-
-  it("styles URL controls as full-width icon fields", () => {
-    const styles = readStyles();
-
-    expect(styles).toMatch(
-      /\.leif-url-field\s*{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/s
-    );
-    expect(styles).toMatch(/\.leif-url-control\s*{[^}]*position:\s*relative;/s);
-    expect(styles).toMatch(
-      /\.leif-url-control input\s*{[^}]*width:\s*100%;[^}]*padding-inline-start:/s
-    );
-  });
-
-  it("aligns corresponding fields across the wall reference cards", () => {
-    const styles = readStyles();
-
-    expect(styles).toMatch(
-      /\.leif-wall-reference-card\s*{[^}]*display:\s*grid;[^}]*grid-template-rows:\s*subgrid;[^}]*grid-row:\s*span 4;/s
+      /\.leif-status-(active|inactive)\s*{[^}]*background:\s*transparent;/s
     );
   });
 });
