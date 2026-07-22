@@ -290,7 +290,8 @@ export class SessionsTab {
       "div",
       "leif-inline-actions leif-inline-actions-compact"
     );
-    actions.appendChild(
+    const secondaryActions: HTMLElement[] = [];
+    secondaryActions.push(
       DomHelpers.createIconButton("edit", "Editar", {
         onClick: async () => {
           this.editingSessionId = session.id;
@@ -298,7 +299,7 @@ export class SessionsTab {
         }
       })
     );
-    actions.appendChild(
+    secondaryActions.push(
       DomHelpers.createIconButton("delete", "Excluir", {
         dataset: { sessionDeleteId: session.id },
         onClick: async () => {
@@ -309,7 +310,7 @@ export class SessionsTab {
     );
 
     if (this.pendingDeleteSessionId === session.id) {
-      actions.append(
+      secondaryActions.push(
         DomHelpers.createButton("Excluir?", {
           dataset: { sessionConfirmDeleteId: session.id },
           onClick: async () => {
@@ -330,6 +331,7 @@ export class SessionsTab {
         })
       );
     }
+    actions.appendChild(DomHelpers.createOverflowMenu(secondaryActions));
 
     tr.appendChild(DomHelpers.createCell(new Date(session.studiedAt).toLocaleDateString("pt-BR")));
     tr.appendChild(DomHelpers.createCell(this.formatStudyLabel(subjectName, topicName)));

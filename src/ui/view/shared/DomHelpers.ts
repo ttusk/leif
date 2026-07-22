@@ -366,6 +366,20 @@ export class DomHelpers {
     return button;
   }
 
+  /** Groups infrequent row actions behind one keyboard-accessible disclosure. */
+  static createOverflowMenu(actions: HTMLElement[], label = "Mais opções"): HTMLDetailsElement {
+    const menu = this.createElement("details", "leif-overflow-menu");
+    const trigger = this.createElement("summary", "clickable-icon leif-overflow-trigger");
+    trigger.setAttribute("aria-label", label);
+    trigger.appendChild(this.createIcon("more-horizontal"));
+    const content = this.createElement("div", "leif-overflow-menu-content");
+    content.setAttribute("role", "group");
+    content.setAttribute("aria-label", label);
+    content.append(...actions);
+    menu.append(trigger, content);
+    return menu;
+  }
+
   /**
    * Creates a form element.
    */

@@ -113,7 +113,8 @@ export class TopicsTab {
       "div",
       "leif-inline-actions leif-inline-actions-compact"
     );
-    actions.appendChild(
+    const secondaryActions: HTMLElement[] = [];
+    secondaryActions.push(
       DomHelpers.createIconButton("edit", "Editar", {
         onClick: async () => {
           this.editingTopicId = topic.id;
@@ -121,7 +122,7 @@ export class TopicsTab {
         }
       })
     );
-    actions.appendChild(
+    secondaryActions.push(
       DomHelpers.createIconButton("delete", "Excluir", {
         onClick: async () => {
           this.pendingDeleteTopicId = topic.id;
@@ -131,7 +132,7 @@ export class TopicsTab {
     );
 
     if (this.pendingDeleteTopicId === topic.id) {
-      actions.append(
+      secondaryActions.push(
         DomHelpers.createButton("Excluir?", {
           onClick: async () => {
             try {
@@ -151,6 +152,7 @@ export class TopicsTab {
         })
       );
     }
+    actions.appendChild(DomHelpers.createOverflowMenu(secondaryActions));
 
     const titleCell = DomHelpers.createElement("td", "leif-topic-title-cell");
     const title = DomHelpers.createElement("span", "leif-topic-title");

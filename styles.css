@@ -434,6 +434,44 @@ form.leif-card,
   white-space: nowrap;
 }
 
+.leif-overflow-menu {
+  position: relative;
+}
+
+.leif-overflow-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28px;
+  min-height: 28px;
+  list-style: none;
+  cursor: pointer;
+}
+
+.leif-overflow-trigger::-webkit-details-marker {
+  display: none;
+}
+
+.leif-overflow-trigger:focus-visible {
+  outline: 2px solid var(--leif-focus);
+  outline-offset: 1px;
+}
+
+.leif-overflow-menu-content {
+  position: absolute;
+  z-index: var(--layer-menu);
+  inset-block-start: calc(100% + var(--size-4-1));
+  inset-inline-end: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--size-4-1);
+  width: max-content;
+  padding: var(--size-4-1);
+  border: 1px solid var(--leif-border-hover);
+  border-radius: var(--radius-s);
+  background: var(--background-primary);
+}
+
 .leif-subject-picker {
   display: inline-flex;
   align-items: center;

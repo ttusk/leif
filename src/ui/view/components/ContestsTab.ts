@@ -79,6 +79,7 @@ export class ContestsTab {
       "div",
       "leif-inline-actions leif-inline-actions-compact"
     );
+    const secondaryActions: HTMLElement[] = [];
 
     if (!isActive) {
       actions.appendChild(
@@ -97,7 +98,7 @@ export class ContestsTab {
       );
     }
 
-    actions.appendChild(
+    secondaryActions.push(
       DomHelpers.createIconButton("edit", "Editar", {
         onClick: async () => {
           this.editingContestId = contest.id;
@@ -106,7 +107,7 @@ export class ContestsTab {
       })
     );
 
-    actions.appendChild(
+    secondaryActions.push(
       DomHelpers.createIconButton("delete", "Excluir", {
         onClick: async () => {
           this.pendingDeleteContestId = contest.id;
@@ -116,7 +117,7 @@ export class ContestsTab {
     );
 
     if (this.pendingDeleteContestId === contest.id) {
-      actions.append(
+      secondaryActions.push(
         DomHelpers.createButton("Excluir?", {
           dataset: { contestDeleteId: contest.id },
           onClick: async () => {
@@ -137,6 +138,7 @@ export class ContestsTab {
         })
       );
     }
+    actions.appendChild(DomHelpers.createOverflowMenu(secondaryActions));
 
     const header = DomHelpers.createElement("div", "leif-contest-card-header");
     const titleGroup = DomHelpers.createElement("div", "leif-contest-card-title-group");

@@ -307,6 +307,11 @@ export class LeifView extends ItemView {
       const prev = tabIds[(index - 1 + tabIds.length) % tabIds.length];
       void this.selectPrimaryTab(prev);
       this.primaryTabButtons.get(prev)?.focus();
+    } else if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      const target = event.key === "Home" ? tabIds[0] : tabIds[tabIds.length - 1];
+      void this.selectPrimaryTab(target);
+      this.primaryTabButtons.get(target)?.focus();
     } else if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
       void this.selectPrimaryTab(tabIds[index]);
@@ -325,6 +330,11 @@ export class LeifView extends ItemView {
       const previous = tabIds[(index - 1 + tabIds.length) % tabIds.length];
       void this.selectTab(previous);
       this.planTabButtons.get(previous)?.focus();
+    } else if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      const target = event.key === "Home" ? tabIds[0] : tabIds[tabIds.length - 1];
+      void this.selectTab(target);
+      this.planTabButtons.get(target)?.focus();
     } else if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
       void this.selectTab(tabIds[index]);
