@@ -260,6 +260,25 @@ describe("LeifView", () => {
     expect(contestMenu?.textContent).toContain("Gerenciar concursos");
   });
 
+  it("supports Home and End in primary navigation", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiData(dataStore);
+    const { leaf } = await openLeifView(dataStore);
+    const today = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='dashboard']");
+
+    today?.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(leaf.containerEl.querySelector("[data-tab='wall']")?.getAttribute("aria-selected")).toBe(
+      "true"
+    );
+
+    leaf.containerEl
+      .querySelector<HTMLButtonElement>("[data-tab='wall']")
+      ?.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(today?.getAttribute("aria-selected")).toBe("true");
+  });
+
   it("uses native Obsidian classes for buttons and form controls", async () => {
     const dataStore = new InMemoryPluginDataStore();
     await seedUiData(dataStore);
@@ -749,6 +768,14 @@ describe("LeifView", () => {
     expect(
       questionsRow?.querySelector("td.leif-actions-cell button[title='Excluir']")
     ).not.toBeNull();
+    const overflow = questionsRow?.querySelector<HTMLDetailsElement>(
+      "td.leif-actions-cell details.leif-overflow-menu"
+    );
+    expect(overflow).not.toBeNull();
+    expect(overflow).not.toBeUndefined();
+    expect(overflow?.querySelector("summary[aria-label='Mais opções']")).not.toBeNull();
+    expect(overflow?.querySelector("button[title='Editar']")).not.toBeNull();
+    expect(overflow?.querySelector("button[title='Excluir']")).not.toBeNull();
     expect(
       questionsRow?.querySelector("td.leif-session-date-cell button[title='Excluir']")
     ).toBeNull();
