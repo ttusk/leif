@@ -1404,10 +1404,12 @@ describe("LeifView", () => {
     const topicRow = leaf.containerEl.querySelector<HTMLTableRowElement>(
       "tr[data-topic-id='topic-progress-sessions']"
     );
+    const progressCell = topicRow?.querySelector("td.leif-topic-progress-cell");
 
     expect(topicRow?.textContent).toContain("16/20 acertos");
     expect(topicRow?.textContent).toContain("12 pág. PDF");
     expect(topicRow?.textContent).not.toContain("0 resolvidas");
+    expect(progressCell?.textContent).toContain("16/20 acertos");
   });
 
   it("creates a questions session when the count is greater than zero", async () => {

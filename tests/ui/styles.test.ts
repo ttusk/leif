@@ -122,6 +122,7 @@ describe("Leif Native visual system", () => {
     expect(styles).toMatch(/\.leif-metric-value\s*{[^}]*font-variant-numeric:\s*tabular-nums;/s);
     expect(styles).toMatch(/\.leif-progress-fill\s*{[^}]*background:\s*var\(--leif-accent\);/s);
     expect(styles).toMatch(/\.leif-status-(active|inactive)\s*{[^}]*background:\s*transparent;/s);
+    expect(styles).toMatch(/\.leif-topic-progress-cell\s*{[^}]*white-space:\s*nowrap;/s);
   });
 
   it("keeps multi-digit reorder positions on one line", () => {
