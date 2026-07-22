@@ -28,6 +28,13 @@ class InMemoryPluginDataStore implements PluginDataStore {
   async save(data: LeifPluginData): Promise<void> {
     this.data = data;
   }
+
+  async mutate<T>(mutation: (draft: LeifPluginData) => T | Promise<T>): Promise<T> {
+    const draft = structuredClone(this.data);
+    const result = await mutation(draft);
+    this.data = draft;
+    return result;
+  }
 }
 
 async function seedUiData(dataStore: PluginDataStore): Promise<EntityRepositoryFactory> {

@@ -20,6 +20,13 @@ class InMemoryStorageAdapter implements PersistentStorageAdapter<LeifPluginData>
   }
 }
 
+class DelayedStorageAdapter extends InMemoryStorageAdapter {
+  override async save(data: LeifPluginData): Promise<void> {
+    await Promise.resolve();
+    await super.save(structuredClone(data));
+  }
+}
+
 describe("PluginDataStore", () => {
   it("loads default data when there is no persisted state", async () => {
     const store = new PluginDataStore(new InMemoryStorageAdapter());
@@ -79,5 +86,39 @@ describe("PluginDataStore", () => {
     await store.save(initialData);
 
     await expect(store.load()).resolves.toEqual(initialData);
+  });
+
+  it("serializes concurrent mutations without losing either update", async () => {
+    const store = new PluginDataStore(new DelayedStorageAdapter(createDefaultLeifPluginData()));
+
+    await Promise.all([
+      store.mutate((data) => {
+        data.activeContestId = "contest-1";
+      }),
+      store.mutate((data) => {
+        data.contestStates.push({
+          contestId: "contest-1",
+          currentSubjectId: null,
+          currentItemId: null
+        });
+      })
+    ]);
+
+    const saved = await store.load();
+    expect(saved.activeContestId).toBe("contest-1");
+    expect(saved.contestStates).toHaveLength(1);
+  });
+
+  it("does not persist a partially mutated draft when the transaction fails", async () => {
+    const store = new PluginDataStore(new InMemoryStorageAdapter(createDefaultLeifPluginData()));
+
+    await expect(
+      store.mutate((data) => {
+        data.activeContestId = "partial";
+        throw new Error("boom");
+      })
+    ).rejects.toThrow("boom");
+
+    expect((await store.load()).activeContestId).toBeNull();
   });
 });

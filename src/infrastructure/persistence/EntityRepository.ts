@@ -70,16 +70,16 @@ export class EntityRepository<K extends EntityCollectionKey> implements EntityRe
    * @throws {AlreadyExistsError} If an entity with the same ID already exists
    */
   async create(entity: EntityCollections[K]): Promise<EntityCollections[K]> {
-    const data = await this.dataStore.load();
-    const entities = this.collection(data);
+    return this.dataStore.mutate((data) => {
+      const entities = this.collection(data);
 
-    if (entities.some((e) => e.id === entity.id)) {
-      throw new AlreadyExistsError(String(this.entityKey), entity.id);
-    }
+      if (entities.some((e) => e.id === entity.id)) {
+        throw new AlreadyExistsError(String(this.entityKey), entity.id);
+      }
 
-    entities.push(entity);
-    await this.dataStore.save(data);
-    return entity;
+      entities.push(entity);
+      return entity;
+    });
   }
 
   /**
@@ -94,18 +94,18 @@ export class EntityRepository<K extends EntityCollectionKey> implements EntityRe
     id: string,
     updater: (entity: EntityCollections[K]) => EntityCollections[K]
   ): Promise<EntityCollections[K]> {
-    const data = await this.dataStore.load();
-    const entities = this.collection(data);
-    const index = entities.findIndex((e) => e.id === id);
+    return this.dataStore.mutate((data) => {
+      const entities = this.collection(data);
+      const index = entities.findIndex((e) => e.id === id);
 
-    if (index === -1) {
-      throw new NotFoundError(String(this.entityKey), id);
-    }
+      if (index === -1) {
+        throw new NotFoundError(String(this.entityKey), id);
+      }
 
-    const updated = updater(entities[index]);
-    entities[index] = updated;
-    await this.dataStore.save(data);
-    return updated;
+      const updated = updater(entities[index]);
+      entities[index] = updated;
+      return updated;
+    });
   }
 
   /**
@@ -115,16 +115,16 @@ export class EntityRepository<K extends EntityCollectionKey> implements EntityRe
    * @throws {NotFoundError} If the entity is not found
    */
   async delete(id: string): Promise<void> {
-    const data = await this.dataStore.load();
-    const entities = this.collection(data);
-    const index = entities.findIndex((e) => e.id === id);
+    await this.dataStore.mutate((data) => {
+      const entities = this.collection(data);
+      const index = entities.findIndex((e) => e.id === id);
 
-    if (index === -1) {
-      throw new NotFoundError(String(this.entityKey), id);
-    }
+      if (index === -1) {
+        throw new NotFoundError(String(this.entityKey), id);
+      }
 
-    entities.splice(index, 1);
-    await this.dataStore.save(data);
+      entities.splice(index, 1);
+    });
   }
 
   /**
@@ -133,9 +133,9 @@ export class EntityRepository<K extends EntityCollectionKey> implements EntityRe
    * @param entities - The new entities to store
    */
   async replaceAll(entities: EntityCollections[K][]): Promise<void> {
-    const data = await this.dataStore.load();
-    this.setCollection(data, entities);
-    await this.dataStore.save(data);
+    await this.dataStore.mutate((data) => {
+      this.setCollection(data, entities);
+    });
   }
 
   /**

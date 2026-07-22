@@ -15,7 +15,7 @@ describe("DataMigrationService", () => {
     expect(migrated.schemaVersion).toBe(1);
   });
 
-  it("deduplicates entities by id and keeps the first occurrence", () => {
+  it("preserves duplicate entities for explicit repair instead of silently deleting data", () => {
     const base = createDefaultLeifPluginData();
     const subject = {
       id: "subject-1",
@@ -34,11 +34,12 @@ describe("DataMigrationService", () => {
 
     const migrated = service.migrate({ ...data, schemaVersion: 1 });
 
-    expect(migrated.subjects).toHaveLength(1);
+    expect(migrated.subjects).toHaveLength(2);
     expect(migrated.subjects[0].name).toBe("Portuguese");
+    expect(migrated.subjects[1].name).toBe("Duplicate");
   });
 
-  it("deduplicates subjectIds within each contest", () => {
+  it("preserves duplicate relationship entries for explicit repair", () => {
     const base = createDefaultLeifPluginData();
     const data: LeifPluginData = {
       ...base,
@@ -54,7 +55,14 @@ describe("DataMigrationService", () => {
 
     const migrated = service.migrate({ ...data, schemaVersion: 1 });
 
-    expect(migrated.contests[0].subjectIds).toEqual(["s1", "s2"]);
+    expect(migrated.contests[0].subjectIds).toEqual(["s1", "s1", "s2", "s1"]);
+  });
+
+  it("refuses to downgrade data created by a newer Leif schema", () => {
+    const futureData = { ...createDefaultLeifPluginData(), schemaVersion: 99 };
+
+    expect(() => service.migrate(futureData)).toThrow(/newer Leif version/i);
+    expect(futureData.schemaVersion).toBe(99);
   });
 
   it("normalizes subject and study item order to one-based sequences per parent", () => {

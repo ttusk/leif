@@ -1,22 +1,6 @@
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 
 /**
- * Removes duplicate entries from an array based on a key extractor.
- * Keeps the first occurrence of each key.
- */
-function deduplicateByKey<T>(items: T[], getKey: (item: T) => string): T[] {
-  const seen = new Set<string>();
-  return items.filter((item) => {
-    const key = getKey(item);
-    if (seen.has(key)) {
-      return false;
-    }
-    seen.add(key);
-    return true;
-  });
-}
-
-/**
  * Renumbers ordered children within each parent while preserving their
  * effective order. Array position is used as the stable tie-breaker.
  */
@@ -45,26 +29,25 @@ function normalizeOrdersByParent<T extends { order: number }>(
   return items.map((item) => ({ ...item, order: normalizedOrders.get(item) ?? 1 }));
 }
 
-/**
- * Deduplicates all entity arrays in the plugin data.
- * Also deduplicates subjectIds within each contest.
- */
-function deduplicatePluginData(data: LeifPluginData): LeifPluginData {
-  const subjects = deduplicateByKey(data.subjects, (subject) => subject.id);
-  const studyItems = deduplicateByKey(data.studyItems, (item) => item.id);
-
+function normalizeOrderedData(data: LeifPluginData): LeifPluginData {
   return {
     ...data,
-    contests: data.contests.map((contest) => ({
-      ...contest,
-      subjectIds: [...new Set(contest.subjectIds)]
-    })),
-    subjects: normalizeOrdersByParent(subjects, (subject) => subject.contestId),
-    topics: deduplicateByKey(data.topics, (t) => t.id),
-    studyItems: normalizeOrdersByParent(studyItems, (item) => item.subjectId),
-    studySessions: deduplicateByKey(data.studySessions, (s) => s.id),
-    contestStates: deduplicateByKey(data.contestStates, (s) => s.contestId)
+    subjects: normalizeOrdersByParent(data.subjects, (subject) => subject.contestId),
+    studyItems: normalizeOrdersByParent(data.studyItems, (item) => item.subjectId)
   };
+}
+
+export class UnsupportedSchemaVersionError extends Error {
+  constructor(
+    public readonly foundVersion: number,
+    public readonly supportedVersion: number
+  ) {
+    super(
+      `This data was created by a newer Leif version (schema ${foundVersion}); ` +
+        `this version supports schema ${supportedVersion}. Open it read-only or update Leif.`
+    );
+    this.name = "UnsupportedSchemaVersionError";
+  }
 }
 
 /**
@@ -84,6 +67,10 @@ export class DataMigrationService {
     const version = data.schemaVersion ?? 1;
     let current: LeifPluginData = data;
 
+    if (version > this.CURRENT_VERSION) {
+      throw new UnsupportedSchemaVersionError(version, this.CURRENT_VERSION);
+    }
+
     // Apply migrations sequentially
     if (version < 2) {
       current = this.migrateV1toV2(current);
@@ -92,8 +79,9 @@ export class DataMigrationService {
       current = this.migrateV2toV3(current);
     }
 
-    // Always deduplicate entities to prevent corruption
-    current = deduplicatePluginData(current);
+    // Ordering is a presentation invariant. Identity conflicts are deliberately
+    // preserved so a repair flow can resolve them without silently losing data.
+    current = normalizeOrderedData(current);
 
     // Always include the current version
     return {
