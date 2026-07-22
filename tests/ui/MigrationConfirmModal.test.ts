@@ -28,6 +28,10 @@ describe("MigrationConfirmModal", () => {
     expect(modal.contentEl.textContent).toContain("Prévia da migração");
     expect(modal.contentEl.textContent).toContain("Leif/concursos/trt/concurso.md");
     expect(modal.contentEl.textContent).toContain("2 arquivos");
+    const fileDisclosure = modal.contentEl.querySelector("details.leif-migration__files");
+    expect(fileDisclosure).not.toBeNull();
+    expect(fileDisclosure?.hasAttribute("open")).toBe(false);
+    expect(fileDisclosure?.querySelector("summary")?.textContent).toContain("Ver 2 arquivos");
     expect(
       Array.from(modal.contentEl.querySelectorAll("button")).find((button) =>
         button.textContent?.includes("Criar backup e migrar")
