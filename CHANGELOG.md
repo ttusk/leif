@@ -4,6 +4,27 @@ Todas as mudanças notáveis do Leif são documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [2.1.0] - 2026-07-22
+
+### Resumo da era 2.0
+
+Consolida as mudanças das versões 2.0.0 a 2.0.3:
+
+- Armazenamento aberto em Markdown no vault, com migração opcional por concurso e prévia dos arquivos.
+- Backup completo verificado por checksum antes da primeira escrita do v2; falha interrompe a inicialização antes de registrar a interface.
+- Escritas em staging com releitura e comparação antes de ativar o Markdown; corridas de escrita são abortadas.
+- Rollback protegido ao JSON legado, permitido só com checksum íntegro; arquivos Markdown nunca são apagados.
+- Guias para agentes em Leif/AGENTS.md e modelos em Leif/templates/.
+- Notas de versão mostradas uma vez após cada atualização.
+- Workspace de estudo com visual nativo do Obsidian e design system próprio.
+- Avisos da revisão de plugins do Obsidian corrigidos e README em inglês.
+- Resumo do ciclo e status das matérias mais legíveis.
+- Versão mínima suportada: Obsidian 1.5.7.
+
+### Documentação
+
+- Novo guia de migração do v1 para o v2 em docs/v2-migration.md.
+
 ## [2.0.3] - 2026-07-22
 
 ### Alterado
@@ -61,6 +82,7 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 - Bloqueios de segurança reportados em português no painel.
 - Prévia de migração compacta, abas de navegação sem interferência do tema, progresso de assuntos e posições de reordenação em uma única linha, e estados de data e pendências mais claros.
 
+[2.1.0]: https://github.com/ttusk/leif/compare/2.0.3...2.1.0
 [2.0.3]: https://github.com/ttusk/leif/compare/2.0.2...2.0.3
 [2.0.2]: https://github.com/ttusk/leif/compare/2.0.1...2.0.2
 [2.0.1]: https://github.com/ttusk/leif/compare/2.0.0...2.0.1

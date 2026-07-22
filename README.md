@@ -68,6 +68,7 @@ npm run release:check   # lint, tests, format, build, and release verification
 ## Documentation
 
 - [Markdown storage contract](docs/markdown-storage-v1.md)
+- [Migrating from v1 to v2](docs/v2-migration.md)
 - [ADR: Markdown is the study content authority](docs/adr/0001-markdown-is-the-study-content-authority.md)
 - [Design system](docs/design-system.md)
 - [Changelog](CHANGELOG.md)

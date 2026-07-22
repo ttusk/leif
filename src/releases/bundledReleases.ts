@@ -2,6 +2,32 @@ import type { BundledReleaseNote } from "@/application/services/ChangelogService
 
 export const BUNDLED_RELEASES: readonly BundledReleaseNote[] = [
   {
+    version: "2.1.0",
+    title: "Leif 2.1",
+    body: `## Resumo da era 2.0
+
+- Armazenamento aberto em Markdown no vault, com migração opcional por concurso e prévia dos arquivos.
+- Backup completo verificado por checksum antes da primeira escrita do v2; falha interrompe a inicialização antes de registrar a interface.
+- Escritas em staging com releitura e comparação antes de ativar o Markdown; corridas de escrita são abortadas em vez de sobrescrever.
+- Rollback protegido ao JSON legado, permitido só com checksum íntegro; arquivos Markdown nunca são apagados.
+- Guias para agentes em Leif/AGENTS.md e modelos em Leif/templates/.
+- Notas de versão mostradas uma vez após cada atualização.
+- Workspace de estudo com visual nativo do Obsidian e design system próprio.
+- Avisos da revisão de plugins do Obsidian corrigidos e README em inglês.
+- Resumo do ciclo e status das matérias mais legíveis.
+- Versão mínima suportada: Obsidian 1.5.7.
+
+## Como migrar do v1 para o v2
+
+1. Atualize o plugin; o v1 continua funcionando sem mudança.
+2. Abra a paleta de comandos e execute Migrar concurso ativo para Markdown.
+3. Revise a prévia dos arquivos e dos diagnósticos que bloqueariam a migração.
+4. Confirme: um backup imutável é criado, os arquivos vão para staging e o Markdown só vira autoridade se for equivalente.
+5. Em caso de erro, use Voltar concurso ativo ao JSON legado, desde que o snapshot legado ainda esteja intacto.
+6. Antes de automatizar com agentes de IA, leia Leif/AGENTS.md e o guia completo em docs/v2-migration.md.`,
+    githubUrl: "https://github.com/ttusk/leif/releases/tag/2.1.0"
+  },
+  {
     version: "2.0.3",
     title: "Leif 2.0.3",
     body: `## Documentação
