@@ -63,7 +63,7 @@ function element<K extends keyof HTMLElementTagNameMap>(
   text?: string,
   className?: string
 ): HTMLElementTagNameMap[K] {
-  const result = document.createElement(tag);
+  const result = createEl(tag);
   if (text) result.textContent = text;
   if (className) result.className = className;
   return result;

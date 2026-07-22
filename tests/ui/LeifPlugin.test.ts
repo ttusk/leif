@@ -11,7 +11,7 @@ describe("LeifPlugin", () => {
     const app = new App();
     const plugin = new LeifPlugin(app as never, {} as never);
 
-    await plugin.onload();
+    await plugin.initialize();
 
     const registeredPlugin = plugin as unknown as Plugin;
     expect(registeredPlugin.settingTabs).toHaveLength(0);
@@ -27,7 +27,7 @@ describe("LeifPlugin", () => {
     resetOpenModals();
     const plugin = new LeifPlugin(new App() as never, { version: "2.0.0" } as never);
 
-    await plugin.onload();
+    await plugin.initialize();
     await Promise.resolve();
 
     expect(getOpenModals()).toHaveLength(0);
@@ -48,7 +48,7 @@ describe("LeifPlugin", () => {
     delete existing.runtimeState;
     await plugin.saveData(existing);
 
-    await plugin.onload();
+    await plugin.initialize();
     await Promise.resolve();
 
     const backups = await plugin.app.vault.adapter.list("Leif/.backups/upgrades");
@@ -94,7 +94,7 @@ describe("LeifPlugin", () => {
     });
     await plugin.saveData(existing);
 
-    await expect(plugin.onload()).rejects.toThrow(/disk full/i);
+    await expect(plugin.initialize()).rejects.toThrow(/disk full/i);
     expect((plugin as unknown as Plugin).commands).toHaveLength(0);
     expect(await plugin.loadData()).toEqual(existing);
   });

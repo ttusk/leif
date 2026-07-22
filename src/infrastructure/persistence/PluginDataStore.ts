@@ -68,7 +68,7 @@ export class PluginDataStore implements PluginDataStorePort {
    */
   async mutate<T>(mutation: (draft: MutableLeifPluginData) => T | Promise<T>): Promise<T> {
     return this.runExclusive(async () => {
-      const draft = structuredClone(await this.loadCurrentData()) as MutableLeifPluginData;
+      const draft = structuredClone(await this.loadCurrentData());
       const result = await mutation(draft);
       await this.storageAdapter.save(draft);
       return result;

@@ -20,7 +20,11 @@ import { registerLeifView } from "@/ui/view/registerLeifView";
 export default class LeifPlugin extends Plugin {
   private dataStore!: PluginDataStorePort;
 
-  override async onload(): Promise<void> {
+  override onload(): void {
+    void this.initialize();
+  }
+
+  async initialize(): Promise<void> {
     const storageAdapter = new ObsidianStorageAdapter(this);
     const markdownFiles = new ObsidianMarkdownFileStore(this.app.vault);
     const rawData = await storageAdapter.load();
