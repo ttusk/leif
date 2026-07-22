@@ -3,7 +3,7 @@ import type { EntityRepositoryPort, RepositoryFactory } from "@/application/port
 import type { StudySession } from "@/domain/entities/StudySession";
 import { StudySessionType } from "@/domain/entities/StudySession";
 import type { Topic } from "@/domain/entities/Topic";
-import { ValidationError } from "@/domain/errors/DomainErrors";
+import { NotFoundError, ValidationError } from "@/domain/errors/DomainErrors";
 import { DeleteStudySessionValidator } from "@/application/validation/InputValidators";
 
 export interface DeleteStudySessionInput {
@@ -31,39 +31,34 @@ export class DeleteStudySessionUseCase {
       throw new ValidationError(validation.errors.join(", "));
     }
 
-    const session = await this.sessionRepository.findById(input.sessionId);
-
-    await this.updateTopicQuestionNotebookStats(session);
-
-    await this.sessionRepository.delete(input.sessionId);
-
-    return session;
-  }
-
-  private async updateTopicQuestionNotebookStats(session: StudySession): Promise<void> {
-    if (session.type !== StudySessionType.QUESTIONS || !session.topicId) {
-      return;
-    }
-
-    await this.topicRepository.update(session.topicId, (topic) => {
-      if (!topic.questionNotebook) {
-        return topic;
-      }
-
-      return {
-        ...topic,
-        questionNotebook: {
-          ...topic.questionNotebook,
-          solvedQuestions: Math.max(
-            0,
-            topic.questionNotebook.solvedQuestions - (session.pagesOrCount ?? 0)
-          ),
-          correctAnswers: Math.max(
-            0,
-            topic.questionNotebook.correctAnswers - (session.correctAnswers ?? 0)
-          )
+    return this.dataStore.mutate((data) => {
+      const sessionIndex = data.studySessions.findIndex(
+        (session) => session.id === input.sessionId
+      );
+      if (sessionIndex === -1) throw new NotFoundError("studySessions", input.sessionId);
+      const session = data.studySessions[sessionIndex];
+      if (session.type === StudySessionType.QUESTIONS && session.topicId) {
+        const topicIndex = data.topics.findIndex((topic) => topic.id === session.topicId);
+        const topic = data.topics[topicIndex];
+        if (topic?.questionNotebook) {
+          data.topics[topicIndex] = {
+            ...topic,
+            questionNotebook: {
+              ...topic.questionNotebook,
+              solvedQuestions: Math.max(
+                0,
+                topic.questionNotebook.solvedQuestions - (session.pagesOrCount ?? 0)
+              ),
+              correctAnswers: Math.max(
+                0,
+                topic.questionNotebook.correctAnswers - (session.correctAnswers ?? 0)
+              )
+            }
+          };
         }
-      };
+      }
+      data.studySessions.splice(sessionIndex, 1);
+      return session;
     });
   }
 }
