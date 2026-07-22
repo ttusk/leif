@@ -1,4 +1,4 @@
-import { normalizePath, TFile, Vault } from "obsidian";
+import { normalizePath, Vault } from "obsidian";
 
 import type { MarkdownFileStore } from "@/application/ports/MarkdownFileStore";
 
@@ -6,7 +6,7 @@ export class ObsidianMarkdownFileStore implements MarkdownFileStore {
   constructor(private readonly vault: Vault) {}
 
   async exists(path: string): Promise<boolean> {
-    return this.vault.getAbstractFileByPath(normalizePath(path)) !== null;
+    return this.vault.adapter.exists(normalizePath(path));
   }
 
   async writeNew(path: string, content: string): Promise<void> {
@@ -15,36 +15,42 @@ export class ObsidianMarkdownFileStore implements MarkdownFileStore {
       throw new Error(`Leif will not overwrite existing path "${normalized}".`);
     }
     await this.ensureParentFolder(normalized);
-    await this.vault.create(normalized, content);
+    await this.vault.adapter.write(normalized, content);
   }
 
   async read(path: string): Promise<string> {
     const normalized = normalizePath(path);
-    const file = this.vault.getAbstractFileByPath(normalized);
-    if (!(file instanceof TFile)) {
+    if (!(await this.vault.adapter.exists(normalized))) {
       throw new Error(`Expected file "${normalized}".`);
     }
-    return this.vault.read(file);
+    return this.vault.adapter.read(normalized);
   }
 
   async list(prefix: string): Promise<string[]> {
     const normalized = normalizePath(prefix);
-    return this.vault
-      .getFiles()
-      .map((file) => file.path)
-      .filter((path) => path.startsWith(`${normalized}/`));
+    if (!(await this.vault.adapter.exists(normalized))) return [];
+    const files: string[] = [];
+    const pending = [normalized];
+    while (pending.length > 0) {
+      const folder = pending.pop()!;
+      const listed = await this.vault.adapter.list(folder);
+      files.push(...listed.files);
+      pending.push(...listed.folders);
+    }
+    return files.sort((left, right) => left.localeCompare(right));
   }
 
   async move(source: string, destination: string): Promise<void> {
     const normalizedSource = normalizePath(source);
     const normalizedDestination = normalizePath(destination);
-    const entry = this.vault.getAbstractFileByPath(normalizedSource);
-    if (!entry) throw new Error(`Migration staging path "${normalizedSource}" is missing.`);
+    if (!(await this.vault.adapter.exists(normalizedSource))) {
+      throw new Error(`Migration staging path "${normalizedSource}" is missing.`);
+    }
     if (await this.exists(normalizedDestination)) {
       throw new Error(`Leif will not overwrite existing path "${normalizedDestination}".`);
     }
     await this.ensureParentFolder(normalizedDestination);
-    await this.vault.rename(entry, normalizedDestination);
+    await this.vault.adapter.rename(normalizedSource, normalizedDestination);
   }
 
   private async ensureParentFolder(path: string): Promise<void> {
@@ -52,16 +58,11 @@ export class ObsidianMarkdownFileStore implements MarkdownFileStore {
     let current = "";
     for (const segment of segments) {
       current = current ? `${current}/${segment}` : segment;
-      const existing = this.vault.getAbstractFileByPath(current);
-      if (existing instanceof TFile) {
-        throw new Error(`Expected folder "${current}", but a file already exists there.`);
-      }
-      if (existing) continue;
+      if (await this.vault.adapter.exists(current)) continue;
       try {
-        await this.vault.createFolder(current);
+        await this.vault.adapter.mkdir(current);
       } catch (error) {
-        const createdByAnotherWriter = this.vault.getAbstractFileByPath(current);
-        if (!createdByAnotherWriter || createdByAnotherWriter instanceof TFile) throw error;
+        if (!(await this.vault.adapter.exists(current))) throw error;
       }
     }
   }

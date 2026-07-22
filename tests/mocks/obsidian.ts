@@ -74,12 +74,34 @@ export class TFile extends TAbstractFile {}
 export class Vault {
   private readonly files = new Map<string, { file: TFile; content: string }>();
   private readonly folders = new Map<string, TAbstractFile>();
+  readonly adapter = {
+    exists: async (path: string) => this.files.has(path) || this.folders.has(path),
+    read: async (path: string) => this.files.get(path)?.content ?? "",
+    write: async (path: string, content: string) => {
+      const file = new TFile(path);
+      this.files.set(path, { file, content });
+    },
+    mkdir: async (path: string) => {
+      if (this.files.has(path) || this.folders.has(path)) throw new Error("Folder already exists.");
+      this.folders.set(path, new TAbstractFile(path));
+    },
+    list: async (path: string) => ({
+      files: [...this.files.keys()].filter((candidate) => isDirectChild(path, candidate)),
+      folders: [...this.folders.keys()].filter((candidate) => isDirectChild(path, candidate))
+    }),
+    rename: async (source: string, destination: string) => {
+      this.renamePath(source, destination);
+    }
+  };
 
   getFiles(): TFile[] {
-    return [...this.files.values()].map(({ file }) => file);
+    return [...this.files.values()]
+      .map(({ file }) => file)
+      .filter((file) => !isHiddenPath(file.path));
   }
 
   getAbstractFileByPath(path: string): TAbstractFile | null {
+    if (isHiddenPath(path)) return null;
     return this.files.get(path)?.file ?? this.folders.get(path) ?? null;
   }
 
@@ -98,7 +120,10 @@ export class Vault {
   }
 
   async rename(file: TAbstractFile, newPath: string): Promise<void> {
-    const oldPath = file.path;
+    this.renamePath(file.path, newPath);
+  }
+
+  private renamePath(oldPath: string, newPath: string): void {
     const storedFile = this.files.get(oldPath);
     if (storedFile) {
       this.files.delete(oldPath);
@@ -115,10 +140,23 @@ export class Vault {
       entry.file.path = `${newPath}${path.slice(oldPath.length)}`;
       this.files.set(entry.file.path, entry);
     });
-    this.folders.delete(oldPath);
-    file.path = newPath;
-    this.folders.set(newPath, file);
+    const affectedFolders = [...this.folders.entries()].filter(
+      ([path]) => path === oldPath || path.startsWith(`${oldPath}/`)
+    );
+    affectedFolders.forEach(([path, folder]) => {
+      this.folders.delete(path);
+      folder.path = `${newPath}${path.slice(oldPath.length)}`;
+      this.folders.set(folder.path, folder);
+    });
   }
+}
+
+function isHiddenPath(path: string): boolean {
+  return path.split("/").some((segment) => segment.startsWith("."));
+}
+
+function isDirectChild(parent: string, candidate: string): boolean {
+  return candidate.startsWith(`${parent}/`) && !candidate.slice(parent.length + 1).includes("/");
 }
 
 export function normalizePath(path: string): string {

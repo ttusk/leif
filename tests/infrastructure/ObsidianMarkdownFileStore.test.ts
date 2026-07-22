@@ -1,35 +1,35 @@
 import { describe, expect, it } from "vitest";
-import { TAbstractFile, Vault } from "obsidian";
+import { Vault } from "obsidian";
 
 import { ObsidianMarkdownFileStore } from "@/infrastructure/obsidian/ObsidianMarkdownFileStore";
 
-class EventuallyConsistentFolderVault extends Vault {
-  private hideExistingFolder = true;
-
-  override getAbstractFileByPath(path: string): TAbstractFile | null {
-    if (path === "Leif" && this.hideExistingFolder) {
-      this.hideExistingFolder = false;
-      return null;
-    }
-    return super.getAbstractFileByPath(path);
-  }
-
-  override async createFolder(path: string) {
-    if (path === "Leif" && super.getAbstractFileByPath(path)) {
-      throw new Error("Folder already exists.");
-    }
-    return super.createFolder(path);
-  }
-}
-
 describe("ObsidianMarkdownFileStore", () => {
   it("continues when Obsidian reports an existing parent after a stale lookup", async () => {
-    const vault = new EventuallyConsistentFolderVault();
-    await vault.createFolder("Leif");
+    const files = new Map<string, string>();
+    const folders = new Set<string>(["Leif"]);
+    let hideExistingFolder = true;
+    const vault = {
+      adapter: {
+        exists: async (path: string) => {
+          if (path === "Leif" && hideExistingFolder) {
+            hideExistingFolder = false;
+            return false;
+          }
+          return files.has(path) || folders.has(path);
+        },
+        mkdir: async (path: string) => {
+          if (folders.has(path)) throw new Error("Folder already exists.");
+          folders.add(path);
+        },
+        write: async (path: string, content: string) => {
+          files.set(path, content);
+        }
+      }
+    } as unknown as Vault;
     const store = new ObsidianMarkdownFileStore(vault);
 
     await expect(store.writeNew("Leif/README.md", "# Leif\n")).resolves.toBeUndefined();
-    expect(vault.getAbstractFileByPath("Leif/README.md")).not.toBeNull();
+    expect(files.get("Leif/README.md")).toBe("# Leif\n");
   });
 
   it("uses the data adapter for dot-folders omitted from the Vault index", async () => {
@@ -46,10 +46,12 @@ describe("ObsidianMarkdownFileStore", () => {
       },
       list: async (path: string) => ({
         files: [...files.keys()].filter(
-          (candidate) => candidate.startsWith(`${path}/`) && !candidate.slice(path.length + 1).includes("/")
+          (candidate) =>
+            candidate.startsWith(`${path}/`) && !candidate.slice(path.length + 1).includes("/")
         ),
         folders: [...folders].filter(
-          (candidate) => candidate.startsWith(`${path}/`) && !candidate.slice(path.length + 1).includes("/")
+          (candidate) =>
+            candidate.startsWith(`${path}/`) && !candidate.slice(path.length + 1).includes("/")
         )
       }),
       rename: async (source: string, destination: string) => {

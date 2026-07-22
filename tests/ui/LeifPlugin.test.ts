@@ -51,11 +51,10 @@ describe("LeifPlugin", () => {
     await plugin.onload();
     await Promise.resolve();
 
-    const backup = plugin.app.vault
-      .getFiles()
-      .find((file) => file.path.startsWith("Leif/.backups/upgrades/v1-to-v2-"));
+    const backups = await plugin.app.vault.adapter.list("Leif/.backups/upgrades");
+    const backup = backups.files.find((path) => path.includes("/v1-to-v2-"));
     expect(backup).toBeDefined();
-    expect(await plugin.app.vault.read(backup!)).toContain('"contest-1"');
+    expect(await plugin.app.vault.adapter.read(backup!)).toContain('"contest-1"');
 
     const [modal] = getOpenModals();
     expect(modal?.contentEl.textContent).toContain("Leif 2.0");
@@ -72,9 +71,13 @@ describe("LeifPlugin", () => {
 
   it("fails closed before registering writable UI when a legacy backup cannot be created", async () => {
     class FailingBackupVault extends Vault {
-      override async create(path: string, content: string) {
-        if (path.startsWith("Leif/.backups/upgrades/")) throw new Error("disk full");
-        return super.create(path, content);
+      constructor() {
+        super();
+        const write = this.adapter.write;
+        this.adapter.write = async (path: string, content: string) => {
+          if (path.startsWith("Leif/.backups/upgrades/")) throw new Error("disk full");
+          await write(path, content);
+        };
       }
     }
 
