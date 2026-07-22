@@ -40,8 +40,8 @@ export class WallTab {
 
     const hasContent = Boolean(
       activeContest.wall.noticeLinks.length ||
-        activeContest.wall.examLinks.length ||
-        activeContest.wall.notes?.trim()
+      activeContest.wall.examLinks.length ||
+      activeContest.wall.notes?.trim()
     );
     if (!hasContent) {
       this.isEditing = true;
@@ -75,10 +75,7 @@ export class WallTab {
     return view;
   }
 
-  private renderLinkSection(
-    title: string,
-    link?: { label: string; url: string }
-  ): HTMLElement {
+  private renderLinkSection(title: string, link?: { label: string; url: string }): HTMLElement {
     const section = DomHelpers.createElement("section", "leif-wall-section");
     section.appendChild(DomHelpers.createSectionSubtitle(title));
     if (!link) {
