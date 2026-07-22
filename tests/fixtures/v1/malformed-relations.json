@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "activeContestId": "contest-1",
+  "contests": [
+    {
+      "id": "contest-1",
+      "name": "Concurso preservado",
+      "subjectIds": ["subject-1"],
+      "wall": { "noticeLinks": [], "examLinks": [], "subjectSnapshots": [] }
+    }
+  ],
+  "contestStates": [],
+  "subjects": [
+    {
+      "id": "subject-1",
+      "contestId": "contest-1",
+      "name": "Original",
+      "order": 0,
+      "isActive": true,
+      "plannedStudyMinutes": 60,
+      "itemIds": [],
+      "topicIds": []
+    },
+    {
+      "id": "subject-1",
+      "contestId": "contest-1",
+      "name": "Duplicada preservada",
+      "order": 1,
+      "isActive": false,
+      "plannedStudyMinutes": 30,
+      "itemIds": [],
+      "topicIds": []
+    }
+  ],
+  "topics": [],
+  "studyItems": [
+    { "id": "orphan-item", "subjectId": "missing", "title": "Órfão", "order": 0 }
+  ],
+  "studySessions": []
+}

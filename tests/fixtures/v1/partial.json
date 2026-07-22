@@ -1,0 +1,25 @@
+{
+  "activeContestId": "contest-1",
+  "contests": [
+    {
+      "id": "contest-1",
+      "name": "TRT Região Exemplo",
+      "subjectIds": ["subject-1"],
+      "wall": {
+        "noticeLinks": [],
+        "examLinks": [],
+        "subjectSnapshots": []
+      }
+    }
+  ],
+  "subjects": [
+    {
+      "id": "subject-1",
+      "contestId": "contest-1",
+      "name": "Língua Portuguesa",
+      "order": 0,
+      "isActive": true,
+      "plannedStudyMinutes": 45
+    }
+  ]
+}
