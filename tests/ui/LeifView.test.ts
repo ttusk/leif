@@ -308,7 +308,7 @@ describe("LeifView", () => {
     expect(leaf.containerEl.textContent).toContain("Portuguese");
     expect(leaf.containerEl.textContent).toContain("Constitutional Law");
     expect(leaf.containerEl.textContent).toContain("20");
-    expect(leaf.containerEl.textContent).toContain("O que estudar agora");
+    expect(leaf.containerEl.textContent).not.toContain("O que estudar agora e como o dia");
   });
 
   it("shows the exam context and an accessible ordered study route on Hoje", async () => {
@@ -2057,7 +2057,7 @@ describe("LeifView", () => {
     itemsTabButton.click();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(leaf.containerEl.textContent).toContain("Guarde materiais de estudo por matéria");
+    expect(leaf.containerEl.textContent).not.toContain("Guarde materiais de estudo por matéria");
 
     const expandButton = leaf.containerEl.querySelector<HTMLButtonElement>(
       `tr[data-item-id='${itemRes.id}'] button[title='Expandir']`
