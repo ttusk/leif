@@ -1,4 +1,67 @@
-import type { LeifPluginData } from "@/domain/types/LeifPluginData";
+import {
+  createDefaultLeifPluginData,
+  type LeifPluginData
+} from "@/domain/types/LeifPluginData";
+
+function legacyCollection<T>(value: T[] | undefined, name: string): T[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) {
+    throw new Error(`Legacy Leif field "${name}" must be an array. No data was written.`);
+  }
+  return value;
+}
+
+function legacyRelationIds(value: string[] | undefined, name: string): string[] {
+  return legacyCollection(value, name);
+}
+
+function normalizeLegacyShape(data: LeifPluginData): LeifPluginData {
+  const defaults = createDefaultLeifPluginData();
+  const contests = legacyCollection(data.contests, "contests").map((contest) => ({
+    ...contest,
+    subjectIds: legacyRelationIds(contest.subjectIds, `contest:${contest.id}:subjectIds`),
+    wall: {
+      noticeLinks: legacyCollection(contest.wall?.noticeLinks, `contest:${contest.id}:noticeLinks`),
+      examLinks: legacyCollection(contest.wall?.examLinks, `contest:${contest.id}:examLinks`),
+      subjectSnapshots: legacyCollection(
+        contest.wall?.subjectSnapshots,
+        `contest:${contest.id}:subjectSnapshots`
+      ),
+      ...(contest.wall?.notes === undefined ? {} : { notes: contest.wall.notes })
+    }
+  }));
+  const subjects = legacyCollection(data.subjects, "subjects").map((subject) => ({
+    ...subject,
+    itemIds: legacyRelationIds(subject.itemIds, `subject:${subject.id}:itemIds`),
+    topicIds: legacyRelationIds(subject.topicIds, `subject:${subject.id}:topicIds`)
+  }));
+  const topics = legacyCollection(data.topics, "topics").map((topic) => ({
+    ...topic,
+    resourceReferences: legacyCollection(
+      topic.resourceReferences,
+      `topic:${topic.id}:resourceReferences`
+    )
+  }));
+  const studyItems = legacyCollection(data.studyItems, "studyItems").map((item) => ({
+    ...item,
+    resourceReferences: legacyCollection(
+      item.resourceReferences,
+      `studyItem:${item.id}:resourceReferences`
+    )
+  }));
+
+  return {
+    ...defaults,
+    ...data,
+    activeContestId: data.activeContestId ?? null,
+    contests,
+    contestStates: legacyCollection(data.contestStates, "contestStates"),
+    subjects,
+    topics,
+    studyItems,
+    studySessions: legacyCollection(data.studySessions, "studySessions")
+  };
+}
 
 /**
  * Renumbers ordered children within each parent while preserving their
@@ -64,8 +127,8 @@ export class DataMigrationService {
    * @returns Migrated data at the current schema version
    */
   migrate(data: LeifPluginData): LeifPluginData {
-    const version = data.schemaVersion ?? 1;
-    let current: LeifPluginData = data;
+    let current = normalizeLegacyShape(data);
+    const version = current.schemaVersion ?? 1;
 
     if (version > this.CURRENT_VERSION) {
       throw new UnsupportedSchemaVersionError(version, this.CURRENT_VERSION);
