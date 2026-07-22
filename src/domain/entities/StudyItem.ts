@@ -18,7 +18,7 @@ export class StudyItem {
     if (!id?.trim()) throw new ValidationError("StudyItem ID is required");
     if (!subjectId?.trim()) throw new ValidationError("StudyItem subjectId is required");
     if (!title?.trim()) throw new ValidationError("StudyItem title is required");
-    if (order < 0) throw new ValidationError("StudyItem order cannot be negative");
+    if (order < 1) throw new ValidationError("StudyItem order must be at least 1");
     if (weight !== undefined && weight < 0)
       throw new ValidationError("StudyItem weight cannot be negative");
     if (questionCount !== undefined && questionCount < 0)

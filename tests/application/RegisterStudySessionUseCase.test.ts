@@ -6,6 +6,7 @@ import { CreateContestUseCase } from "@/application/use-cases/CreateContestUseCa
 import { CreateSubjectUseCase } from "@/application/use-cases/CreateSubjectUseCase";
 import { CreateTopicUseCase } from "@/application/use-cases/CreateTopicUseCase";
 import { LinkQuestionNotebookUseCase } from "@/application/use-cases/LinkQuestionNotebookUseCase";
+import { UpdateStudySessionUseCase } from "@/application/use-cases/UpdateStudySessionUseCase";
 import { ValidationError } from "@/domain/errors/DomainErrors";
 import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
 import { PluginDataStore } from "@/infrastructure/persistence/PluginDataStore";
@@ -153,6 +154,55 @@ describe("RegisterStudySessionUseCase", () => {
     expect(topic?.questionNotebook).toMatchObject({
       solvedQuestions: 20,
       correctAnswers: 15
+    });
+  });
+
+  it("rejects cross-contest and missing-item relationships without persisting the session", async () => {
+    const store = createStore();
+    const factory = new EntityRepositoryFactory(store);
+    await seedContestSubjectTopic(store);
+    const useCase = new RegisterStudySessionUseCase(store, factory);
+
+    await expect(
+      useCase.execute({
+        id: "bad-item",
+        contestId: "contest-1",
+        subjectId: "subject-1",
+        studyItemId: "missing-item",
+        type: "pdf",
+        studiedAt: "2026-06-11T20:00:00.000Z"
+      })
+    ).rejects.toThrow("studyItemId must belong");
+
+    expect((await store.load()).studySessions).toHaveLength(0);
+  });
+
+  it("updates question-notebook totals by the session delta in the same transaction", async () => {
+    const store = createStore();
+    const factory = new EntityRepositoryFactory(store);
+    await seedContestSubjectTopic(store);
+    const register = new RegisterStudySessionUseCase(store, factory);
+    const update = new UpdateStudySessionUseCase(store, factory);
+    await register.execute({
+      id: "session-q-update",
+      contestId: "contest-1",
+      subjectId: "subject-1",
+      topicId: "topic-1",
+      type: "questions",
+      studiedAt: "2026-06-11T20:00:00.000Z",
+      pagesOrCount: 20,
+      correctAnswers: 15
+    });
+
+    await update.execute({
+      sessionId: "session-q-update",
+      pagesOrCount: 25,
+      correctAnswers: 18
+    });
+
+    expect((await store.load()).topics[0].questionNotebook).toMatchObject({
+      solvedQuestions: 25,
+      correctAnswers: 18
     });
   });
 });

@@ -1,6 +1,7 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
 import type { Contest } from "@/domain/entities/Contest";
+import { NotFoundError } from "@/domain/errors/DomainErrors";
 
 export interface DeleteContestInput {
   contestId: string;
@@ -20,23 +21,28 @@ export class DeleteContestUseCase {
   }
 
   async execute(input: DeleteContestInput): Promise<Contest> {
-    const contest = await this.contestRepository.findById(input.contestId);
+    return this.dataStore.mutate((data) => {
+      const contest = data.contests.find((candidate) => candidate.id === input.contestId);
+      if (!contest) throw new NotFoundError("contests", input.contestId);
+      const subjectIds = new Set(
+        data.subjects
+          .filter((subject) => subject.contestId === input.contestId)
+          .map((subject) => subject.id)
+      );
 
-    const data = await this.dataStore.load();
-    const subjectIds = new Set(contest.subjectIds);
+      data.contests = data.contests.filter((candidate) => candidate.id !== input.contestId);
+      data.contestStates = data.contestStates.filter(
+        (state) => state.contestId !== input.contestId
+      );
+      data.subjects = data.subjects.filter((subject) => subject.contestId !== input.contestId);
+      data.studyItems = data.studyItems.filter((item) => !subjectIds.has(item.subjectId));
+      data.topics = data.topics.filter((topic) => !subjectIds.has(topic.subjectId));
+      data.studySessions = data.studySessions.filter(
+        (session) => session.contestId !== input.contestId
+      );
 
-    data.contests = data.contests.filter((c) => c.id !== input.contestId);
-    data.contestStates = data.contestStates.filter((s) => s.contestId !== input.contestId);
-    data.subjects = data.subjects.filter((s) => s.contestId !== input.contestId);
-    data.studyItems = data.studyItems.filter((i) => !subjectIds.has(i.subjectId));
-    data.topics = data.topics.filter((t) => !subjectIds.has(t.subjectId));
-    data.studySessions = data.studySessions.filter((s) => s.contestId !== input.contestId);
-
-    if (data.activeContestId === input.contestId) {
-      data.activeContestId = null;
-    }
-
-    await this.dataStore.save(data);
-    return contest;
+      if (data.activeContestId === input.contestId) data.activeContestId = null;
+      return contest;
+    });
   }
 }

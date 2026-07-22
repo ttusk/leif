@@ -52,11 +52,6 @@ export class TopicsTab {
       })
     );
     container.appendChild(header);
-    container.appendChild(
-      DomHelpers.createParagraph(
-        "Transforme o edital em assuntos pequenos e conecte cadernos de questões quando fizer sentido."
-      )
-    );
 
     const subject = SubjectPicker.getSelectedSubject(data, this.selectedSubjectId);
     if (!subject) {
@@ -118,7 +113,8 @@ export class TopicsTab {
       "div",
       "leif-inline-actions leif-inline-actions-compact"
     );
-    actions.appendChild(
+    const secondaryActions: HTMLElement[] = [];
+    secondaryActions.push(
       DomHelpers.createIconButton("edit", "Editar", {
         onClick: async () => {
           this.editingTopicId = topic.id;
@@ -126,7 +122,7 @@ export class TopicsTab {
         }
       })
     );
-    actions.appendChild(
+    secondaryActions.push(
       DomHelpers.createIconButton("delete", "Excluir", {
         onClick: async () => {
           this.pendingDeleteTopicId = topic.id;
@@ -136,7 +132,7 @@ export class TopicsTab {
     );
 
     if (this.pendingDeleteTopicId === topic.id) {
-      actions.append(
+      secondaryActions.push(
         DomHelpers.createButton("Excluir?", {
           onClick: async () => {
             try {
@@ -156,6 +152,7 @@ export class TopicsTab {
         })
       );
     }
+    actions.appendChild(DomHelpers.createOverflowMenu(secondaryActions));
 
     const titleCell = DomHelpers.createElement("td", "leif-topic-title-cell");
     const title = DomHelpers.createElement("span", "leif-topic-title");
@@ -163,7 +160,9 @@ export class TopicsTab {
     titleCell.appendChild(title);
 
     tr.appendChild(titleCell);
-    tr.appendChild(DomHelpers.createCell(this.formatQuestionProgress(topic, progress)));
+    const progressCell = DomHelpers.createCell(this.formatQuestionProgress(topic, progress));
+    progressCell.classList.add("leif-topic-progress-cell");
+    tr.appendChild(progressCell);
     tr.appendChild(DomHelpers.createCell(null, this.renderNotebookCell(topic)));
     const actionsCell = DomHelpers.createCell(null, actions);
     actionsCell.classList.add("leif-actions-cell");

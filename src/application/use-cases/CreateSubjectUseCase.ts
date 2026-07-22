@@ -2,7 +2,7 @@ import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
 import { Subject } from "@/domain/entities/Subject";
 import { Contest } from "@/domain/entities/Contest";
-import { ValidationError } from "@/domain/errors/DomainErrors";
+import { AlreadyExistsError, NotFoundError, ValidationError } from "@/domain/errors/DomainErrors";
 import { CreateSubjectValidator } from "@/application/validation/InputValidators";
 
 export interface CreateSubjectInput {
@@ -35,35 +35,38 @@ export class CreateSubjectUseCase {
       throw new ValidationError(validation.errors.join(", "));
     }
 
-    await this.contestRepository.findById(input.contestId);
+    return this.dataStore.mutate((data) => {
+      const contest = data.contests.find((candidate) => candidate.id === input.contestId);
+      if (!contest) throw new NotFoundError("contests", input.contestId);
+      if (data.subjects.some((subject) => subject.id === input.id)) {
+        throw new AlreadyExistsError("subjects", input.id);
+      }
 
-    const contestSubjects = (await this.subjectRepository.findAll()).filter(
-      (subject) => subject.contestId === input.contestId
-    );
-    const nextOrder =
-      contestSubjects.length === 0
-        ? 1
-        : Math.max(...contestSubjects.map((subject) => subject.order)) + 1;
-
-    const subject = new Subject(
-      input.id,
-      input.contestId,
-      input.name,
-      nextOrder,
-      input.isActive ?? true,
-      input.plannedStudyMinutes,
-      input.currentStage,
-      [],
-      []
-    );
-
-    await this.subjectRepository.create(subject);
-
-    await this.contestRepository.update(input.contestId, (contest) => ({
-      ...contest,
-      subjectIds: [...contest.subjectIds, subject.id]
-    }));
-
-    return subject;
+      const contestSubjects = data.subjects.filter(
+        (subject) => subject.contestId === input.contestId
+      );
+      const nextOrder =
+        contestSubjects.length === 0
+          ? 1
+          : Math.max(...contestSubjects.map((subject) => subject.order)) + 1;
+      const subject = new Subject(
+        input.id,
+        input.contestId,
+        input.name,
+        nextOrder,
+        input.isActive ?? true,
+        input.plannedStudyMinutes,
+        input.currentStage,
+        [],
+        []
+      );
+      data.subjects.push(subject);
+      const contestIndex = data.contests.indexOf(contest);
+      data.contests[contestIndex] = {
+        ...contest,
+        subjectIds: [...contest.subjectIds, subject.id]
+      };
+      return subject;
+    });
   }
 }

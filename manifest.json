@@ -1,8 +1,8 @@
 {
   "id": "leif",
   "name": "Leif",
-  "version": "1.0.2",
-  "minAppVersion": "1.5.0",
+  "version": "2.0.0",
+  "minAppVersion": "1.5.7",
   "description": "Organize concursos, ciclos, editais, materiais e sessões de estudo.",
   "author": "Luiz Gustavo",
   "authorUrl": "https://github.com/ttusk",

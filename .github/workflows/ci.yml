@@ -68,6 +68,6 @@ jobs:
             main.js
             styles.css
             manifest.json
-          generate_release_notes: true
+          body_path: release-notes/${{ github.ref_name }}.md
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

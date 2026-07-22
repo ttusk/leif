@@ -64,9 +64,6 @@ export class CycleTab {
       })
     );
     container.appendChild(header);
-    container.appendChild(
-      DomHelpers.createParagraph("Ajuste a ordem das matérias e o tempo de cada uma.")
-    );
 
     if (this.isCreatingSubject) {
       container.appendChild(this.renderCreateSubjectForm(data));
@@ -181,14 +178,16 @@ export class CycleTab {
       "div",
       "leif-inline-actions leif-inline-actions-compact"
     );
-    actions.append(
-      this.renderCycleToggleButton(subject),
-      DomHelpers.createIconButton("edit", "Editar", {
-        onClick: async () => {
-          this.editingSubjectId = subject.id;
-          await this.onUpdate();
-        }
-      })
+    actions.appendChild(
+      DomHelpers.createOverflowMenu([
+        this.renderCycleToggleButton(subject),
+        DomHelpers.createIconButton("edit", "Editar", {
+          onClick: async () => {
+            this.editingSubjectId = subject.id;
+            await this.onUpdate();
+          }
+        })
+      ])
     );
 
     tr.append(

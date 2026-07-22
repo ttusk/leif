@@ -1,38 +1,113 @@
-import type { LeifPluginData } from "@/domain/types/LeifPluginData";
+import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
 
-/**
- * Removes duplicate entries from an array based on a key extractor.
- * Keeps the first occurrence of each key.
- */
-function deduplicateByKey<T>(items: T[], getKey: (item: T) => string): T[] {
-  const seen = new Set<string>();
-  return items.filter((item) => {
-    const key = getKey(item);
-    if (seen.has(key)) {
-      return false;
+function legacyCollection<T>(value: T[] | undefined, name: string): T[] {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) {
+    throw new Error(`Legacy Leif field "${name}" must be an array. No data was written.`);
+  }
+  return value;
+}
+
+function legacyRelationIds(value: string[] | undefined, name: string): string[] {
+  return legacyCollection(value, name);
+}
+
+function normalizeLegacyShape(data: LeifPluginData): LeifPluginData {
+  const defaults = createDefaultLeifPluginData();
+  const contests = legacyCollection(data.contests, "contests").map((contest) => ({
+    ...contest,
+    subjectIds: legacyRelationIds(contest.subjectIds, `contest:${contest.id}:subjectIds`),
+    wall: {
+      noticeLinks: legacyCollection(contest.wall?.noticeLinks, `contest:${contest.id}:noticeLinks`),
+      examLinks: legacyCollection(contest.wall?.examLinks, `contest:${contest.id}:examLinks`),
+      subjectSnapshots: legacyCollection(
+        contest.wall?.subjectSnapshots,
+        `contest:${contest.id}:subjectSnapshots`
+      ),
+      ...(contest.wall?.notes === undefined ? {} : { notes: contest.wall.notes })
     }
-    seen.add(key);
-    return true;
-  });
+  }));
+  const subjects = legacyCollection(data.subjects, "subjects").map((subject) => ({
+    ...subject,
+    itemIds: legacyRelationIds(subject.itemIds, `subject:${subject.id}:itemIds`),
+    topicIds: legacyRelationIds(subject.topicIds, `subject:${subject.id}:topicIds`)
+  }));
+  const topics = legacyCollection(data.topics, "topics").map((topic) => ({
+    ...topic,
+    resourceReferences: legacyCollection(
+      topic.resourceReferences,
+      `topic:${topic.id}:resourceReferences`
+    )
+  }));
+  const studyItems = legacyCollection(data.studyItems, "studyItems").map((item) => ({
+    ...item,
+    resourceReferences: legacyCollection(
+      item.resourceReferences,
+      `studyItem:${item.id}:resourceReferences`
+    )
+  }));
+
+  return {
+    ...defaults,
+    ...data,
+    activeContestId: data.activeContestId ?? null,
+    contests,
+    contestStates: legacyCollection(data.contestStates, "contestStates"),
+    subjects,
+    topics,
+    studyItems,
+    studySessions: legacyCollection(data.studySessions, "studySessions")
+  };
 }
 
 /**
- * Deduplicates all entity arrays in the plugin data.
- * Also deduplicates subjectIds within each contest.
+ * Renumbers ordered children within each parent while preserving their
+ * effective order. Array position is used as the stable tie-breaker.
  */
-function deduplicatePluginData(data: LeifPluginData): LeifPluginData {
+function normalizeOrdersByParent<T extends { order: number }>(
+  items: T[],
+  getParentKey: (item: T) => string
+): T[] {
+  const groups = new Map<string, Array<{ item: T; sourceIndex: number }>>();
+
+  items.forEach((item, sourceIndex) => {
+    const parentKey = getParentKey(item);
+    const group = groups.get(parentKey) ?? [];
+    group.push({ item, sourceIndex });
+    groups.set(parentKey, group);
+  });
+
+  const normalizedOrders = new Map<T, number>();
+  groups.forEach((group) => {
+    group
+      .sort(
+        (left, right) => left.item.order - right.item.order || left.sourceIndex - right.sourceIndex
+      )
+      .forEach(({ item }, index) => normalizedOrders.set(item, index + 1));
+  });
+
+  return items.map((item) => ({ ...item, order: normalizedOrders.get(item) ?? 1 }));
+}
+
+function normalizeOrderedData(data: LeifPluginData): LeifPluginData {
   return {
     ...data,
-    contests: data.contests.map((contest) => ({
-      ...contest,
-      subjectIds: [...new Set(contest.subjectIds)]
-    })),
-    subjects: deduplicateByKey(data.subjects, (s) => s.id),
-    topics: deduplicateByKey(data.topics, (t) => t.id),
-    studyItems: deduplicateByKey(data.studyItems, (i) => i.id),
-    studySessions: deduplicateByKey(data.studySessions, (s) => s.id),
-    contestStates: deduplicateByKey(data.contestStates, (s) => s.contestId)
+    subjects: normalizeOrdersByParent(data.subjects, (subject) => subject.contestId),
+    studyItems: normalizeOrdersByParent(data.studyItems, (item) => item.subjectId)
   };
+}
+
+export class UnsupportedSchemaVersionError extends Error {
+  constructor(
+    public readonly foundVersion: number,
+    public readonly supportedVersion: number
+  ) {
+    super(
+      `This data was created by a newer Leif version (schema ${foundVersion}); ` +
+        `this version supports schema ${supportedVersion}. Open it read-only or update Leif.`
+    );
+    this.name = "UnsupportedSchemaVersionError";
+  }
 }
 
 /**
@@ -49,8 +124,12 @@ export class DataMigrationService {
    * @returns Migrated data at the current schema version
    */
   migrate(data: LeifPluginData): LeifPluginData {
-    const version = data.schemaVersion ?? 1;
-    let current: LeifPluginData = data;
+    let current = normalizeLegacyShape(data);
+    const version = current.schemaVersion ?? 1;
+
+    if (version > this.CURRENT_VERSION) {
+      throw new UnsupportedSchemaVersionError(version, this.CURRENT_VERSION);
+    }
 
     // Apply migrations sequentially
     if (version < 2) {
@@ -60,8 +139,9 @@ export class DataMigrationService {
       current = this.migrateV2toV3(current);
     }
 
-    // Always deduplicate entities to prevent corruption
-    current = deduplicatePluginData(current);
+    // Ordering is a presentation invariant. Identity conflicts are deliberately
+    // preserved so a repair flow can resolve them without silently losing data.
+    current = normalizeOrderedData(current);
 
     // Always include the current version
     return {

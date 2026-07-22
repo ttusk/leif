@@ -35,12 +35,20 @@ export const ICON_NAMES = {
 export type LeifTabId =
   "dashboard" | "contests" | "cycle" | "items" | "topics" | "sessions" | "wall";
 
-export const TABS: Array<{ id: LeifTabId; label: string; icon: string }> = [
-  { id: "dashboard", label: t("tab.dashboard"), icon: ICON_NAMES.dashboard },
-  { id: "sessions", label: t("tab.sessions"), icon: ICON_NAMES.sessions },
-  { id: "cycle", label: t("tab.cycle"), icon: ICON_NAMES.cycle },
-  { id: "topics", label: t("tab.topics"), icon: ICON_NAMES.topics },
-  { id: "items", label: t("tab.items"), icon: ICON_NAMES.items },
-  { id: "contests", label: t("tab.contests"), icon: ICON_NAMES.contests },
-  { id: "wall", label: t("tab.wall"), icon: ICON_NAMES.wall }
+export type LeifPrimaryTabId = "dashboard" | "sessions" | "plan" | "wall";
+
+export const PRIMARY_TABS: Array<{ id: LeifPrimaryTabId; label: string }> = [
+  { id: "dashboard", label: t("tab.dashboard") },
+  { id: "sessions", label: t("tab.sessions") },
+  { id: "plan", label: "Plano" },
+  { id: "wall", label: t("tab.wall") }
+];
+
+export const PLAN_TABS: Array<{
+  id: Extract<LeifTabId, "cycle" | "topics" | "items">;
+  label: string;
+}> = [
+  { id: "cycle", label: t("tab.cycle") },
+  { id: "topics", label: t("tab.topics") },
+  { id: "items", label: t("tab.items") }
 ];

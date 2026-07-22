@@ -3,7 +3,7 @@ import type { EntityRepositoryPort, RepositoryFactory } from "@/application/port
 import type { ResourceReference } from "@/domain/entities/ResourceReference";
 import { StudyItem } from "@/domain/entities/StudyItem";
 import { Subject } from "@/domain/entities/Subject";
-import { ValidationError } from "@/domain/errors/DomainErrors";
+import { AlreadyExistsError, NotFoundError, ValidationError } from "@/domain/errors/DomainErrors";
 import { CreateStudyItemValidator } from "@/application/validation/InputValidators";
 import { createId } from "@/application/Id";
 
@@ -38,30 +38,31 @@ export class CreateStudyItemUseCase {
       throw new ValidationError(validation.errors.join(", "));
     }
 
-    await this.subjectRepository.findById(input.subjectId);
-
-    const subjectItems = (await this.studyItemRepository.findAll()).filter(
-      (item) => item.subjectId === input.subjectId
-    );
-
-    const nextItem = new StudyItem(
-      input.id ?? createId("item"),
-      input.subjectId,
-      input.title,
-      subjectItems.length + 1,
-      input.weight,
-      input.questionCount,
-      input.resourceReferences ?? [],
-      input.totalPages
-    );
-
-    await this.studyItemRepository.create(nextItem);
-
-    await this.subjectRepository.update(input.subjectId, (subject) => ({
-      ...subject,
-      itemIds: [...subject.itemIds, nextItem.id]
-    }));
-
-    return nextItem;
+    return this.dataStore.mutate((data) => {
+      const subject = data.subjects.find((candidate) => candidate.id === input.subjectId);
+      if (!subject) throw new NotFoundError("subjects", input.subjectId);
+      const id = input.id ?? createId("item");
+      if (data.studyItems.some((item) => item.id === id)) {
+        throw new AlreadyExistsError("studyItems", id);
+      }
+      const subjectItems = data.studyItems.filter((item) => item.subjectId === input.subjectId);
+      const nextItem = new StudyItem(
+        id,
+        input.subjectId,
+        input.title,
+        subjectItems.length + 1,
+        input.weight,
+        input.questionCount,
+        input.resourceReferences ?? [],
+        input.totalPages
+      );
+      data.studyItems.push(nextItem);
+      const subjectIndex = data.subjects.indexOf(subject);
+      data.subjects[subjectIndex] = {
+        ...subject,
+        itemIds: [...subject.itemIds, nextItem.id]
+      };
+      return nextItem;
+    });
   }
 }

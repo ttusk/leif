@@ -4,6 +4,8 @@ import type { StudyItem } from "@/domain/entities/StudyItem";
 import type { StudySession } from "@/domain/entities/StudySession";
 import type { Subject } from "@/domain/entities/Subject";
 import type { Topic } from "@/domain/entities/Topic";
+import type { LeifRuntimeState } from "@/domain/types/LeifRuntimeState";
+import { createDefaultLeifRuntimeState } from "@/domain/types/LeifRuntimeState";
 
 // ContestState is intentionally not in EntityCollections (no `id` field,
 // accessed directly from LeifPluginData). Import stays for the data shape.
@@ -34,6 +36,7 @@ export interface LeifPluginData {
   topics: Topic[];
   studyItems: StudyItem[];
   studySessions: StudySession[];
+  runtimeState?: LeifRuntimeState;
 }
 
 export function createDefaultLeifPluginData(): LeifPluginData {
@@ -45,6 +48,7 @@ export function createDefaultLeifPluginData(): LeifPluginData {
     subjects: [],
     topics: [],
     studyItems: [],
-    studySessions: []
+    studySessions: [],
+    runtimeState: createDefaultLeifRuntimeState()
   };
 }

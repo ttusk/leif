@@ -10,6 +10,7 @@ import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepo
  */
 export class WallTab {
   private readonly updateContestWallUseCase: UpdateContestWallUseCase;
+  private isEditing = false;
 
   constructor(
     private readonly dataStore: PluginDataStore,
@@ -23,9 +24,6 @@ export class WallTab {
 
   async render(container: HTMLElement, data: LeifPluginData): Promise<void> {
     container.appendChild(DomHelpers.createSectionTitle("Mural"));
-    container.appendChild(
-      DomHelpers.createParagraph("Guarde links oficiais e anotações úteis do concurso ativo.")
-    );
 
     const activeContest =
       data.contests.find((contest) => contest.id === data.activeContestId) ?? null;
@@ -40,11 +38,72 @@ export class WallTab {
       return;
     }
 
-    container.appendChild(this.renderWallForm(activeContest));
+    const hasContent = Boolean(
+      activeContest.wall.noticeLinks.length ||
+      activeContest.wall.examLinks.length ||
+      activeContest.wall.notes?.trim()
+    );
+    if (!hasContent) {
+      this.isEditing = true;
+    }
+
+    container.appendChild(
+      this.isEditing ? this.renderWallEditor(activeContest) : this.renderWallReadView(activeContest)
+    );
     container.appendChild(this.renderSnapshotsCard(activeContest, data));
   }
 
-  private renderWallForm(
+  private renderWallReadView(
+    activeContest: NonNullable<LeifPluginData["contests"][number]>
+  ): HTMLElement {
+    const view = DomHelpers.createElement("div", "leif-wall-read-view");
+    const actions = DomHelpers.createElement("div", "leif-section-actions");
+    actions.appendChild(
+      DomHelpers.createButton("Editar", {
+        onClick: async () => {
+          this.isEditing = true;
+          await this.onUpdate();
+        }
+      })
+    );
+    view.appendChild(actions);
+    view.append(
+      this.renderLinkSection("Edital", activeContest.wall.noticeLinks[0]),
+      this.renderLinkSection("Prova", activeContest.wall.examLinks[0]),
+      this.renderNotesSection(activeContest.wall.notes)
+    );
+    return view;
+  }
+
+  private renderLinkSection(title: string, link?: { label: string; url: string }): HTMLElement {
+    const section = DomHelpers.createElement("section", "leif-wall-section");
+    section.appendChild(DomHelpers.createSectionSubtitle(title));
+    if (!link) {
+      section.appendChild(DomHelpers.createParagraph("Nenhum link salvo."));
+      return section;
+    }
+
+    const anchor = DomHelpers.createElement("a", "leif-wall-link");
+    anchor.href = link.url;
+    anchor.target = "_blank";
+    anchor.rel = "noopener";
+    anchor.textContent = link.label;
+    const url = DomHelpers.createElement("span", "leif-wall-link-url");
+    url.textContent = link.url;
+    section.append(anchor, url);
+    return section;
+  }
+
+  private renderNotesSection(notes?: string): HTMLElement {
+    const section = DomHelpers.createElement("section", "leif-wall-section");
+    section.appendChild(DomHelpers.createSectionSubtitle("Notas"));
+    const body = DomHelpers.createElement("div", "leif-wall-notes-content");
+    body.textContent = notes?.trim() || "Nenhuma nota salva.";
+    section.appendChild(body);
+    return section;
+  }
+
+  private renderWallEditor(
     activeContest: NonNullable<LeifPluginData["contests"][number]>
   ): HTMLElement {
     const noticeLabel = DomHelpers.createInput(
@@ -103,52 +162,50 @@ export class WallTab {
           }
         });
 
+        this.isEditing = false;
         await this.onUpdate();
       } catch (error) {
         DomHelpers.notifyError(error, "Não consegui salvar o mural.");
       }
     });
 
-    form.classList.add("leif-wall-form");
+    form.classList.add("leif-wall-editor", "is-editing");
 
-    const notesCard = DomHelpers.createElement("section", "leif-wall-card leif-wall-primary");
-    notesCard.append(
-      DomHelpers.createSectionSubtitle("Notas"),
-      DomHelpers.createParagraph(
-        "Use este espaço para pesos, datas, cortes, estratégia e qualquer lembrete que você queira revisar sem procurar em outro lugar."
-      ),
-      DomHelpers.createStackedLabel("Notas", notes)
-    );
-
-    const noticeCard = DomHelpers.createElement("section", "leif-wall-card");
-    noticeCard.append(
+    const noticeSection = DomHelpers.createElement("section", "leif-wall-editor-section");
+    noticeSection.append(
       DomHelpers.createSectionSubtitle("Edital"),
-      DomHelpers.createParagraph("Guarde o link do edital ou da página oficial do concurso."),
-      DomHelpers.createLabel("Nome", noticeLabel),
+      DomHelpers.createStackedLabel("Nome", noticeLabel),
       DomHelpers.createUrlField("Link", noticeUrl)
     );
 
-    const examCard = DomHelpers.createElement("section", "leif-wall-card");
-    examCard.append(
+    const examSection = DomHelpers.createElement("section", "leif-wall-editor-section");
+    examSection.append(
       DomHelpers.createSectionSubtitle("Prova"),
-      DomHelpers.createParagraph(
-        "Deixe aqui a prova anterior, o espelho ou outro material de referência."
-      ),
-      DomHelpers.createLabel("Nome", examLabel),
+      DomHelpers.createStackedLabel("Nome", examLabel),
       DomHelpers.createUrlField("Link", examUrl)
     );
 
-    const referenceGrid = DomHelpers.createElement("div", "leif-wall-reference-grid");
-    referenceGrid.append(noticeCard, examCard);
+    const notesSection = DomHelpers.createElement("section", "leif-wall-editor-section");
+    notesSection.append(
+      DomHelpers.createSectionSubtitle("Notas"),
+      DomHelpers.createStackedLabel("Notas", notes)
+    );
 
-    form.append(notesCard, referenceGrid);
-
-    form.append(
-      DomHelpers.createButton("Salvar mural", {
+    const actions = DomHelpers.createElement("div", "leif-form-actions");
+    actions.append(
+      DomHelpers.createButton("Cancelar", {
+        onClick: async () => {
+          this.isEditing = false;
+          await this.onUpdate();
+        }
+      }),
+      DomHelpers.createButton("Salvar alterações", {
         type: "submit",
-        className: "mod-cta leif-wall-save"
+        className: "mod-cta"
       })
     );
+
+    form.append(noticeSection, examSection, notesSection, actions);
 
     return form;
   }

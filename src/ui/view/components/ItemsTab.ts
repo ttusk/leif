@@ -59,11 +59,6 @@ export class ItemsTab {
       })
     );
     container.appendChild(header);
-    container.appendChild(
-      DomHelpers.createParagraph(
-        "Guarde materiais de estudo por matéria — PDFs, vídeos e links — e acompanhe o avanço de leitura sem sair do Obsidian."
-      )
-    );
 
     const subject = SubjectPicker.getSelectedSubject(data, this.selectedSubjectId);
     if (!subject) {
@@ -160,7 +155,8 @@ export class ItemsTab {
         }
       )
     );
-    actions.appendChild(
+    const secondaryActions: HTMLElement[] = [];
+    secondaryActions.push(
       DomHelpers.createIconButton("edit", "Editar", {
         onClick: async () => {
           this.editingItemId = item.id;
@@ -168,7 +164,7 @@ export class ItemsTab {
         }
       })
     );
-    actions.appendChild(
+    secondaryActions.push(
       DomHelpers.createIconButton("delete", "Excluir", {
         onClick: async () => {
           this.pendingDeleteItemId = item.id;
@@ -178,7 +174,7 @@ export class ItemsTab {
     );
 
     if (this.pendingDeleteItemId === item.id) {
-      actions.append(
+      secondaryActions.push(
         DomHelpers.createButton("Excluir?", {
           onClick: async () => {
             try {
@@ -198,6 +194,7 @@ export class ItemsTab {
         })
       );
     }
+    actions.appendChild(DomHelpers.createOverflowMenu(secondaryActions));
 
     const title = DomHelpers.createElement("strong", "leif-resource-table-title");
     title.textContent = item.title;

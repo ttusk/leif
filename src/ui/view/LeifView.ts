@@ -1,7 +1,9 @@
 import { ItemView, type WorkspaceLeaf } from "obsidian";
 
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import { SetActiveContestUseCase } from "@/application/use-cases/SetActiveContestUseCase";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
+import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 import { ContestsTab } from "@/ui/view/components/ContestsTab";
 import { CycleTab } from "@/ui/view/components/CycleTab";
 import { DashboardTab } from "@/ui/view/components/DashboardTab";
@@ -12,7 +14,7 @@ import { WallTab } from "@/ui/view/components/WallTab";
 import { LEIF_ICON, LEIF_VIEW_TYPE } from "@/ui/view/registerLeifView";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 import { SubjectPicker } from "@/ui/view/shared/SubjectPicker";
-import { TABS, type LeifTabId } from "@/ui/constants";
+import { PLAN_TABS, PRIMARY_TABS, type LeifPrimaryTabId, type LeifTabId } from "@/ui/constants";
 
 /**
  * Main Leif view with incremental rendering optimization.
@@ -20,15 +22,20 @@ import { TABS, type LeifTabId } from "@/ui/constants";
  */
 export class LeifView extends ItemView {
   private activeTab: LeifTabId = "dashboard";
+  private activePlanTab: Extract<LeifTabId, "cycle" | "topics" | "items"> = "cycle";
   private selectedSubjectId: string | null = null;
 
   private shell?: HTMLElement;
   private headerActions?: HTMLElement;
+  private diagnosticsContainer?: HTMLElement;
   private workspace?: HTMLElement;
-  private tabBar?: HTMLElement;
+  private primaryTabBar?: HTMLElement;
+  private planTabBar?: HTMLElement;
   private activeTabContainer?: HTMLElement;
   private resizeObserver?: ResizeObserver;
-  private tabButtons: Map<LeifTabId, HTMLElement> = new Map();
+  private primaryTabButtons: Map<LeifPrimaryTabId, HTMLButtonElement> = new Map();
+  private planTabButtons: Map<Extract<LeifTabId, "cycle" | "topics" | "items">, HTMLButtonElement> =
+    new Map();
 
   private readonly dashboardTab: DashboardTab;
   private readonly contestsTab: ContestsTab;
@@ -37,19 +44,29 @@ export class LeifView extends ItemView {
   private readonly topicsTab: TopicsTab;
   private readonly sessionsTab: SessionsTab;
   private readonly wallTab: WallTab;
+  private readonly setActiveContestUseCase: SetActiveContestUseCase;
 
   constructor(
     leaf: WorkspaceLeaf,
     private readonly dataStore: PluginDataStore
   ) {
     super(leaf);
-    this.dashboardTab = new DashboardTab(dataStore, (tabId) => this.selectTab(tabId));
+    this.dashboardTab = new DashboardTab(dataStore, (tabId, registration) => {
+      if (tabId === "sessions" && registration) {
+        this.sessionsTab.startRecommendedStudy(registration);
+      }
+      return this.selectTab(tabId);
+    });
     this.contestsTab = new ContestsTab(dataStore, () => this.refresh());
     this.cycleTab = new CycleTab(dataStore, () => this.refresh());
     this.itemsTab = new ItemsTab(dataStore, () => this.refresh());
     this.topicsTab = new TopicsTab(dataStore, () => this.refresh());
     this.sessionsTab = new SessionsTab(dataStore, () => this.refresh());
     this.wallTab = new WallTab(dataStore, () => this.refresh());
+    this.setActiveContestUseCase = new SetActiveContestUseCase(
+      dataStore,
+      new EntityRepositoryFactory(dataStore)
+    );
   }
 
   getViewType(): string {
@@ -85,6 +102,7 @@ export class LeifView extends ItemView {
     }
 
     await this.updateHeader(data);
+    this.updateDiagnostics();
     await this.updateActiveTab(data);
   }
 
@@ -95,6 +113,7 @@ export class LeifView extends ItemView {
     const data = await this.dataStore.load();
     this.ensureSelectedSubject(data);
     await this.updateHeader(data);
+    this.updateDiagnostics();
     await this.updateActiveTab(data);
   }
 
@@ -103,51 +122,67 @@ export class LeifView extends ItemView {
    */
   private buildShell(): void {
     this.contentEl.innerHTML = "";
-    this.contentEl.className = "leif-view";
+    this.contentEl.classList.add("leif-view");
 
     this.shell = DomHelpers.createElement("div", "leif-shell");
 
     const header = DomHelpers.createElement("header", "leif-header");
-    const titleGroup = DomHelpers.createElement("div", "leif-title-group");
-    titleGroup.append(
-      DomHelpers.createHeading("Leif", "compass"),
-      DomHelpers.createParagraph("Sua rota de estudos, sem sair do Obsidian.")
-    );
-
     this.headerActions = DomHelpers.createElement("div", "leif-header-actions");
-    header.append(titleGroup, this.headerActions);
+    header.appendChild(this.headerActions);
+
+    this.diagnosticsContainer = DomHelpers.createElement("section", "leif-diagnostics");
+    this.diagnosticsContainer.setAttribute("role", "alert");
+    this.diagnosticsContainer.hidden = true;
 
     this.workspace = DomHelpers.createElement("div", "leif-workspace");
-    const navigation = DomHelpers.createElement("aside", "leif-navigation");
+    const navigation = DomHelpers.createElement("nav", "leif-navigation");
     navigation.setAttribute("aria-label", "Navegação do Leif");
 
-    this.tabBar = DomHelpers.createElement("nav", "leif-tab-bar");
-    this.tabBar.setAttribute("role", "tablist");
-    this.tabBar.setAttribute("aria-label", "Seções do Leif");
-    TABS.forEach((tab, index) => {
+    this.primaryTabBar = DomHelpers.createElement("div", "leif-tab-bar leif-primary-navigation");
+    this.primaryTabBar.setAttribute("role", "tablist");
+    this.primaryTabBar.setAttribute("aria-label", "Seções do Leif");
+    PRIMARY_TABS.forEach((tab, index) => {
       const button = DomHelpers.createElement("button", "leif-tab-button");
       button.type = "button";
-      const icon = DomHelpers.createIcon(tab.icon, "leif-tab-icon");
-      icon.setAttribute("aria-hidden", "true");
-      const label = DomHelpers.createElement("span", "leif-tab-label");
-      label.textContent = tab.label;
-      button.append(icon, label);
+      button.textContent = tab.label;
       button.dataset.tab = tab.id;
       button.addEventListener("click", () => {
-        void this.selectTab(tab.id);
+        void this.selectPrimaryTab(tab.id);
       });
       button.setAttribute("role", "tab");
       button.id = `leif-tab-${tab.id}`;
-      button.tabIndex = tab.id === this.activeTab ? 0 : -1;
-      button.setAttribute("aria-selected", String(tab.id === this.activeTab));
+      button.tabIndex = tab.id === "dashboard" ? 0 : -1;
+      button.setAttribute("aria-selected", String(tab.id === "dashboard"));
       button.setAttribute("aria-controls", "leif-tabpanel");
       button.addEventListener("keydown", (event: KeyboardEvent) => {
-        this.handleTabKeyDown(event, index);
+        this.handlePrimaryTabKeyDown(event, index);
       });
-      this.tabButtons.set(tab.id, button);
-      this.tabBar!.appendChild(button);
+      this.primaryTabButtons.set(tab.id, button);
+      this.primaryTabBar!.appendChild(button);
     });
-    navigation.appendChild(this.tabBar);
+
+    this.planTabBar = DomHelpers.createElement("div", "leif-plan-navigation");
+    this.planTabBar.setAttribute("role", "tablist");
+    this.planTabBar.setAttribute("aria-label", "Seções do plano");
+    PLAN_TABS.forEach((tab, index) => {
+      const button = DomHelpers.createElement("button", "leif-tab-button");
+      button.type = "button";
+      button.textContent = tab.label;
+      button.dataset.tab = tab.id;
+      button.setAttribute("role", "tab");
+      button.id = `leif-tab-${tab.id}`;
+      button.setAttribute("aria-controls", "leif-tabpanel");
+      button.addEventListener("click", () => {
+        void this.selectTab(tab.id);
+      });
+      button.addEventListener("keydown", (event: KeyboardEvent) => {
+        this.handlePlanTabKeyDown(event, index);
+      });
+      this.planTabButtons.set(tab.id, button);
+      this.planTabBar!.appendChild(button);
+    });
+    this.planTabBar.hidden = true;
+    navigation.append(this.primaryTabBar, this.planTabBar);
 
     this.activeTabContainer = DomHelpers.createElement("section", "leif-body");
     this.activeTabContainer.id = "leif-tabpanel";
@@ -156,7 +191,7 @@ export class LeifView extends ItemView {
     this.activeTabContainer.setAttribute("aria-labelledby", `leif-tab-${this.activeTab}`);
 
     this.workspace.append(navigation, this.activeTabContainer);
-    this.shell.append(header, this.workspace);
+    this.shell.append(header, this.diagnosticsContainer, this.workspace);
     this.contentEl.appendChild(this.shell);
     this.observePaneWidth();
   }
@@ -192,12 +227,74 @@ export class LeifView extends ItemView {
 
     const activeContest = data.contests.find((contest) => contest.id === data.activeContestId);
     this.headerActions.innerHTML = "";
-    this.headerActions.appendChild(
-      DomHelpers.createBadge(
-        activeContest ? `Estudando: ${activeContest.name}` : "Escolha um concurso",
-        activeContest ? "trophy" : "compass"
-      )
+
+    const switcher = DomHelpers.createElement("div", "leif-contest-switcher");
+    const selector = DomHelpers.createElement("button", "leif-contest-selector");
+    selector.type = "button";
+    selector.textContent = activeContest?.name ?? "Escolha um concurso";
+    selector.setAttribute("aria-haspopup", "menu");
+    selector.setAttribute("aria-expanded", "false");
+
+    const menu = DomHelpers.createElement("div", "leif-contest-menu");
+    menu.setAttribute("role", "menu");
+    menu.setAttribute("aria-label", "Concursos");
+    menu.hidden = true;
+
+    data.contests.forEach((contest) => {
+      const option = DomHelpers.createElement("button", "leif-contest-option");
+      option.type = "button";
+      option.textContent = contest.name;
+      option.setAttribute("role", "menuitemradio");
+      option.setAttribute("aria-checked", String(contest.id === data.activeContestId));
+      option.addEventListener("click", () => {
+        void this.activateContest(contest.id);
+      });
+      menu.appendChild(option);
+    });
+
+    const manage = DomHelpers.createElement("button", "leif-contest-manage");
+    manage.type = "button";
+    manage.id = "leif-contest-management";
+    manage.dataset.tab = "contests";
+    manage.textContent = "Gerenciar concursos";
+    manage.setAttribute("role", "menuitem");
+    manage.addEventListener("click", () => {
+      menu.hidden = true;
+      void this.selectTab("contests");
+    });
+    menu.appendChild(manage);
+
+    selector.addEventListener("click", () => {
+      menu.hidden = !menu.hidden;
+      selector.setAttribute("aria-expanded", String(!menu.hidden));
+    });
+    switcher.append(selector, menu);
+    this.headerActions.appendChild(switcher);
+  }
+
+  private updateDiagnostics(): void {
+    if (!this.diagnosticsContainer) return;
+    const diagnostics = this.dataStore.diagnostics?.() ?? [];
+    this.diagnosticsContainer.replaceChildren();
+    this.diagnosticsContainer.hidden = diagnostics.length === 0;
+    if (diagnostics.length === 0) return;
+
+    const title = DomHelpers.createElement("strong");
+    title.textContent = "Leif protegeu seus dados";
+    const explanation = DomHelpers.createParagraph(
+      "Há arquivos Markdown que precisam de revisão. Leif bloqueou escritas neles."
     );
+    const list = DomHelpers.createElement("ul", "leif-diagnostics-list");
+    diagnostics.forEach((diagnostic) => {
+      const item = DomHelpers.createElement("li");
+      const path = DomHelpers.createElement("code");
+      const message = DomHelpers.createElement("span");
+      path.textContent = diagnostic.path;
+      message.textContent = ` — ${diagnostic.message}`;
+      item.append(path, message);
+      list.appendChild(item);
+    });
+    this.diagnosticsContainer.append(title, explanation, list);
   }
 
   /**
@@ -216,25 +313,60 @@ export class LeifView extends ItemView {
    */
   private async selectTab(tabId: LeifTabId): Promise<void> {
     this.activeTab = tabId;
+    if (tabId === "cycle" || tabId === "topics" || tabId === "items") {
+      this.activePlanTab = tabId;
+    }
     this.updateTabButtonStyles();
     await this.refresh();
   }
 
   /**
-   * Moves focus between tabs with Arrow keys and activates on Enter/Space.
+   * Selects a primary section. Plano remembers its last active subsection.
    */
-  private handleTabKeyDown(event: KeyboardEvent, index: number): void {
-    const tabIds = TABS.map((tab) => tab.id);
+  private async selectPrimaryTab(tabId: LeifPrimaryTabId): Promise<void> {
+    await this.selectTab(tabId === "plan" ? this.activePlanTab : tabId);
+  }
+
+  private handlePrimaryTabKeyDown(event: KeyboardEvent, index: number): void {
+    const tabIds = PRIMARY_TABS.map((tab) => tab.id);
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      const next = tabIds[(index + 1) % tabIds.length];
+      void this.selectPrimaryTab(next);
+      this.primaryTabButtons.get(next)?.focus();
+    } else if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      const prev = tabIds[(index - 1 + tabIds.length) % tabIds.length];
+      void this.selectPrimaryTab(prev);
+      this.primaryTabButtons.get(prev)?.focus();
+    } else if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      const target = event.key === "Home" ? tabIds[0] : tabIds[tabIds.length - 1];
+      void this.selectPrimaryTab(target);
+      this.primaryTabButtons.get(target)?.focus();
+    } else if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      void this.selectPrimaryTab(tabIds[index]);
+    }
+  }
+
+  private handlePlanTabKeyDown(event: KeyboardEvent, index: number): void {
+    const tabIds = PLAN_TABS.map((tab) => tab.id);
     if (event.key === "ArrowRight") {
       event.preventDefault();
       const next = tabIds[(index + 1) % tabIds.length];
       void this.selectTab(next);
-      this.tabButtons.get(next)?.focus();
+      this.planTabButtons.get(next)?.focus();
     } else if (event.key === "ArrowLeft") {
       event.preventDefault();
-      const prev = tabIds[(index - 1 + tabIds.length) % tabIds.length];
-      void this.selectTab(prev);
-      this.tabButtons.get(prev)?.focus();
+      const previous = tabIds[(index - 1 + tabIds.length) % tabIds.length];
+      void this.selectTab(previous);
+      this.planTabButtons.get(previous)?.focus();
+    } else if (event.key === "Home" || event.key === "End") {
+      event.preventDefault();
+      const target = event.key === "Home" ? tabIds[0] : tabIds[tabIds.length - 1];
+      void this.selectTab(target);
+      this.planTabButtons.get(target)?.focus();
     } else if (event.key === "Enter" || event.key === " ") {
       event.preventDefault();
       void this.selectTab(tabIds[index]);
@@ -245,13 +377,43 @@ export class LeifView extends ItemView {
    * Updates the active class on tab buttons.
    */
   private updateTabButtonStyles(): void {
-    this.tabButtons.forEach((button, tabId) => {
+    const primaryTabId = this.getActivePrimaryTab();
+    this.primaryTabButtons.forEach((button, tabId) => {
+      const isActive = primaryTabId === tabId;
+      button.className = isActive ? "leif-tab-button is-active" : "leif-tab-button";
+      button.tabIndex = isActive ? 0 : -1;
+      button.setAttribute("aria-selected", String(isActive));
+    });
+    this.planTabButtons.forEach((button, tabId) => {
       const isActive = this.activeTab === tabId;
       button.className = isActive ? "leif-tab-button is-active" : "leif-tab-button";
       button.tabIndex = isActive ? 0 : -1;
       button.setAttribute("aria-selected", String(isActive));
     });
-    this.activeTabContainer?.setAttribute("aria-labelledby", `leif-tab-${this.activeTab}`);
+    if (this.planTabBar) {
+      this.planTabBar.hidden = primaryTabId !== "plan";
+    }
+    const labelledBy =
+      this.activeTab === "contests" ? "leif-contest-management" : `leif-tab-${this.activeTab}`;
+    this.activeTabContainer?.setAttribute("aria-labelledby", labelledBy);
+  }
+
+  private getActivePrimaryTab(): LeifPrimaryTabId | null {
+    if (this.activeTab === "cycle" || this.activeTab === "topics" || this.activeTab === "items") {
+      return "plan";
+    }
+    if (this.activeTab === "contests") return null;
+    return this.activeTab;
+  }
+
+  private async activateContest(contestId: string): Promise<void> {
+    try {
+      await this.setActiveContestUseCase.execute({ contestId });
+      this.activeTab = "dashboard";
+      await this.refresh();
+    } catch (error) {
+      DomHelpers.notifyError(error, "Não foi possível escolher o concurso.");
+    }
   }
 
   private async renderActiveTab(container: HTMLElement, data: LeifPluginData): Promise<void> {

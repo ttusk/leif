@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "activeContestId": "contest-b",
+  "contests": [
+    {
+      "id": "contest-a",
+      "name": "Concurso A",
+      "subjectIds": ["subject-a1", "subject-a2"],
+      "wall": { "noticeLinks": [], "examLinks": [], "subjectSnapshots": [] }
+    },
+    {
+      "id": "contest-b",
+      "name": "Concurso B",
+      "subjectIds": ["subject-b1"],
+      "wall": { "noticeLinks": [], "examLinks": [], "subjectSnapshots": [] }
+    }
+  ],
+  "contestStates": [],
+  "subjects": [
+    {
+      "id": "subject-a1",
+      "contestId": "contest-a",
+      "name": "Primeira A",
+      "order": 0,
+      "isActive": true,
+      "plannedStudyMinutes": 30,
+      "itemIds": [],
+      "topicIds": []
+    },
+    {
+      "id": "subject-a2",
+      "contestId": "contest-a",
+      "name": "Segunda A",
+      "order": 0,
+      "isActive": true,
+      "plannedStudyMinutes": 45,
+      "itemIds": [],
+      "topicIds": []
+    },
+    {
+      "id": "subject-b1",
+      "contestId": "contest-b",
+      "name": "Primeira B",
+      "order": 0,
+      "isActive": true,
+      "plannedStudyMinutes": 60,
+      "itemIds": ["item-b1", "item-b2"],
+      "topicIds": []
+    }
+  ],
+  "topics": [],
+  "studyItems": [
+    { "id": "item-b1", "subjectId": "subject-b1", "title": "Item 1", "order": 0 },
+    { "id": "item-b2", "subjectId": "subject-b1", "title": "Item 2", "order": 0 }
+  ],
+  "studySessions": []
+}

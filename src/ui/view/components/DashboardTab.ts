@@ -7,6 +7,11 @@ import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import type { LeifTabId } from "@/ui/constants";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 
+export interface RecommendedStudyRegistration {
+  subjectId: string;
+  itemId?: string;
+}
+
 /**
  * Dashboard tab component - shows contest overview and summary.
  */
@@ -17,7 +22,10 @@ export class DashboardTab {
 
   constructor(
     private readonly dataStore: PluginDataStore,
-    private readonly onNavigate: (tabId: LeifTabId) => Promise<void>
+    private readonly onNavigate: (
+      tabId: LeifTabId,
+      registration?: RecommendedStudyRegistration
+    ) => Promise<void>
   ) {
     this.getActiveCycleSnapshotUseCase = new GetActiveCycleSnapshotUseCase(dataStore);
     this.getActiveContestSummaryUseCase = new GetActiveContestSummaryUseCase(dataStore);
@@ -34,13 +42,7 @@ export class DashboardTab {
       data.contests.find((contest) => contest.id === data.activeContestId) ?? null;
 
     if (!activeContest) {
-      container.append(
-        DomHelpers.createSectionTitle("Hoje"),
-        DomHelpers.createEmptyState(
-          "Nada escolhido ainda",
-          "Escolha um concurso para o Leif saber por onde começar."
-        )
-      );
+      container.append(DomHelpers.createSectionTitle("Hoje"), this.renderFirstRun());
       return;
     }
 
@@ -57,9 +59,6 @@ export class DashboardTab {
     const afterRecommendedItemId = snapshot.currentItemId ? snapshot.nextItemId : null;
 
     container.appendChild(DomHelpers.createSectionTitle("Hoje"));
-    container.appendChild(
-      DomHelpers.createParagraph("O que estudar agora e como o dia está andando.")
-    );
     const examPlanPanel = this.renderExamPlanPanel(activeContest);
     if (examPlanPanel) {
       container.appendChild(examPlanPanel);
@@ -74,7 +73,12 @@ export class DashboardTab {
         stage: recommendedSubject?.currentStage,
         nextSubjectName: afterRecommendedSubject?.name,
         nextItemName: itemMap.get(afterRecommendedItemId ?? ""),
-        canRegisterStudy: Boolean(recommendedSubject)
+        canRegisterStudy: Boolean(recommendedSubject),
+        subjectId: recommendedSubject?.id,
+        itemId: recommendedItemId ?? undefined,
+        recommendationReason: recommendedSubject
+          ? this.buildRecommendationReason(data, recommendedSubject.id)
+          : undefined
       })
     );
 
@@ -117,29 +121,18 @@ export class DashboardTab {
 
   private renderExamPlanPanel(
     contest: NonNullable<LeifPluginData["contests"][number]>
-  ): HTMLElement | null {
+  ): HTMLElement {
     const plan = contest.examPlan;
-    if (
-      !plan?.examDate &&
-      !plan?.board &&
-      plan?.weeklyStudyHours === undefined &&
-      plan?.weeklyQuestionGoal === undefined
-    ) {
-      return null;
-    }
+    const examDate = this.parseExamDate(plan?.examDate);
 
-    const panel = DomHelpers.createElement("section", "leif-next-activity leif-exam-plan");
+    const panel = DomHelpers.createElement("section", "leif-exam-plan");
     const intro = DomHelpers.createElement("div", "leif-next-activity-intro");
     const label = DomHelpers.createElement("span", "leif-next-activity-label");
     label.textContent = "Prova";
     const title = DomHelpers.createElement("strong", "leif-next-activity-subject");
-    title.textContent = plan?.examDate
-      ? `Prova em ${this.formatDaysUntilExam(plan.examDate)}`
-      : "Planejamento da prova";
+    title.textContent = this.formatExamHeading(plan?.examDate, examDate);
     const details = DomHelpers.createElement("span", "leif-next-activity-item");
-    details.textContent = plan?.examDate
-      ? this.formatDate(plan.examDate)
-      : "Data ainda não definida";
+    details.textContent = examDate ? this.formatDate(plan!.examDate!) : (plan?.examDate ?? "");
     intro.append(label, title, details);
 
     const meta = DomHelpers.createElement("div", "leif-next-activity-meta");
@@ -167,6 +160,9 @@ export class DashboardTab {
     nextSubjectName?: string;
     nextItemName?: string;
     canRegisterStudy?: boolean;
+    recommendationReason?: string;
+    subjectId?: string;
+    itemId?: string;
   }): HTMLElement {
     const panel = DomHelpers.createElement("section", "leif-next-activity");
     const intro = DomHelpers.createElement("div", "leif-next-activity-intro");
@@ -177,6 +173,11 @@ export class DashboardTab {
     const item = DomHelpers.createElement("span", "leif-next-activity-item");
     item.textContent = activity.itemName;
     intro.append(label, subject, item);
+    if (activity.recommendationReason) {
+      const reason = DomHelpers.createElement("span", "leif-recommendation-reason");
+      reason.textContent = activity.recommendationReason;
+      intro.appendChild(reason);
+    }
 
     const meta = DomHelpers.createElement("div", "leif-next-activity-meta");
     meta.append(
@@ -189,25 +190,51 @@ export class DashboardTab {
 
     if (activity.canRegisterStudy) {
       meta.appendChild(
-        DomHelpers.createButton("Ir para Registros", {
-          icon: "arrow-right",
-          className: "leif-next-activity-action",
-          onClick: () => this.onNavigate("sessions")
+        DomHelpers.createButton("Registrar estudo", {
+          className: "mod-cta leif-next-activity-action",
+          onClick: () =>
+            this.onNavigate(
+              "sessions",
+              activity.subjectId
+                ? { subjectId: activity.subjectId, itemId: activity.itemId }
+                : undefined
+            )
         })
       );
     }
 
     panel.append(intro, meta);
 
-    if (activity.nextSubjectName || activity.nextItemName) {
-      const next = DomHelpers.createElement("div", "leif-next-activity-next");
-      next.textContent = [
-        activity.nextSubjectName ? `Próxima matéria: ${activity.nextSubjectName}` : undefined,
-        activity.nextItemName ? `item na fila: ${activity.nextItemName}` : undefined
-      ]
-        .filter(Boolean)
-        .join(" · ");
-      panel.appendChild(next);
+    if (activity.canRegisterStudy) {
+      const route = DomHelpers.createElement("ol", "leif-cycle-thread leif-next-activity-next");
+      route.setAttribute("aria-label", "Ordem atual do ciclo");
+
+      const current = DomHelpers.createElement("li", "leif-cycle-thread-step is-current");
+      current.dataset.cycleState = "current";
+      current.setAttribute("aria-current", "step");
+      const currentState = DomHelpers.createElement("span", "leif-cycle-thread-state");
+      currentState.textContent = "Agora";
+      const currentSubject = DomHelpers.createElement("strong", "leif-cycle-thread-subject");
+      currentSubject.textContent = activity.subjectName;
+      current.append(currentState, currentSubject);
+
+      route.appendChild(current);
+      if (activity.nextSubjectName || activity.nextItemName) {
+        const next = DomHelpers.createElement("li", "leif-cycle-thread-step is-next");
+        next.dataset.cycleState = "next";
+        const nextState = DomHelpers.createElement("span", "leif-cycle-thread-state");
+        nextState.textContent = "Próxima";
+        const nextDescription = DomHelpers.createElement("span", "leif-cycle-thread-subject");
+        nextDescription.textContent = [
+          activity.nextSubjectName ? `Próxima matéria: ${activity.nextSubjectName}` : undefined,
+          activity.nextItemName ? `item na fila: ${activity.nextItemName}` : undefined
+        ]
+          .filter(Boolean)
+          .join(" · ");
+        next.append(nextState, nextDescription);
+        route.appendChild(next);
+      }
+      panel.appendChild(route);
     }
 
     return panel;
@@ -217,26 +244,63 @@ export class DashboardTab {
     return DomHelpers.createMetric(label, value);
   }
 
-  private formatDaysUntilExam(examDate: string): string {
+  private renderFirstRun(): HTMLElement {
+    const section = DomHelpers.createElement("section", "leif-first-run");
+    section.appendChild(DomHelpers.createSectionSubtitle("Comece por aqui"));
+    const list = DomHelpers.createElement("ol", "leif-setup-steps");
+    [
+      "Criar ou escolher um concurso",
+      "Informar a data da prova",
+      "Adicionar e ordenar as matérias"
+    ].forEach((text) => {
+      const step = DomHelpers.createElement("li", "leif-setup-step");
+      step.textContent = text;
+      list.appendChild(step);
+    });
+    section.appendChild(list);
+    return section;
+  }
+
+  private buildRecommendationReason(data: LeifPluginData, subjectId: string): string {
+    const lastSession = data.studySessions
+      .filter((session) => session.subjectId === subjectId)
+      .slice()
+      .sort((left, right) => right.studiedAt.localeCompare(left.studiedAt))[0];
+
+    if (!lastSession) {
+      return "Próxima no ciclo · ainda não estudada";
+    }
+
+    return `Próxima no ciclo · último estudo em ${new Date(
+      lastSession.studiedAt
+    ).toLocaleDateString("pt-BR")}`;
+  }
+
+  private formatExamHeading(examDate: string | undefined, target: Date | null): string {
+    if (!examDate) return "Data da prova não definida";
+    if (!target) return "Data da prova inválida";
+
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const [year, month, day] = examDate.split("-").map(Number);
-
-    if (!year || !month || !day) {
-      return "data indefinida";
-    }
-
-    const target = new Date(year, month - 1, day);
     const days = Math.ceil((target.getTime() - today.getTime()) / 86400000);
 
-    if (days < 0) {
-      return "data já passou";
-    }
-    if (days === 0) {
-      return "hoje";
-    }
+    if (days < 0) return `Prova realizada em ${this.formatDate(examDate)}`;
+    if (days === 0) return "Prova hoje";
+    return `Prova em ${days} dias`;
+  }
 
-    return `${days} dias`;
+  private parseExamDate(value?: string): Date | null {
+    if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+    const [year, month, day] = value.split("-").map(Number);
+    const parsed = new Date(year, month - 1, day);
+    if (
+      parsed.getFullYear() !== year ||
+      parsed.getMonth() !== month - 1 ||
+      parsed.getDate() !== day
+    ) {
+      return null;
+    }
+    return parsed;
   }
 
   private formatDate(value: string): string {
