@@ -7,6 +7,7 @@ import {
   MarkdownContestBundleCodec,
   type MarkdownFile
 } from "@/infrastructure/markdown/MarkdownContestBundleCodec";
+import { MARKDOWN_WORKSPACE_FILES } from "@/infrastructure/markdown/MarkdownWorkspaceFiles";
 
 export class StagedMarkdownMigrationService {
   private readonly safety = new MigrationSafetyService();
@@ -32,6 +33,7 @@ export class StagedMarkdownMigrationService {
 
     await this.files.writeNew(backupPath, prepared.backupContent);
     await this.recordReceipt(prepared.receipt);
+    await this.ensureWorkspaceFiles();
 
     const encoded = this.codec.encode(source, contestId);
     const stageRoot = `Leif/.staging/${safePathSegment(prepared.receipt.id)}`;
@@ -76,6 +78,14 @@ export class StagedMarkdownMigrationService {
 
   private async recordReceipt(receipt: MigrationReceipt): Promise<void> {
     await this.dataStore.mutate((data) => upsertReceipt(data, receipt));
+  }
+
+  private async ensureWorkspaceFiles(): Promise<void> {
+    for (const file of MARKDOWN_WORKSPACE_FILES) {
+      if (!(await this.files.exists(file.path))) {
+        await this.files.writeNew(file.path, file.content);
+      }
+    }
   }
 }
 

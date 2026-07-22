@@ -95,6 +95,8 @@ describe("StagedMarkdownMigrationService", () => {
 
     expect(receipt.status).toBe("activated");
     expect(files.files.has(receipt.backupPath)).toBe(true);
+    expect(files.files.get("Leif/AGENTS.md")).toContain("Never change a `leif-id`");
+    expect(files.files.get("Leif/templates/materia.md")).toContain("leif-type: materia");
     expect([...files.files.keys()].some((path) => path.endsWith("/concurso.md"))).toBe(true);
     expect([...files.files.keys()].some((path) => path.includes("/.staging/"))).toBe(false);
     const saved = await dataStore.load();
