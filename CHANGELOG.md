@@ -4,6 +4,12 @@ Todas as mudanças notáveis do Leif são documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [2.0.3] - 2026-07-22
+
+### Alterado
+
+- README mantém o inglês como idioma principal do texto, preservando apenas os rótulos reais da interface em português.
+
 ## [2.0.2] - 2026-07-22
 
 ### Corrigido
@@ -55,6 +61,7 @@ O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o 
 - Bloqueios de segurança reportados em português no painel.
 - Prévia de migração compacta, abas de navegação sem interferência do tema, progresso de assuntos e posições de reordenação em uma única linha, e estados de data e pendências mais claros.
 
+[2.0.3]: https://github.com/ttusk/leif/compare/2.0.2...2.0.3
 [2.0.2]: https://github.com/ttusk/leif/compare/2.0.1...2.0.2
 [2.0.1]: https://github.com/ttusk/leif/compare/2.0.0...2.0.1
 [2.0.0]: https://github.com/ttusk/leif/compare/1.0.2...2.0.0

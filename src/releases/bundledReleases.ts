@@ -2,6 +2,14 @@ import type { BundledReleaseNote } from "@/application/services/ChangelogService
 
 export const BUNDLED_RELEASES: readonly BundledReleaseNote[] = [
   {
+    version: "2.0.3",
+    title: "Leif 2.0.3",
+    body: `## Documentação
+
+- README agora mantém o inglês como idioma principal do texto, mantendo apenas os rótulos reais da interface em português.`,
+    githubUrl: "https://github.com/ttusk/leif/releases/tag/2.0.3"
+  },
+  {
     version: "2.0.2",
     title: "Leif 2.0.2",
     body: `## Refinamentos visuais no plano e nos registros
