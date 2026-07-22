@@ -52,8 +52,16 @@ export class ObsidianMarkdownFileStore implements MarkdownFileStore {
     let current = "";
     for (const segment of segments) {
       current = current ? `${current}/${segment}` : segment;
-      if (!this.vault.getAbstractFileByPath(current)) {
+      const existing = this.vault.getAbstractFileByPath(current);
+      if (existing instanceof TFile) {
+        throw new Error(`Expected folder "${current}", but a file already exists there.`);
+      }
+      if (existing) continue;
+      try {
         await this.vault.createFolder(current);
+      } catch (error) {
+        const createdByAnotherWriter = this.vault.getAbstractFileByPath(current);
+        if (!createdByAnotherWriter || createdByAnotherWriter instanceof TFile) throw error;
       }
     }
   }

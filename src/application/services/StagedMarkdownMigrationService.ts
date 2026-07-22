@@ -66,23 +66,29 @@ export class StagedMarkdownMigrationService {
     const recovered = await this.recoverVerifiedMigration(source, contestId);
     if (recovered) return recovered;
 
-    const createdAt = this.now().toISOString();
-    const safeTimestamp = createdAt.replace(/[:.]/g, "-");
-    const backupPath = `Leif/.backups/${contestId}-${safeTimestamp}.json`;
-    const prepared = await this.safety.prepare(source, contestId, backupPath, createdAt);
-
-    await this.files.writeNew(backupPath, prepared.backupContent);
-    await this.recordReceipt(prepared.receipt);
+    const pending = [...(source.runtimeState?.migrationReceipts ?? [])]
+      .reverse()
+      .find((receipt) => receipt.contestId === contestId && receipt.status === "backed-up");
+    const receipt = pending ?? (await this.prepareNewMigration(source, contestId));
+    if (pending) await this.assertPendingMigrationCanResume(source, pending);
     await this.ensureWorkspaceFiles();
 
     const encoded = this.codec.encode(source, contestId);
-    const stageRoot = `Leif/.staging/${safePathSegment(prepared.receipt.id)}`;
+    const stageRoot = `Leif/.staging/${safePathSegment(receipt.id)}`;
     const staged = encoded.map((file) => ({
       path: file.path.replace(/^Leif\//, `${stageRoot}/`),
       content: file.content
     }));
     for (const file of staged) {
-      await this.files.writeNew(file.path, file.content);
+      if (!(await this.files.exists(file.path))) {
+        await this.files.writeNew(file.path, file.content);
+        continue;
+      }
+      if ((await this.files.read(file.path)) !== file.content) {
+        throw new Error(
+          `O arquivo parcial "${file.path}" difere da fonte atual. O JSON legado continua sendo a fonte.`
+        );
+      }
     }
 
     const readBack: MarkdownFile[] = [];
@@ -91,7 +97,7 @@ export class StagedMarkdownMigrationService {
     }
     const decoded = this.codec.decode(readBack);
     const targetProjection = mergeDurableProjection(source, decoded, contestId);
-    const verified = await this.safety.verify(prepared.receipt, source, targetProjection);
+    const verified = await this.safety.verify(receipt, source, targetProjection);
     await this.recordReceipt(verified);
 
     const finalContestRoot = encoded[0].path.replace(/\/concurso\.md$/, "");
@@ -104,6 +110,37 @@ export class StagedMarkdownMigrationService {
     await this.files.move(stagedContestRoot, finalContestRoot);
 
     return this.activate(verified);
+  }
+
+  private async prepareNewMigration(
+    source: LeifPluginData,
+    contestId: string
+  ): Promise<MigrationReceipt> {
+    const createdAt = this.now().toISOString();
+    const safeTimestamp = createdAt.replace(/[:.]/g, "-");
+    const backupPath = `Leif/.backups/${contestId}-${safeTimestamp}.json`;
+    const prepared = await this.safety.prepare(source, contestId, backupPath, createdAt);
+    await this.files.writeNew(backupPath, prepared.backupContent);
+    await this.recordReceipt(prepared.receipt);
+    return prepared.receipt;
+  }
+
+  private async assertPendingMigrationCanResume(
+    source: LeifPluginData,
+    receipt: MigrationReceipt
+  ): Promise<void> {
+    if (!(await this.files.exists(receipt.backupPath))) {
+      throw new Error(`O backup parcial "${receipt.backupPath}" não existe.`);
+    }
+    const backup = await this.files.read(receipt.backupPath);
+    if ((await sha256(backup)) !== receipt.backupChecksum) {
+      throw new Error(`O backup parcial "${receipt.backupPath}" falhou na verificação.`);
+    }
+    if ((await this.safety.checksum(source, receipt.contestId)) !== receipt.sourceChecksum) {
+      throw new Error(
+        "A fonte mudou desde o backup parcial. O JSON legado continua sendo a fonte."
+      );
+    }
   }
 
   private async recordReceipt(receipt: MigrationReceipt): Promise<void> {
@@ -241,4 +278,10 @@ function mergeDurableProjection(
 
 function safePathSegment(value: string): string {
   return value.replace(/[^a-zA-Z0-9_-]/g, "-");
+}
+
+async function sha256(value: string): Promise<string> {
+  const bytes = new TextEncoder().encode(value);
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", bytes);
+  return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join("");
 }

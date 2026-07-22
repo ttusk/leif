@@ -14,11 +14,11 @@ class EventuallyConsistentFolderVault extends Vault {
     return super.getAbstractFileByPath(path);
   }
 
-  override async createFolder(path: string): Promise<void> {
+  override async createFolder(path: string) {
     if (path === "Leif" && super.getAbstractFileByPath(path)) {
       throw new Error("Folder already exists.");
     }
-    await super.createFolder(path);
+    return super.createFolder(path);
   }
 }
 

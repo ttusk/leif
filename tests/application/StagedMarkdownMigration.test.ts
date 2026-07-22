@@ -195,7 +195,7 @@ describe("StagedMarkdownMigrationService", () => {
     const files = new MemoryFileStore();
     files.files.set(prepared.receipt.backupPath, prepared.backupContent);
     const [firstFile] = new MarkdownContestBundleCodec().encode(source, "contest-1");
-    const stageRoot = `Leif/.staging/${prepared.receipt.id.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
+    const stageRoot = `Leif/.staging/${prepared.receipt.id.replace(/[^a-zA-Z0-9_-]/g, "-")}`;
     files.files.set(firstFile.path.replace(/^Leif\//, `${stageRoot}/`), firstFile.content);
     const service = new StagedMarkdownMigrationService(
       dataStore,
