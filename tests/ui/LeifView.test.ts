@@ -156,7 +156,7 @@ describe("LeifView", () => {
     expect(disconnect).toHaveBeenCalledOnce();
   });
 
-  it("opens the Leif view and renders all required tabs for an empty state", async () => {
+  it("keeps the Obsidian view shell and exposes four text-only primary sections", async () => {
     const dataStore = new InMemoryPluginDataStore();
     const { plugin, leaf } = await openLeifView(dataStore);
 
@@ -166,37 +166,65 @@ describe("LeifView", () => {
     expect(plugin.commands.find((command) => command.id === "open-view")?.name).toBe(
       "Abrir painel"
     );
-    expect(leaf.containerEl.textContent).toContain("Hoje");
-    expect(leaf.containerEl.textContent).toContain("Matérias");
-    expect(leaf.containerEl.textContent).toContain("Edital");
-    expect(leaf.containerEl.textContent).toContain("Registros");
-    expect(leaf.containerEl.textContent).toContain("Recursos");
-    expect(leaf.containerEl.textContent).toContain("Concursos");
-    expect(leaf.containerEl.textContent).toContain("Mural");
+    expect(leaf.containerEl.querySelector(".view-content.leif-view")).not.toBeNull();
     expect(leaf.containerEl.textContent).toContain("Nada escolhido ainda");
 
-    const tabLabels = Array.from(leaf.containerEl.querySelectorAll("[role='tab']")).map(
-      (tab) => tab.querySelector(".leif-tab-label")?.textContent?.trim() ?? ""
+    const primaryNavigation = leaf.containerEl.querySelector(".leif-primary-navigation");
+    const primaryTabs = Array.from(
+      primaryNavigation?.querySelectorAll<HTMLButtonElement>("[role='tab']") ?? []
     );
-    expect(tabLabels).toEqual([
+    expect(primaryTabs.map((tab) => tab.textContent?.trim())).toEqual([
       "Hoje",
       "Registros",
-      "Matérias",
-      "Edital",
-      "Recursos",
-      "Concursos",
+      "Plano",
       "Mural"
     ]);
-    const tabs = Array.from(leaf.containerEl.querySelectorAll<HTMLButtonElement>("[role='tab']"));
-    expect(tabs.every((tab) => tab.tagName === "BUTTON" && tab.type === "button")).toBe(true);
-    expect(tabs.every((tab) => tab.querySelector(".leif-tab-icon[data-icon]"))).toBe(true);
-    expect(tabs.every((tab) => tab.querySelector(".leif-tab-label")?.textContent?.trim())).toBe(
-      true
+    expect(primaryTabs.every((tab) => tab.type === "button")).toBe(true);
+    expect(primaryTabs.every((tab) => tab.querySelector("[data-icon]") === null)).toBe(true);
+
+    const contestSelector = leaf.containerEl.querySelector<HTMLButtonElement>(
+      "button.leif-contest-selector"
     );
+    expect(contestSelector?.getAttribute("aria-haspopup")).toBe("menu");
+    expect(contestSelector?.textContent).toContain("Escolha um concurso");
+
     expect(leaf.containerEl.querySelector(".leif-workspace")).not.toBeNull();
-    expect(leaf.containerEl.querySelector(".leif-navigation")).not.toBeNull();
-    expect(leaf.containerEl.querySelector(".leif-navigation-label")).toBeNull();
-    expect(leaf.containerEl.textContent).not.toContain("Navegar");
+  });
+
+  it("keeps setup sections under Plano and contest management in the global selector", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiData(dataStore);
+
+    const { leaf } = await openLeifView(dataStore);
+    const planTab = leaf.containerEl.querySelector<HTMLButtonElement>(
+      ".leif-primary-navigation [data-tab='plan']"
+    );
+
+    expect(planTab).not.toBeNull();
+    planTab?.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const planTabs = Array.from(
+      leaf.containerEl.querySelectorAll<HTMLButtonElement>(".leif-plan-navigation [role='tab']")
+    );
+    expect(planTabs.map((tab) => tab.textContent?.trim())).toEqual([
+      "Matérias",
+      "Edital",
+      "Recursos"
+    ]);
+
+    const contestSelector = leaf.containerEl.querySelector<HTMLButtonElement>(
+      "button.leif-contest-selector"
+    );
+    contestSelector?.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const contestMenu = leaf.containerEl.querySelector<HTMLElement>(
+      ".leif-contest-menu[role='menu']"
+    );
+    expect(contestMenu?.textContent).toContain("TRT");
+    expect(contestMenu?.textContent).toContain("SEFAZ");
+    expect(contestMenu?.textContent).toContain("Gerenciar concursos");
   });
 
   it("uses native Obsidian classes for buttons and form controls", async () => {
@@ -248,6 +276,46 @@ describe("LeifView", () => {
     expect(leaf.containerEl.textContent).toContain("Constitutional Law");
     expect(leaf.containerEl.textContent).toContain("20");
     expect(leaf.containerEl.textContent).toContain("O que estudar agora");
+  });
+
+  it("shows the exam context and an accessible ordered study route on Hoje", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-21T12:00:00.000Z"));
+
+    try {
+      const dataStore = new InMemoryPluginDataStore();
+      await seedUiData(dataStore);
+      const data = await dataStore.load();
+      data.contests = data.contests.map((contest) =>
+        contest.id === data.activeContestId
+          ? { ...contest, examPlan: { ...contest.examPlan, examDate: "2026-11-22" } }
+          : contest
+      );
+      await dataStore.save(data);
+
+      const { leaf } = await openLeifView(dataStore);
+      const today = leaf.containerEl.querySelector<HTMLElement>("#leif-tabpanel");
+
+      expect(today?.textContent).toContain("Prova em 124 dias");
+      expect(today?.textContent).toMatch(/22\/11\/2026|22 nov 2026/i);
+
+      const route = today?.querySelector<HTMLOListElement>("ol.leif-cycle-thread");
+      const current = route?.querySelector<HTMLElement>("[data-cycle-state='current']");
+      const next = route?.querySelector<HTMLElement>("[data-cycle-state='next']");
+
+      expect(route).not.toBeNull();
+      expect(current?.getAttribute("aria-current")).toBe("step");
+      expect(current?.textContent).toContain("Agora");
+      expect(current?.textContent).toContain("Portuguese");
+      expect(next?.textContent).toContain("Próxima");
+      expect(next?.textContent).toContain("Constitutional Law");
+
+      const reason = today?.querySelector<HTMLElement>(".leif-recommendation-reason");
+      expect(reason?.textContent).toMatch(/Próxima no ciclo/i);
+      expect(reason?.textContent).not.toMatch(/Leif (acha|pensa|recomenda)/i);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("surfaces the next study activity as a focused dashboard panel", async () => {
@@ -655,38 +723,9 @@ describe("LeifView", () => {
     expect(contestCard?.querySelector(".leif-contest-meta")?.textContent).not.toContain("ID");
   });
 
-  it("organizes the wall into clear edital, prova and notes sections", async () => {
+  it("starts Mural as vertical read-only sections and reveals one editor on demand", async () => {
     const dataStore = new InMemoryPluginDataStore();
     await seedUiData(dataStore);
-    const data = await dataStore.load();
-    const activeContest = data.contests.find((contest) => contest.id === data.activeContestId);
-    const subject = data.subjects[0];
-    const item = data.studyItems[0];
-
-    if (!activeContest || !subject || !item) {
-      throw new Error("Seed data was not created.");
-    }
-
-    const updateContestWall = new UpdateContestWallUseCase(
-      dataStore,
-      new EntityRepositoryFactory(dataStore)
-    );
-    await updateContestWall.execute({
-      contestId: activeContest.id,
-      wall: {
-        noticeLinks: activeContest.wall.noticeLinks,
-        examLinks: activeContest.wall.examLinks,
-        notes: activeContest.wall.notes,
-        subjectSnapshots: [
-          {
-            subjectId: subject.id,
-            weight: 2,
-            score: 8,
-            targetItems: [item.id]
-          }
-        ]
-      }
-    });
 
     const { leaf } = await openLeifView(dataStore);
     const wallTabButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='wall']");
@@ -698,21 +737,32 @@ describe("LeifView", () => {
     wallTabButton.click();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    const wallCards = Array.from(leaf.containerEl.querySelectorAll<HTMLElement>(".leif-wall-card"));
-    const titles = wallCards.map((card) => card.querySelector("h3")?.textContent?.trim() ?? "");
+    const readView = leaf.containerEl.querySelector<HTMLElement>(".leif-wall-read-view");
+    const sections = Array.from(
+      readView?.querySelectorAll<HTMLElement>(":scope > .leif-wall-section") ?? []
+    );
+    expect(sections.map((section) => section.querySelector("h3")?.textContent?.trim())).toEqual([
+      "Edital",
+      "Prova",
+      "Notas"
+    ]);
+    expect(readView?.textContent).toContain("https://example.com/edital");
+    expect(leaf.containerEl.querySelector("form.leif-wall-editor")).toBeNull();
 
-    expect(titles).toEqual(["Notas", "Edital", "Prova"]);
-    expect(leaf.containerEl.querySelector(".leif-wall-primary")).not.toBeNull();
-    expect(leaf.containerEl.querySelector(".leif-wall-reference-grid")).not.toBeNull();
-    expect(leaf.containerEl.querySelectorAll(".leif-wall-reference-card")).toHaveLength(2);
-    expect(leaf.containerEl.querySelector(".leif-wall-layout")).toBeNull();
-    expect(leaf.containerEl.querySelector(".leif-wall-links")).toBeNull();
-    expect(leaf.containerEl.querySelector(".leif-wall-card-wide")).toBeNull();
-    expect(leaf.containerEl.querySelector("button.leif-wall-save")).not.toBeNull();
-    expect(leaf.containerEl.querySelector(".leif-wall-snapshot-card")).not.toBeNull();
-    expect(leaf.containerEl.querySelector(".leif-wall-snapshot-card .leif-metric")).not.toBeNull();
-    expect(leaf.containerEl.querySelector(".leif-wall-snapshot-list table.leif-table")).toBeNull();
-    expect(leaf.containerEl.textContent).toContain("Salvar mural");
+    const editButton = Array.from(readView?.querySelectorAll("button") ?? []).find(
+      (button) => button.textContent?.trim() === "Editar"
+    );
+    expect(editButton).not.toBeUndefined();
+    editButton?.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const editor = leaf.containerEl.querySelector<HTMLFormElement>("form.leif-wall-editor");
+    expect(editor).not.toBeNull();
+    expect(editor?.querySelector("input[placeholder='Rótulo do edital']")).not.toBeNull();
+    expect(editor?.querySelector("input[placeholder='URL da prova']")).not.toBeNull();
+    expect(editor?.querySelector("textarea[placeholder='Notas do concurso']")).not.toBeNull();
+    expect(editor?.textContent).toContain("Salvar alterações");
+    expect(editor?.textContent).toContain("Cancelar");
   });
 
   it("opens creation forms inline instead of using modals", async () => {

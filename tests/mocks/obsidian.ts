@@ -203,6 +203,7 @@ export abstract class ItemView {
 
   constructor(public readonly leaf: WorkspaceLeaf) {
     this.contentEl = document.createElement("div");
+    this.contentEl.classList.add("view-content");
     this.leaf.containerEl.innerHTML = "";
     this.leaf.containerEl.appendChild(this.contentEl);
   }
