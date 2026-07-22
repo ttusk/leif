@@ -25,7 +25,7 @@ export class LegacyUpgradeBackupService {
     const persisted = await this.files.read(path);
     if ((await sha256(persisted)) !== checksum) {
       throw new Error(
-        `Legacy upgrade backup verification failed for "${path}". Leif v2 will not write plugin data.`
+        `A verificação do backup legado falhou em "${path}". O Leif v2 não alterou os dados do plugin.`
       );
     }
 

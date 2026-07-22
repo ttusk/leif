@@ -34,13 +34,13 @@ export class MigrationSafetyService {
       diagnostics.push({
         code: "missing-contest",
         entityId: contestId,
-        message: `Contest "${contestId}" does not exist.`
+        message: `O concurso "${contestId}" não existe.`
       });
     }
 
     if (diagnostics.length > 0) {
       throw new MigrationBlockedError(
-        "Legacy data must be repaired before migration.",
+        "Os dados legados precisam ser reparados antes da migração.",
         diagnostics
       );
     }
@@ -72,21 +72,21 @@ export class MigrationSafetyService {
     const targetChecksum = await this.checksum(markdownProjection, receipt.contestId);
 
     if (receipt.status !== "backed-up" || receipt.sourceChecksum !== sourceChecksum) {
-      throw new MigrationBlockedError("The migration source changed after backup.", [
+      throw new MigrationBlockedError("A fonte da migração mudou depois do backup.", [
         {
           code: "source-changed",
           entityId: receipt.contestId,
-          message: "Create a new backup before verifying this migration."
+          message: "Crie um novo backup antes de verificar esta migração."
         }
       ]);
     }
 
     if (sourceChecksum !== targetChecksum) {
-      throw new MigrationBlockedError("The Markdown projection is not equivalent to legacy data.", [
+      throw new MigrationBlockedError("A projeção Markdown não equivale aos dados legados.", [
         {
           code: "projection-mismatch",
           entityId: receipt.contestId,
-          message: "The staged Markdown must match the legacy concurso before activation."
+          message: "O Markdown em staging deve corresponder ao concurso legado antes da ativação."
         }
       ]);
     }
@@ -116,7 +116,7 @@ export class MigrationSafetyService {
           diagnostics.push({
             code: "duplicate-id",
             entityId: entity.id,
-            message: `Duplicate identity "${entity.id}" must be resolved explicitly.`
+            message: `A identidade "${entity.id}" está duplicada e precisa ser resolvida explicitamente.`
           });
         }
         seen.add(entity.id);
@@ -133,7 +133,7 @@ export class MigrationSafetyService {
         diagnostics.push({
           code: "orphan-subject",
           entityId: subject.id,
-          message: `Subject "${subject.id}" references a missing contest.`
+          message: `A matéria "${subject.id}" referencia um concurso inexistente.`
         });
       }
     });
@@ -143,7 +143,7 @@ export class MigrationSafetyService {
         diagnostics.push({
           code: "orphan-study-item",
           entityId: item.id,
-          message: `Study item "${item.id}" references a missing subject.`
+          message: `O item de estudo "${item.id}" referencia uma matéria inexistente.`
         });
       }
     });
@@ -153,7 +153,7 @@ export class MigrationSafetyService {
         diagnostics.push({
           code: "orphan-topic",
           entityId: topic.id,
-          message: `Topic "${topic.id}" references a missing subject.`
+          message: `O assunto "${topic.id}" referencia uma matéria inexistente.`
         });
       }
     });
@@ -168,28 +168,28 @@ export class MigrationSafetyService {
         diagnostics.push({
           code: "orphan-study-session",
           entityId: session.id,
-          message: `Study session "${session.id}" references a missing contest.`
+          message: `A sessão de estudo "${session.id}" referencia um concurso inexistente.`
         });
       }
       if (session.subjectId && (!subject || subject.contestId !== session.contestId)) {
         diagnostics.push({
           code: "invalid-session-subject",
           entityId: session.id,
-          message: `Study session "${session.id}" references a subject outside its contest.`
+          message: `A sessão de estudo "${session.id}" referencia uma matéria de outro concurso.`
         });
       }
       if (session.studyItemId && (!item || item.subjectId !== session.subjectId)) {
         diagnostics.push({
           code: "invalid-session-study-item",
           entityId: session.id,
-          message: `Study session "${session.id}" references an item outside its subject.`
+          message: `A sessão de estudo "${session.id}" referencia um item de outra matéria.`
         });
       }
       if (session.topicId && (!topic || topic.subjectId !== session.subjectId)) {
         diagnostics.push({
           code: "invalid-session-topic",
           entityId: session.id,
-          message: `Study session "${session.id}" references a topic outside its subject.`
+          message: `A sessão de estudo "${session.id}" referencia um assunto de outra matéria.`
         });
       }
     });
@@ -239,6 +239,7 @@ function sortValue(value: unknown): unknown {
   if (value !== null && typeof value === "object") {
     return Object.fromEntries(
       Object.entries(value as Record<string, unknown>)
+        .filter(([, child]) => !(Array.isArray(child) && child.length === 0))
         .sort(([left], [right]) => left.localeCompare(right))
         .map(([key, child]) => [key, sortValue(child)])
     );

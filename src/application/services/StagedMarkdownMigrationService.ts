@@ -38,7 +38,7 @@ export class StagedMarkdownMigrationService {
       diagnostics.push({
         code: "missing-contest",
         entityId: contestId,
-        message: `Contest "${contestId}" does not exist.`
+        message: `O concurso "${contestId}" não existe.`
       });
       return { contestId, files: [], diagnostics, blocked: true };
     }
@@ -50,7 +50,7 @@ export class StagedMarkdownMigrationService {
       diagnostics.push({
         code: "destination-exists",
         entityId: contestId,
-        message: `Migration destination "${finalContestRoot}" already exists.`
+        message: `O destino da migração "${finalContestRoot}" já existe.`
       });
     }
 
@@ -170,13 +170,13 @@ export class StagedMarkdownMigrationService {
   ): Promise<void> {
     if ((await this.safety.checksum(source, receipt.contestId)) !== receipt.sourceChecksum) {
       throw new Error(
-        "Migration source changed before crash recovery; legacy authority is retained."
+        "A fonte da migração mudou antes da recuperação; o JSON legado continua sendo a fonte."
       );
     }
     const decoded = this.codec.decode(files);
     const projection = mergeDurableProjection(source, decoded, receipt.contestId);
     if ((await this.safety.checksum(projection, receipt.contestId)) !== receipt.targetChecksum) {
-      throw new Error("Recovered Markdown differs from the verified migration target.");
+      throw new Error("O Markdown recuperado difere do destino verificado da migração.");
     }
   }
 

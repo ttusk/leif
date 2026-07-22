@@ -141,7 +141,7 @@ describe("StagedMarkdownMigrationService", () => {
       () => new Date("2026-07-21T20:00:00.000Z")
     );
 
-    await expect(service.migrate("contest-1")).rejects.toThrow(/not equivalent/i);
+    await expect(service.migrate("contest-1")).rejects.toThrow(/não equivale/i);
 
     const saved = await dataStore.load();
     expect(saved.runtimeState?.contestStorage["contest-1"] ?? "legacy-json").toBe("legacy-json");

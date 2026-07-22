@@ -113,7 +113,7 @@ export class MarkdownContestWriter {
     const latest = await this.findContestFiles(contestId, markdownRoot);
     if (fingerprintMarkdown(latest) !== sourceFingerprint) {
       throw new Error(
-        "Markdown changed while Leif was preparing the write. The external edit was preserved; review it and try again."
+        "O Markdown foi alterado enquanto o Leif preparava a escrita. A edição externa foi preservada; revise-a e tente novamente."
       );
     }
 
