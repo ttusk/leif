@@ -2,6 +2,17 @@ import type { BundledReleaseNote } from "@/application/services/ChangelogService
 
 export const BUNDLED_RELEASES: readonly BundledReleaseNote[] = [
   {
+    version: "2.0.1",
+    title: "Leif 2.0.1",
+    body: `## Revisão da comunidade e documentação
+
+- Código ajustado às regras de revisão de plugins do Obsidian: checksums usam o crypto global compatível com janelas popout, modais passam a criar elementos com o helper createEl e o carregamento do plugin deixa de usar onload assíncrono.
+- README reescrito em inglês, preparado para o diretório oficial de plugins.
+- Contrato do armazenamento Markdown atualizado com o layout real do vault, todos os tipos leif-type e o formato dos block IDs ^leif-ref-...
+- O repositório ganha um AGENTS.md com comandos, estrutura e convenções para agentes de IA.`,
+    githubUrl: "https://github.com/ttusk/leif/releases/tag/2.0.1"
+  },
+  {
     version: "2.0.0",
     title: "Leif 2.0",
     body: `## Markdown aberto, com migração segura
