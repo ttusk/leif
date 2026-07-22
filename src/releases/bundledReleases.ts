@@ -2,6 +2,16 @@ import type { BundledReleaseNote } from "@/application/services/ChangelogService
 
 export const BUNDLED_RELEASES: readonly BundledReleaseNote[] = [
   {
+    version: "2.0.2",
+    title: "Leif 2.0.2",
+    body: `## Refinamentos visuais no plano e nos registros
+
+- O resumo do ciclo em Matérias agora tem espaço entre Matérias, No ciclo e Tempo total, e o tempo total aparece em horas e minutos (ex.: 2h 20min) em vez de minutos crus.
+- O status No ciclo das matérias não quebra mais em duas linhas.
+- Nos Registros, o item atual aparece como subtítulo de Agora, e o próximo passo passou de Depois vem para Depois:.`,
+    githubUrl: "https://github.com/ttusk/leif/releases/tag/2.0.2"
+  },
+  {
     version: "2.0.1",
     title: "Leif 2.0.1",
     body: `## Revisão da comunidade e documentação
