@@ -132,6 +132,12 @@ describe("Leif Native visual system", () => {
     expect(styles).toMatch(/\.leif-order-number\s*{[^}]*min-width:\s*2ch;/s);
   });
 
+  it("keeps cycle status labels like No ciclo on one line", () => {
+    const styles = readStyles();
+
+    expect(styles).toMatch(/\.leif-status-(active|inactive)\s*{[^}]*white-space:\s*nowrap;/s);
+  });
+
   it("spaces cycle summary chips so Matérias, No ciclo and Tempo total are not colliding", () => {
     const styles = readStyles();
 

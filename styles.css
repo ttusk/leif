@@ -577,6 +577,7 @@ form.leif-card,
   border-radius: 0;
   background: transparent;
   font-size: var(--font-ui-smaller);
+  white-space: nowrap;
 }
 
 .leif-status-active {
