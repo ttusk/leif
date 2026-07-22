@@ -1,6 +1,9 @@
 import type { MarkdownFileStore } from "@/application/ports/MarkdownFileStore";
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
-import { MigrationSafetyService } from "@/application/services/MigrationSafetyService";
+import {
+  MigrationSafetyService,
+  type MigrationDiagnostic
+} from "@/application/services/MigrationSafetyService";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import type { MigrationReceipt } from "@/domain/types/LeifRuntimeState";
 import {
@@ -9,6 +12,13 @@ import {
 } from "@/infrastructure/markdown/MarkdownContestBundleCodec";
 import { MARKDOWN_WORKSPACE_FILES } from "@/infrastructure/markdown/MarkdownWorkspaceFiles";
 import { ManagedMarkdownDocument } from "@/infrastructure/markdown/ManagedMarkdownDocument";
+
+export interface MigrationPreview {
+  contestId: string;
+  files: string[];
+  diagnostics: MigrationDiagnostic[];
+  blocked: boolean;
+}
 
 export class StagedMarkdownMigrationService {
   private readonly safety = new MigrationSafetyService();
@@ -19,6 +29,33 @@ export class StagedMarkdownMigrationService {
     private readonly files: MarkdownFileStore,
     private readonly now: () => Date = () => new Date()
   ) {}
+
+  async preview(contestId: string): Promise<MigrationPreview> {
+    const source = await this.dataStore.load();
+    const diagnostics = this.safety.validateRawData(source);
+    const contest = source.contests.find((candidate) => candidate.id === contestId);
+    if (!contest) {
+      diagnostics.push({
+        code: "missing-contest",
+        entityId: contestId,
+        message: `Contest "${contestId}" does not exist.`
+      });
+      return { contestId, files: [], diagnostics, blocked: true };
+    }
+
+    const encoded = this.codec.encode(source, contestId);
+    const files = encoded.map((file) => file.path);
+    const finalContestRoot = encoded[0]?.path.replace(/\/concurso\.md$/, "");
+    if (finalContestRoot && (await this.files.exists(finalContestRoot))) {
+      diagnostics.push({
+        code: "destination-exists",
+        entityId: contestId,
+        message: `Migration destination "${finalContestRoot}" already exists.`
+      });
+    }
+
+    return { contestId, files, diagnostics, blocked: diagnostics.length > 0 };
+  }
 
   async migrate(contestId: string): Promise<MigrationReceipt> {
     const source = await this.dataStore.load();

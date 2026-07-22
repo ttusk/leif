@@ -26,7 +26,20 @@ export function registerMarkdownMigration(
         new Notice("Este concurso já usa Markdown como fonte.");
         return;
       }
-      new MigrationConfirmModal(plugin.app, contest.name, contest.id, migration).open();
+      try {
+        const preview = await migration.preview(contest.id);
+        new MigrationConfirmModal(
+          plugin.app,
+          contest.name,
+          contest.id,
+          preview,
+          migration
+        ).open();
+      } catch (error) {
+        new Notice(
+          `Não foi possível preparar a prévia: ${error instanceof Error ? error.message : String(error)}`
+        );
+      }
     }
   });
 

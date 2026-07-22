@@ -32,7 +32,7 @@ describe("MigrationConfirmModal", () => {
     expect(modal.contentEl.textContent).toContain("Leif/concursos/trt/concurso.md");
     expect(modal.contentEl.textContent).toContain("2 arquivos");
     expect(
-      [...modal.contentEl.querySelectorAll("button")].find((button) =>
+      Array.from(modal.contentEl.querySelectorAll("button")).find((button) =>
         button.textContent?.includes("Criar backup e migrar")
       )?.disabled
     ).toBe(false);
@@ -64,7 +64,7 @@ describe("MigrationConfirmModal", () => {
     expect(modal.contentEl.textContent).toContain("Migração bloqueada");
     expect(modal.contentEl.textContent).toContain("Identidade duplicada");
     expect(
-      [...modal.contentEl.querySelectorAll("button")].find((button) =>
+      Array.from(modal.contentEl.querySelectorAll("button")).find((button) =>
         button.textContent?.includes("Criar backup e migrar")
       )?.disabled
     ).toBe(true);

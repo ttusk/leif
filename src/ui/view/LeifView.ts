@@ -27,6 +27,7 @@ export class LeifView extends ItemView {
 
   private shell?: HTMLElement;
   private headerActions?: HTMLElement;
+  private diagnosticsContainer?: HTMLElement;
   private workspace?: HTMLElement;
   private primaryTabBar?: HTMLElement;
   private planTabBar?: HTMLElement;
@@ -101,6 +102,7 @@ export class LeifView extends ItemView {
     }
 
     await this.updateHeader(data);
+    this.updateDiagnostics();
     await this.updateActiveTab(data);
   }
 
@@ -111,6 +113,7 @@ export class LeifView extends ItemView {
     const data = await this.dataStore.load();
     this.ensureSelectedSubject(data);
     await this.updateHeader(data);
+    this.updateDiagnostics();
     await this.updateActiveTab(data);
   }
 
@@ -126,6 +129,10 @@ export class LeifView extends ItemView {
     const header = DomHelpers.createElement("header", "leif-header");
     this.headerActions = DomHelpers.createElement("div", "leif-header-actions");
     header.appendChild(this.headerActions);
+
+    this.diagnosticsContainer = DomHelpers.createElement("section", "leif-diagnostics");
+    this.diagnosticsContainer.setAttribute("role", "alert");
+    this.diagnosticsContainer.hidden = true;
 
     this.workspace = DomHelpers.createElement("div", "leif-workspace");
     const navigation = DomHelpers.createElement("nav", "leif-navigation");
@@ -184,7 +191,7 @@ export class LeifView extends ItemView {
     this.activeTabContainer.setAttribute("aria-labelledby", `leif-tab-${this.activeTab}`);
 
     this.workspace.append(navigation, this.activeTabContainer);
-    this.shell.append(header, this.workspace);
+    this.shell.append(header, this.diagnosticsContainer, this.workspace);
     this.contentEl.appendChild(this.shell);
     this.observePaneWidth();
   }
@@ -263,6 +270,31 @@ export class LeifView extends ItemView {
     });
     switcher.append(selector, menu);
     this.headerActions.appendChild(switcher);
+  }
+
+  private updateDiagnostics(): void {
+    if (!this.diagnosticsContainer) return;
+    const diagnostics = this.dataStore.diagnostics?.() ?? [];
+    this.diagnosticsContainer.replaceChildren();
+    this.diagnosticsContainer.hidden = diagnostics.length === 0;
+    if (diagnostics.length === 0) return;
+
+    const title = DomHelpers.createElement("strong");
+    title.textContent = "Leif protegeu seus dados";
+    const explanation = DomHelpers.createParagraph(
+      "Há arquivos Markdown que precisam de revisão. Leif bloqueou escritas neles."
+    );
+    const list = DomHelpers.createElement("ul", "leif-diagnostics-list");
+    diagnostics.forEach((diagnostic) => {
+      const item = DomHelpers.createElement("li");
+      const path = DomHelpers.createElement("code");
+      const message = DomHelpers.createElement("span");
+      path.textContent = diagnostic.path;
+      message.textContent = ` — ${diagnostic.message}`;
+      item.append(path, message);
+      list.appendChild(item);
+    });
+    this.diagnosticsContainer.append(title, explanation, list);
   }
 
   /**

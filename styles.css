@@ -337,6 +337,31 @@ form.leif-card,
   font-size: var(--font-ui-medium);
 }
 
+.leif-diagnostics {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+  padding: var(--size-4-3);
+  border-inline-start: 2px solid var(--leif-warning);
+  background: var(--leif-bg-muted);
+}
+
+.leif-diagnostics[hidden] {
+  display: none;
+}
+
+.leif-diagnostics-list,
+.leif-migration__file-list,
+.leif-migration__diagnostics {
+  margin: 0;
+  padding-inline-start: var(--size-4-5);
+}
+
+.leif-diagnostics-list code,
+.leif-migration__file-list {
+  overflow-wrap: anywhere;
+}
+
 .leif-first-run {
   display: flex;
   flex-direction: column;

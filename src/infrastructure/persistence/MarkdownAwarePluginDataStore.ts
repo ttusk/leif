@@ -1,4 +1,7 @@
-import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import type {
+  PluginDataDiagnostic,
+  PluginDataStore
+} from "@/application/ports/PluginDataStore";
 import { MigrationSafetyService } from "@/application/services/MigrationSafetyService";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import type { MarkdownIndexDiagnostic } from "@/infrastructure/markdown/MarkdownContestIndex";
@@ -8,7 +11,7 @@ import { MarkdownContestWriter } from "@/infrastructure/markdown/MarkdownContest
 export class MarkdownAwarePluginDataStore implements PluginDataStore {
   private readonly safety = new MigrationSafetyService();
   private transactionTail: Promise<void> = Promise.resolve();
-  private diagnostics: readonly MarkdownIndexDiagnostic[] = [];
+  private currentDiagnostics: readonly MarkdownIndexDiagnostic[] = [];
 
   constructor(
     private readonly legacy: PluginDataStore,
@@ -17,7 +20,11 @@ export class MarkdownAwarePluginDataStore implements PluginDataStore {
   ) {}
 
   get markdownDiagnostics(): readonly MarkdownIndexDiagnostic[] {
-    return this.diagnostics;
+    return this.currentDiagnostics;
+  }
+
+  diagnostics(): readonly PluginDataDiagnostic[] {
+    return this.currentDiagnostics;
   }
 
   async load(): Promise<LeifPluginData> {
@@ -60,7 +67,7 @@ export class MarkdownAwarePluginDataStore implements PluginDataStore {
         });
       }
     }
-    this.diagnostics = diagnostics;
+    this.currentDiagnostics = diagnostics;
     const markdownContestIds = markdownContestIdSet(json);
     return overlayMarkdown(json, markdown, markdownContestIds);
   }
