@@ -62,6 +62,44 @@ export class Plugin {
 
 export class App {
   workspace = new Workspace();
+  vault = new Vault();
+}
+
+export class TAbstractFile {
+  constructor(public path: string) {}
+}
+
+export class TFile extends TAbstractFile {}
+
+export class Vault {
+  getFiles(): TFile[] {
+    return [];
+  }
+
+  getAbstractFileByPath(_path: string): TAbstractFile | null {
+    return null;
+  }
+
+  async create(path: string, _content: string): Promise<TFile> {
+    return new TFile(path);
+  }
+
+  async read(_file: TFile): Promise<string> {
+    return "";
+  }
+
+  async createFolder(_path: string): Promise<void> {}
+
+  async rename(file: TAbstractFile, newPath: string): Promise<void> {
+    file.path = newPath;
+  }
+}
+
+export function normalizePath(path: string): string {
+  return path
+    .replace(/\\/g, "/")
+    .replace(/\/{2,}/g, "/")
+    .replace(/^\//, "");
 }
 
 export class Workspace {

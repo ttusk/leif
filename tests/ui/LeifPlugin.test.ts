@@ -7,7 +7,7 @@ import { App, getOpenModals, Plugin, resetOpenModals } from "../mocks/obsidian";
 import { createDefaultLeifPluginData } from "@/domain/types/LeifPluginData";
 
 describe("LeifPlugin", () => {
-  it("registers only the production view command and no settings tab", async () => {
+  it("registers the panel and safe Markdown migration commands with no settings tab", async () => {
     const app = new App();
     const plugin = new LeifPlugin(app as never, {} as never);
 
@@ -15,7 +15,10 @@ describe("LeifPlugin", () => {
 
     const registeredPlugin = plugin as unknown as Plugin;
     expect(registeredPlugin.settingTabs).toHaveLength(0);
-    expect(registeredPlugin.commands.map((command) => command.id)).toEqual(["open-view"]);
+    expect(registeredPlugin.commands.map((command) => command.id)).toEqual([
+      "open-view",
+      "migrate-active-contest-to-markdown"
+    ]);
     expect(registeredPlugin.commands[0]?.name).toBe("Abrir painel");
   });
 
