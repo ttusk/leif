@@ -3,7 +3,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import LeifPlugin from "@/main";
-import { App, getOpenModals, Plugin, resetOpenModals } from "../mocks/obsidian";
+import { App, getOpenModals, Plugin, resetOpenModals, Vault } from "../mocks/obsidian";
 import { createDefaultLeifPluginData } from "@/domain/types/LeifPluginData";
 
 describe("LeifPlugin", () => {
@@ -54,6 +54,12 @@ describe("LeifPlugin", () => {
     await plugin.onload();
     await Promise.resolve();
 
+    const backup = plugin.app.vault
+      .getFiles()
+      .find((file) => file.path.startsWith("Leif/.backups/upgrades/v1-to-v2-"));
+    expect(backup).toBeDefined();
+    expect(await plugin.app.vault.read(backup!)).toContain('"contest-1"');
+
     const [modal] = getOpenModals();
     expect(modal?.contentEl.textContent).toContain("Leif 2.0");
     expect(modal?.contentEl.querySelector("a")?.getAttribute("href")).toContain(
@@ -65,5 +71,31 @@ describe("LeifPlugin", () => {
       const saved = (await plugin.loadData()) as ReturnType<typeof createDefaultLeifPluginData>;
       expect(saved.runtimeState?.lastAcknowledgedVersion).toBe("2.0.0");
     });
+  });
+
+  it("fails closed before registering writable UI when a legacy backup cannot be created", async () => {
+    class FailingBackupVault extends Vault {
+      override async create(path: string, content: string) {
+        if (path.startsWith("Leif/.backups/upgrades/")) throw new Error("disk full");
+        return super.create(path, content);
+      }
+    }
+
+    const app = new App();
+    app.vault = new FailingBackupVault();
+    const plugin = new LeifPlugin(app as never, { version: "2.0.0" } as never);
+    const existing = createDefaultLeifPluginData();
+    delete existing.runtimeState;
+    existing.contests.push({
+      id: "contest-1",
+      name: "TRT",
+      subjectIds: [],
+      wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] }
+    });
+    await plugin.saveData(existing);
+
+    await expect(plugin.onload()).rejects.toThrow(/disk full/i);
+    expect((plugin as unknown as Plugin).commands).toHaveLength(0);
+    expect(await plugin.loadData()).toEqual(existing);
   });
 });

@@ -72,26 +72,52 @@ export class TAbstractFile {
 export class TFile extends TAbstractFile {}
 
 export class Vault {
+  private readonly files = new Map<string, { file: TFile; content: string }>();
+  private readonly folders = new Map<string, TAbstractFile>();
+
   getFiles(): TFile[] {
-    return [];
+    return [...this.files.values()].map(({ file }) => file);
   }
 
-  getAbstractFileByPath(_path: string): TAbstractFile | null {
-    return null;
+  getAbstractFileByPath(path: string): TAbstractFile | null {
+    return this.files.get(path)?.file ?? this.folders.get(path) ?? null;
   }
 
-  async create(path: string, _content: string): Promise<TFile> {
-    return new TFile(path);
+  async create(path: string, content: string): Promise<TFile> {
+    const file = new TFile(path);
+    this.files.set(path, { file, content });
+    return file;
   }
 
-  async read(_file: TFile): Promise<string> {
-    return "";
+  async read(file: TFile): Promise<string> {
+    return this.files.get(file.path)?.content ?? "";
   }
 
-  async createFolder(_path: string): Promise<void> {}
+  async createFolder(path: string): Promise<void> {
+    this.folders.set(path, new TAbstractFile(path));
+  }
 
   async rename(file: TAbstractFile, newPath: string): Promise<void> {
+    const oldPath = file.path;
+    const storedFile = this.files.get(oldPath);
+    if (storedFile) {
+      this.files.delete(oldPath);
+      storedFile.file.path = newPath;
+      this.files.set(newPath, storedFile);
+      return;
+    }
+
+    const affectedFiles = [...this.files.entries()].filter(([path]) =>
+      path.startsWith(`${oldPath}/`)
+    );
+    affectedFiles.forEach(([path, entry]) => {
+      this.files.delete(path);
+      entry.file.path = `${newPath}${path.slice(oldPath.length)}`;
+      this.files.set(entry.file.path, entry);
+    });
+    this.folders.delete(oldPath);
     file.path = newPath;
+    this.folders.set(newPath, file);
   }
 }
 
