@@ -8,6 +8,7 @@ import {
   type MarkdownFile
 } from "@/infrastructure/markdown/MarkdownContestBundleCodec";
 import { MARKDOWN_WORKSPACE_FILES } from "@/infrastructure/markdown/MarkdownWorkspaceFiles";
+import { ManagedMarkdownDocument } from "@/infrastructure/markdown/ManagedMarkdownDocument";
 
 export class StagedMarkdownMigrationService {
   private readonly safety = new MigrationSafetyService();
@@ -25,6 +26,8 @@ export class StagedMarkdownMigrationService {
       (receipt) => receipt.contestId === contestId && receipt.status === "activated"
     );
     if (alreadyActivated) return alreadyActivated;
+    const recovered = await this.recoverVerifiedMigration(source, contestId);
+    if (recovered) return recovered;
 
     const createdAt = this.now().toISOString();
     const safeTimestamp = createdAt.replace(/[:.]/g, "-");
@@ -63,17 +66,7 @@ export class StagedMarkdownMigrationService {
     }
     await this.files.move(stagedContestRoot, finalContestRoot);
 
-    const activated: MigrationReceipt = {
-      ...verified,
-      status: "activated",
-      activatedAt: this.now().toISOString()
-    };
-    await this.dataStore.mutate((data) => {
-      data.runtimeState = data.runtimeState!;
-      data.runtimeState.contestStorage[contestId] = "vault-markdown";
-      upsertReceipt(data, activated);
-    });
-    return activated;
+    return this.activate(verified);
   }
 
   private async recordReceipt(receipt: MigrationReceipt): Promise<void> {
@@ -86,6 +79,82 @@ export class StagedMarkdownMigrationService {
         await this.files.writeNew(file.path, file.content);
       }
     }
+  }
+
+  private async recoverVerifiedMigration(
+    source: LeifPluginData,
+    contestId: string
+  ): Promise<MigrationReceipt | null> {
+    const verified = [...source.runtimeState!.migrationReceipts]
+      .reverse()
+      .find((receipt) => receipt.contestId === contestId && receipt.status === "verified");
+    if (!verified?.targetChecksum) return null;
+
+    const markdownRoot = source.runtimeState!.markdownRoot;
+    const finalBundle = await this.findBundle(`${markdownRoot}/concursos`, contestId);
+    if (finalBundle) {
+      await this.assertRecoveredBundle(source, verified, finalBundle.files);
+      return this.activate(verified);
+    }
+
+    const stageRoot = `${markdownRoot}/.staging/${safePathSegment(verified.id)}`;
+    const stagedBundle = await this.findBundle(stageRoot, contestId);
+    if (!stagedBundle) return null;
+    await this.assertRecoveredBundle(source, verified, stagedBundle.files);
+    const finalRoot = stagedBundle.root.replace(`${stageRoot}/`, `${markdownRoot}/`);
+    if (await this.files.exists(finalRoot)) {
+      throw new Error(`Cannot recover migration because "${finalRoot}" already exists.`);
+    }
+    await this.files.move(stagedBundle.root, finalRoot);
+    return this.activate(verified);
+  }
+
+  private async findBundle(
+    prefix: string,
+    contestId: string
+  ): Promise<{ root: string; files: MarkdownFile[] } | null> {
+    const paths = (await this.files.list(prefix)).filter((path) => path.endsWith(".md"));
+    for (const contestPath of paths.filter((path) => path.endsWith("/concurso.md"))) {
+      const content = await this.files.read(contestPath);
+      if (ManagedMarkdownDocument.parse(content).identity.id !== contestId) continue;
+      const root = contestPath.slice(0, -"/concurso.md".length);
+      const bundlePaths = paths.filter((path) => path.startsWith(`${root}/`));
+      const files: MarkdownFile[] = [];
+      for (const path of bundlePaths) files.push({ path, content: await this.files.read(path) });
+      return { root, files };
+    }
+    return null;
+  }
+
+  private async assertRecoveredBundle(
+    source: LeifPluginData,
+    receipt: MigrationReceipt,
+    files: MarkdownFile[]
+  ): Promise<void> {
+    if ((await this.safety.checksum(source, receipt.contestId)) !== receipt.sourceChecksum) {
+      throw new Error(
+        "Migration source changed before crash recovery; legacy authority is retained."
+      );
+    }
+    const decoded = this.codec.decode(files);
+    const projection = mergeDurableProjection(source, decoded, receipt.contestId);
+    if ((await this.safety.checksum(projection, receipt.contestId)) !== receipt.targetChecksum) {
+      throw new Error("Recovered Markdown differs from the verified migration target.");
+    }
+  }
+
+  private async activate(receipt: MigrationReceipt): Promise<MigrationReceipt> {
+    const activated: MigrationReceipt = {
+      ...receipt,
+      status: "activated",
+      activatedAt: this.now().toISOString()
+    };
+    await this.dataStore.mutate((data) => {
+      data.runtimeState = data.runtimeState!;
+      data.runtimeState.contestStorage[receipt.contestId] = "vault-markdown";
+      upsertReceipt(data, activated);
+    });
+    return activated;
   }
 }
 

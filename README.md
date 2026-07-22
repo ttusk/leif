@@ -25,4 +25,24 @@ Quando o Leif estiver disponível no diretório oficial, abra **Configurações 
 
 Ative o Leif em **Plugins da comunidade** e abra o painel pelo ícone da faixa lateral ou pelo comando **Abrir painel**. Crie um concurso, organize suas matérias e recursos, registre cada sessão e consulte **Hoje** para seguir o ciclo.
 
-Os dados ficam no armazenamento local do plugin dentro do seu vault. O Leif não exige conta, não envia telemetria e não faz requisições de rede.
+Os dados ficam localmente no vault. O Leif não exige conta, não envia telemetria e não faz requisições de rede.
+
+## Markdown aberto (Leif 2.0)
+
+Concursos existentes continuam usando o armazenamento legado até você optar pela migração. Selecione o concurso e execute **Leif: Migrar concurso ativo para Markdown** na paleta de comandos.
+
+Antes de trocar a fonte, o Leif:
+
+1. valida IDs e relacionamentos sem alterar os dados;
+2. cria um backup imutável com checksum em `Leif/.backups/`;
+3. escreve os arquivos em `Leif/.staging/`;
+4. relê o Markdown e compara todos os campos, relações e ordens;
+5. ativa o Markdown somente se a projeção for equivalente.
+
+O conteúdo fica em `Leif/concursos/<concurso>/` como arquivos Markdown pequenos para concursos, matérias, itens, assuntos, recursos, mural e registros mensais. O JSON legado é mantido para recuperação e não recebe escrita dupla do conteúdo depois da ativação.
+
+Leif cria também `Leif/AGENTS.md` e modelos em `Leif/templates/`. Agentes podem editar os mesmos arquivos sem executar o Obsidian, desde que preservem `leif-id`, block IDs e regiões `<!-- leif:... -->`. Texto, propriedades desconhecidas e notas fora das regiões gerenciadas são preservados.
+
+Documentos com IDs duplicados, conflitos de merge, relações inválidas ou schemas futuros são bloqueados para escrita. O índice mantém a última projeção válida durante a sessão e mostra o conteúdo Markdown como autoridade; uma alteração posterior no JSON legado é detectada como possível downgrade ou conflito de sync.
+
+O contrato completo está em [`docs/markdown-storage-v1.md`](docs/markdown-storage-v1.md) e a decisão arquitetural em [`docs/adr/0001-markdown-is-the-study-content-authority.md`](docs/adr/0001-markdown-is-the-study-content-authority.md).

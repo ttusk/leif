@@ -5,6 +5,8 @@ import { StagedMarkdownMigrationService } from "@/application/services/StagedMar
 import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
 import type { PersistentStorageAdapter } from "@/application/ports/PersistentStorageAdapter";
 import { PluginDataStore } from "@/infrastructure/persistence/PluginDataStore";
+import { MigrationSafetyService } from "@/application/services/MigrationSafetyService";
+import { MarkdownContestBundleCodec } from "@/infrastructure/markdown/MarkdownContestBundleCodec";
 
 class MemoryDataAdapter implements PersistentStorageAdapter<LeifPluginData> {
   constructor(private data: LeifPluginData) {}
@@ -120,5 +122,37 @@ describe("StagedMarkdownMigrationService", () => {
     expect(saved.runtimeState?.contestStorage["contest-1"] ?? "legacy-json").toBe("legacy-json");
     expect(saved.contests).toEqual(legacyData().contests);
     expect([...files.files.keys()].some((path) => path.includes("/.backups/"))).toBe(true);
+  });
+
+  it("recovers a crash after the verified folder move without creating another migration", async () => {
+    const source = legacyData();
+    const safety = new MigrationSafetyService();
+    const prepared = await safety.prepare(
+      source,
+      "contest-1",
+      "Leif/.backups/original.json",
+      "2026-07-21T19:00:00.000Z"
+    );
+    const verified = await safety.verify(prepared.receipt, source, source);
+    source.runtimeState!.migrationReceipts.push(verified);
+    const dataStore = new PluginDataStore(new MemoryDataAdapter(source));
+    const files = new MemoryFileStore();
+    new MarkdownContestBundleCodec()
+      .encode(source, "contest-1")
+      .forEach((file) => files.files.set(file.path, file.content));
+    files.files.set(prepared.receipt.backupPath, prepared.backupContent);
+    const service = new StagedMarkdownMigrationService(
+      dataStore,
+      files,
+      () => new Date("2026-07-21T20:00:00.000Z")
+    );
+
+    const recovered = await service.migrate("contest-1");
+
+    expect(recovered.status).toBe("activated");
+    expect((await dataStore.load()).runtimeState?.contestStorage["contest-1"]).toBe(
+      "vault-markdown"
+    );
+    expect([...files.files.keys()].filter((path) => path.includes("/.backups/")).length).toBe(1);
   });
 });
