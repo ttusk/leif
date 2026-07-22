@@ -19,6 +19,9 @@ import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepo
 import { seedMinimalContest } from "../fixtures/seedMinimalContest";
 
 class InMemoryPluginDataStore implements PluginDataStore {
+  private nextMutationGate: Promise<void> | null = null;
+  private releaseNextMutation: (() => void) | null = null;
+
   constructor(private data: LeifPluginData = createDefaultLeifPluginData()) {}
 
   async load(): Promise<LeifPluginData> {
@@ -30,10 +33,23 @@ class InMemoryPluginDataStore implements PluginDataStore {
   }
 
   async mutate<T>(mutation: (draft: LeifPluginData) => T | Promise<T>): Promise<T> {
+    const gate = this.nextMutationGate;
+    this.nextMutationGate = null;
+    if (gate) await gate;
     const draft = structuredClone(this.data);
     const result = await mutation(draft);
     this.data = draft;
     return result;
+  }
+
+  pauseNextMutation(): () => void {
+    this.nextMutationGate = new Promise((resolve) => {
+      this.releaseNextMutation = resolve;
+    });
+    return () => {
+      this.releaseNextMutation?.();
+      this.releaseNextMutation = null;
+    };
   }
 }
 
@@ -335,6 +351,34 @@ describe("LeifView", () => {
     }
   });
 
+  it.each([
+    { examDate: undefined, expected: "Data da prova não definida" },
+    { examDate: "2026-07-21", expected: "Prova hoje" },
+    { examDate: "2026-07-20", expected: "Prova realizada em 20/07/2026" },
+    { examDate: "data-inválida", expected: "Data da prova inválida" }
+  ])("renders the exam date state as $expected", async ({ examDate, expected }) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-21T12:00:00.000Z"));
+
+    try {
+      const dataStore = new InMemoryPluginDataStore();
+      await seedUiData(dataStore);
+      const data = await dataStore.load();
+      data.contests = data.contests.map((contest) =>
+        contest.id === data.activeContestId
+          ? { ...contest, examPlan: examDate ? { examDate } : undefined }
+          : contest
+      );
+      await dataStore.save(data);
+
+      const { leaf } = await openLeifView(dataStore);
+      expect(leaf.containerEl.textContent).toContain(expected);
+      expect(leaf.containerEl.textContent).not.toMatch(/Prova em -\d|Prova em data/);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("surfaces the next study activity as a focused dashboard panel", async () => {
     const dataStore = new InMemoryPluginDataStore();
     await seedUiData(dataStore);
@@ -426,6 +470,34 @@ describe("LeifView", () => {
     );
     expect(restored).toEqual(initialState);
     expect(afterUndo.studySessions).toHaveLength(afterSave.studySessions.length);
+  });
+
+  it("blocks duplicate registration while persistence is pending", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiData(dataStore);
+    const release = dataStore.pauseNextMutation();
+
+    const { leaf } = await openLeifView(dataStore);
+    const registerButton = Array.from(leaf.containerEl.querySelectorAll("button")).find((button) =>
+      button.textContent?.includes("Registrar estudo")
+    );
+    registerButton?.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const form = leaf.containerEl.querySelector<HTMLFormElement>("form.leif-registration-form");
+    const submit = form?.querySelector<HTMLButtonElement>("button[type='submit']");
+    const beforeCount = (await dataStore.load()).studySessions.length;
+    form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+
+    expect(form?.getAttribute("aria-busy")).toBe("true");
+    expect(submit?.disabled).toBe(true);
+    expect(submit?.textContent).toBe("Registrando…");
+
+    release();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect((await dataStore.load()).studySessions).toHaveLength(beforeCount + 1);
   });
 
   it("guides the user when today's page has no active subject yet", async () => {
