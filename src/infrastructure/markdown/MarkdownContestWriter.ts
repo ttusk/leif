@@ -60,6 +60,7 @@ export class MarkdownContestWriter {
 
   async sync(data: LeifPluginData, contestId: string, markdownRoot: string): Promise<void> {
     const current = await this.findContestFiles(contestId, markdownRoot);
+    const sourceFingerprint = fingerprintMarkdown(current);
     const currentRoot = current.contestPath.slice(0, -"/concurso.md".length);
     const canonical = this.codec.encode(data, contestId);
     const canonicalRoot = canonical[0].path.slice(0, -"/concurso.md".length);
@@ -109,6 +110,13 @@ export class MarkdownContestWriter {
       );
     }
 
+    const latest = await this.findContestFiles(contestId, markdownRoot);
+    if (fingerprintMarkdown(latest) !== sourceFingerprint) {
+      throw new Error(
+        "Markdown changed while Leif was preparing the write. The external edit was preserved; review it and try again."
+      );
+    }
+
     await this.files.move(currentRoot, backupRoot);
     try {
       await this.files.move(stageRoot, currentRoot);
@@ -151,6 +159,17 @@ export class MarkdownContestWriter {
       nonMarkdownPaths: paths.filter((path) => path.startsWith(`${root}/`) && !path.endsWith(".md"))
     };
   }
+}
+
+function fingerprintMarkdown(current: {
+  managed: MarkdownFile[];
+  ordinaryMarkdown: MarkdownFile[];
+}): string {
+  return JSON.stringify(
+    [...current.managed, ...current.ordinaryMarkdown]
+      .map((file) => [file.path, file.content] as const)
+      .sort(([left], [right]) => left.localeCompare(right))
+  );
 }
 
 function mergeManagedDocument(existingSource: string, targetSource: string): string {
