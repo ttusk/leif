@@ -362,6 +362,17 @@ form.leif-card,
   overflow-wrap: anywhere;
 }
 
+.leif-migration__files > summary {
+  color: var(--text-accent);
+  cursor: pointer;
+}
+
+.leif-migration__file-list {
+  max-height: min(36vh, 360px);
+  margin-top: var(--size-4-2);
+  overflow-y: auto;
+}
+
 .leif-first-run {
   display: flex;
   flex-direction: column;

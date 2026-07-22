@@ -42,7 +42,13 @@ export class MigrationConfirmModal extends Modal {
     );
     const files = element("ul", undefined, "leif-migration__file-list");
     this.preview.files.forEach((path) => files.appendChild(element("li", path)));
-    this.contentEl.appendChild(files);
+    const fileDisclosure = element("details", undefined, "leif-migration__files");
+    const fileSummary = element(
+      "summary",
+      `Ver ${this.preview.files.length} ${this.preview.files.length === 1 ? "arquivo" : "arquivos"}`
+    );
+    fileDisclosure.append(fileSummary, files);
+    this.contentEl.appendChild(fileDisclosure);
 
     if (this.preview.blocked) {
       this.contentEl.appendChild(element("h2", "Migração bloqueada"));
