@@ -180,4 +180,34 @@ describe("StagedMarkdownMigrationService", () => {
     );
     expect([...files.files.keys()].filter((path) => path.includes("/.backups/")).length).toBe(1);
   });
+
+  it("resumes a backed-up partial stage without creating another backup", async () => {
+    const source = legacyData();
+    const safety = new MigrationSafetyService();
+    const prepared = await safety.prepare(
+      source,
+      "contest-1",
+      "Leif/.backups/contest-1-partial.json",
+      "2026-07-21T19:00:00.000Z"
+    );
+    source.runtimeState!.migrationReceipts.push(prepared.receipt);
+    const dataStore = new PluginDataStore(new MemoryDataAdapter(source));
+    const files = new MemoryFileStore();
+    files.files.set(prepared.receipt.backupPath, prepared.backupContent);
+    const [firstFile] = new MarkdownContestBundleCodec().encode(source, "contest-1");
+    const stageRoot = `Leif/.staging/${prepared.receipt.id.replace(/[^a-zA-Z0-9._-]/g, "-")}`;
+    files.files.set(firstFile.path.replace(/^Leif\//, `${stageRoot}/`), firstFile.content);
+    const service = new StagedMarkdownMigrationService(
+      dataStore,
+      files,
+      () => new Date("2026-07-21T20:00:00.000Z")
+    );
+
+    const recovered = await service.migrate("contest-1");
+
+    expect(recovered.id).toBe(prepared.receipt.id);
+    expect(recovered.status).toBe("activated");
+    expect([...files.files.keys()].filter((path) => path.includes("/.backups/")).length).toBe(1);
+    expect([...files.files.keys()].some((path) => path.includes("/.staging/"))).toBe(false);
+  });
 });
