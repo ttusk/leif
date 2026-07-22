@@ -2,21 +2,21 @@
 
 **Your study compass.**
 
-Leif is a plugin for [Obsidian](https://obsidian.md/) that organizes concurso study in a single panel. It brings together concursos, matérias, edital assuntos, recursos, and registros de estudo to show what to study now — and since version 2.0, it stores content as **open Markdown** inside your vault.
+Leif is a plugin for [Obsidian](https://obsidian.md/) that organizes exam-prep study in a single panel. It brings together contests, subjects, syllabus topics, study resources, and study sessions to show what to study now — and since version 2.0, it stores content as **open Markdown** inside your vault.
 
 ## Features
 
-- **Hoje**: the recommendation of what to study now, following the active concurso's cycle. Recording a study and advancing the cycle happen in one gesture.
-- **Concursos**: each concurso has its own cycle, matérias, and progress; switching between concursos is instant.
-- **Matérias**: organize the cycle's matérias, the edital's assuntos, and study recursos (PDFs, videos, and links).
-- **Registros**: the history of every registro de estudo, with direct visual feedback in the panel.
-- **Mural**: official links and planning notes for the concurso, always at hand.
+- **Hoje** (Today): what to study now, following the active contest's cycle. Recording a session and advancing the cycle happen in one gesture.
+- **Concursos** (Contests): each contest has its own cycle, subjects, and progress; switching between contests is instant.
+- **Matérias** (Subjects): organize the cycle's subjects, the syllabus topics, and study resources (PDFs, videos, and links).
+- **Registros** (Records): the history of every study session, with direct visual feedback in the panel.
+- **Mural** (Wall): official links and planning notes for the contest, always at hand.
 
 ## Open Markdown
 
-Since Leif 2.0, study content can live as readable Markdown in the vault, under `Leif/concursos/<concurso>/` — small files for concursos, matérias, itens, assuntos, recursos, mural, and monthly registros. You can edit them in Obsidian, in another editor, or with an AI agent, with or without Obsidian running.
+Since Leif 2.0, study content can live as readable Markdown in the vault, under `Leif/concursos/<contest>/` — small files for contests, subjects, study items, topics, resources, the wall, and monthly session records. You can edit them in Obsidian, in another editor, or with an AI agent, with or without Obsidian running.
 
-Existing concursos keep using the legacy store until you opt in, per concurso: select the concurso and run **Leif: Migrar concurso ativo para Markdown** from the command palette.
+Existing contests keep using the legacy store until you opt in, per contest: select the contest and run **Leif: Migrar concurso ativo para Markdown** from the command palette.
 
 Before the first v2 write on an existing installation, Leif creates and reads back a complete backup identified by checksum in `Leif/.backups/upgrades/`. If that file cannot be verified, the plugin stops startup before registering any interface that could alter data.
 
@@ -50,7 +50,7 @@ Once Leif is available in the official directory, open **Settings → Community 
 
 ## Usage
 
-Enable Leif under **Community plugins** and open the panel from the ribbon icon or the **Abrir painel** command. Create a concurso, organize its matérias and recursos, record each study, and check **Hoje** to follow the cycle.
+Enable Leif under **Community plugins** and open the panel from the ribbon icon or the **Abrir painel** command. Create a contest, organize its subjects and resources, record each session, and check **Hoje** to follow the cycle.
 
 ## Privacy
 
@@ -71,7 +71,6 @@ npm run release:check   # lint, tests, format, build, and release verification
 - [ADR: Markdown is the study content authority](docs/adr/0001-markdown-is-the-study-content-authority.md)
 - [Design system](docs/design-system.md)
 - [Changelog](CHANGELOG.md)
-- [2.0 release notes](release-notes/2.0.0.md)
 
 ## License
 
