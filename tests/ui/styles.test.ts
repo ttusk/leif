@@ -37,6 +37,21 @@ describe("Leif Native visual system", () => {
     expect(styles).not.toContain(".leif-tab-icon");
   });
 
+  it("wins over Obsidian theme button chrome on navigation tabs", () => {
+    const styles = readStyles();
+    const reset = styles.match(/\.leif-view button\.leif-tab-button\s*{([^}]*)}/s)?.[1] ?? "";
+    const active =
+      styles.match(/\.leif-view button\.leif-tab-button\.is-active\s*{([^}]*)}/s)?.[1] ?? "";
+
+    expect(reset).toContain("appearance: none;");
+    expect(reset).toContain("border: 0;");
+    expect(reset).toContain("background: transparent;");
+    expect(reset).toContain("box-shadow: none;");
+    expect(active).toContain("border-bottom-color: var(--leif-accent);");
+    expect(active).toContain("background: transparent;");
+    expect(active).toContain("box-shadow: none;");
+  });
+
   it("keeps content compact and lets the pane width drive reflow", () => {
     const styles = readStyles();
 
