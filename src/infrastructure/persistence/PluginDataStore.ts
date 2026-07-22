@@ -1,4 +1,7 @@
-import type { PluginDataStore as PluginDataStorePort } from "@/application/ports/PluginDataStore";
+import type {
+  MutableLeifPluginData,
+  PluginDataStore as PluginDataStorePort
+} from "@/application/ports/PluginDataStore";
 import type { PersistentStorageAdapter } from "@/application/ports/PersistentStorageAdapter";
 import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
 import { DataMigrationService } from "@/infrastructure/persistence/DataMigrations";
@@ -63,9 +66,9 @@ export class PluginDataStore implements PluginDataStorePort {
    * serialized so concurrent UI actions cannot overwrite one another. A thrown
    * error discards the draft and leaves the persisted snapshot unchanged.
    */
-  async mutate<T>(mutation: (draft: LeifPluginData) => T | Promise<T>): Promise<T> {
+  async mutate<T>(mutation: (draft: MutableLeifPluginData) => T | Promise<T>): Promise<T> {
     return this.runExclusive(async () => {
-      const draft = structuredClone(await this.loadCurrentData());
+      const draft = structuredClone(await this.loadCurrentData()) as MutableLeifPluginData;
       const result = await mutation(draft);
       await this.storageAdapter.save(draft);
       return result;
