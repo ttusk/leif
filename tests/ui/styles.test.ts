@@ -31,7 +31,7 @@ describe("Leif Native visual system", () => {
       /\.leif-tab-bar\s*{[^}]*display:\s*flex;[^}]*flex-direction:\s*row;[^}]*overflow-x:\s*auto;/s
     );
     expect(styles).toMatch(
-      /\.leif-tab-button\.is-active\s*{[^}]*border-bottom-color:\s*var\(--leif-accent\);/s
+      /\.leif-view button\.leif-tab-button\.is-active\s*{[^}]*border-bottom-color:\s*var\(--leif-accent\);/s
     );
     expect(styles).not.toMatch(/grid-template-columns:\s*minmax\(148px,\s*184px\)/);
     expect(styles).not.toContain(".leif-tab-icon");
@@ -110,7 +110,7 @@ describe("Leif Native visual system", () => {
   it("retains accessible focus, reduced motion, forced colors, and touch targets", () => {
     const styles = readStyles();
 
-    expect(styles).toMatch(/\.leif-tab-button:focus-visible\s*{[^}]*outline:/s);
+    expect(styles).toMatch(/\.leif-view button\.leif-tab-button:focus-visible\s*{[^}]*outline:/s);
     expect(styles).toMatch(/@media\s*\(prefers-reduced-motion:\s*reduce\)/);
     expect(styles).toMatch(/@media\s*\(forced-colors:\s*active\)/);
     expect(styles).toMatch(/\.leif-view\.is-compact[\s\S]*button[^}]*min-height:\s*40px;/s);

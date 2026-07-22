@@ -164,7 +164,8 @@
   border-bottom: 1px solid var(--leif-border);
 }
 
-.leif-tab-button {
+.leif-view button.leif-tab-button {
+  appearance: none;
   flex: 0 0 auto;
   min-height: 36px;
   margin: 0 0 -1px;
@@ -173,6 +174,7 @@
   border-bottom: 2px solid transparent;
   border-radius: 0;
   background: transparent;
+  box-shadow: none;
   color: var(--leif-text-muted);
   font-family: var(--font-interface);
   font-size: var(--font-ui-small);
@@ -180,18 +182,23 @@
   white-space: nowrap;
 }
 
-.leif-tab-button:hover {
+.leif-view button.leif-tab-button:hover {
   background: transparent;
+  box-shadow: none;
   color: var(--leif-text);
+  transform: none;
 }
 
-.leif-tab-button:focus-visible {
+.leif-view button.leif-tab-button:focus-visible {
   outline: 2px solid var(--leif-focus);
   outline-offset: -2px;
+  box-shadow: none;
 }
 
-.leif-tab-button.is-active {
+.leif-view button.leif-tab-button.is-active {
   border-bottom-color: var(--leif-accent);
+  background: transparent;
+  box-shadow: none;
   color: var(--leif-text);
   font-weight: var(--font-semibold);
 }
@@ -208,7 +215,7 @@
   display: none;
 }
 
-.leif-plan-navigation .leif-tab-button {
+.leif-view .leif-plan-navigation button.leif-tab-button {
   min-height: 32px;
   font-size: var(--font-ui-smaller);
 }
@@ -1166,7 +1173,7 @@ form.leif-card,
 }
 
 @media (forced-colors: active) {
-  .leif-tab-button.is-active {
+  .leif-view button.leif-tab-button.is-active {
     border-bottom-color: Highlight;
   }
 
