@@ -833,6 +833,16 @@ form.leif-card,
   min-width: 0;
 }
 
+.leif-order-control {
+  white-space: nowrap;
+}
+
+.leif-order-number {
+  flex: 0 0 auto;
+  min-width: 2ch;
+  text-align: end;
+}
+
 .leif-cycle-table-title,
 .leif-resource-table-title,
 .leif-topic-title {
