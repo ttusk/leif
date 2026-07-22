@@ -97,6 +97,9 @@ describe("StagedMarkdownMigrationService", () => {
     expect(preview.diagnostics).toEqual(
       expect.arrayContaining([expect.objectContaining({ code: "orphan-study-item" })])
     );
+    expect(
+      preview.diagnostics.find((diagnostic) => diagnostic.code === "orphan-study-item")?.message
+    ).toContain("referencia uma matéria inexistente");
     expect(preview.files).toEqual(
       expect.arrayContaining([
         expect.stringMatching(/\/concurso\.md$/),

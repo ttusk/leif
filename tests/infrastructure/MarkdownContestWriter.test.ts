@@ -113,7 +113,7 @@ describe("MarkdownContestWriter", () => {
 
     await expect(
       new MarkdownContestWriter(files).sync(updated, "contest-1", "Leif")
-    ).rejects.toThrow(/changed while Leif was preparing the write/i);
+    ).rejects.toThrow(/alterado enquanto o Leif preparava a escrita/i);
 
     expect(files.files.get(subjectPath)).toContain("Edição concorrente do agente");
     expect(files.files.get(subjectPath)).not.toContain('name: "Língua Portuguesa"');

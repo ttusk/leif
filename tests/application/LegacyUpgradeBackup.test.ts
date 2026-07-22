@@ -78,7 +78,7 @@ describe("LegacyUpgradeBackupService", () => {
     files.corruptReads = true;
 
     await expect(new LegacyUpgradeBackupService(files).ensureBackup(legacyData())).rejects.toThrow(
-      /backup verification failed/i
+      /verificação do backup.*falhou/i
     );
   });
 });
