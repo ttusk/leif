@@ -1989,6 +1989,12 @@ describe("LeifView", () => {
     wallTabButton.click();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
+    const editButton = Array.from(leaf.containerEl.querySelectorAll("button")).find(
+      (button) => button.textContent?.trim() === "Editar"
+    );
+    editButton?.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
     const notes = leaf.containerEl.querySelector<HTMLTextAreaElement>(
       "textarea[placeholder='Notas do concurso']"
     );
@@ -1997,7 +2003,7 @@ describe("LeifView", () => {
     expect(notes?.classList.contains("leif-wall-notes")).toBe(true);
     expect(notes?.closest(".setting-item")).toBeNull();
     expect(notes?.closest(".leif-field-stack")).not.toBeNull();
-    expect(leaf.containerEl.textContent).toContain("anotações úteis do concurso ativo");
+    expect(leaf.containerEl.textContent).not.toContain("anotações úteis do concurso ativo");
   });
 
   it("shows the subject picker as a simple label and select in edital and resources", async () => {
