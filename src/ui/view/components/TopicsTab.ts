@@ -160,7 +160,9 @@ export class TopicsTab {
     titleCell.appendChild(title);
 
     tr.appendChild(titleCell);
-    tr.appendChild(DomHelpers.createCell(this.formatQuestionProgress(topic, progress)));
+    const progressCell = DomHelpers.createCell(this.formatQuestionProgress(topic, progress));
+    progressCell.classList.add("leif-topic-progress-cell");
+    tr.appendChild(progressCell);
     tr.appendChild(DomHelpers.createCell(null, this.renderNotebookCell(topic)));
     const actionsCell = DomHelpers.createCell(null, actions);
     actionsCell.classList.add("leif-actions-cell");

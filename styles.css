@@ -898,6 +898,10 @@ form.leif-card,
   min-width: 180px;
 }
 
+.leif-topic-progress-cell {
+  white-space: nowrap;
+}
+
 .leif-resource-edit-input,
 .leif-topic-name-input {
   width: 100%;
