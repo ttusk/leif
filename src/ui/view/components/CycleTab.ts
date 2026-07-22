@@ -96,7 +96,7 @@ export class CycleTab {
         "No ciclo",
         String(subjects.filter((subject) => subject.isActive).length)
       ),
-      this.renderSummaryChip("Tempo total", `${activeMinutes} min`)
+      this.renderSummaryChip("Tempo total", this.formatDuration(activeMinutes))
     );
     card.appendChild(summaryBar);
 
@@ -194,7 +194,7 @@ export class CycleTab {
       DomHelpers.createCell(null, orderControl),
       DomHelpers.createCell(null, title),
       DomHelpers.createCell(null, status),
-      DomHelpers.createCell(`${subject.plannedStudyMinutes} min`),
+      DomHelpers.createCell(this.formatDuration(subject.plannedStudyMinutes)),
       DomHelpers.createCell(subject.currentStage ?? "—"),
       DomHelpers.createCell(this.formatQuestionSummary(summary)),
       DomHelpers.createCell(null, actions)
@@ -352,13 +352,22 @@ export class CycleTab {
   }
 
   private renderSummaryChip(label: string, value: string): HTMLElement {
-    const chip = DomHelpers.createElement("span", "leif-next-activity-chip");
-    const labelEl = DomHelpers.createElement("span", "leif-next-activity-chip-label");
+    const chip = DomHelpers.createElement("span", "leif-cycle-summary-chip");
+    const labelEl = DomHelpers.createElement("span", "leif-cycle-summary-chip-label");
     labelEl.textContent = `${label}:`;
-    const valueEl = DomHelpers.createElement("span", "leif-next-activity-chip-value");
+    const valueEl = DomHelpers.createElement("span", "leif-cycle-summary-chip-value");
     valueEl.textContent = value;
     chip.append(labelEl, valueEl);
     return chip;
+  }
+
+  private formatDuration(totalMinutes: number): string {
+    if (totalMinutes <= 0) return "0 min";
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    if (hours === 0) return `${minutes} min`;
+    if (minutes === 0) return `${hours}h`;
+    return `${hours}h ${minutes}min`;
   }
 
   private formatQuestionSummary(summary?: SubjectSummary): string {

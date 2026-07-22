@@ -131,4 +131,11 @@ describe("Leif Native visual system", () => {
     expect(styles).toMatch(/\.leif-order-control\s*{[^}]*white-space:\s*nowrap;/s);
     expect(styles).toMatch(/\.leif-order-number\s*{[^}]*min-width:\s*2ch;/s);
   });
+
+  it("spaces cycle summary chips so Matérias, No ciclo and Tempo total are not colliding", () => {
+    const styles = readStyles();
+
+    expect(styles).toMatch(/\.leif-cycle-summary\s*{[^}]*display:\s*flex;[^}]*gap:/s);
+    expect(styles).toMatch(/\.leif-cycle-summary-chip\s*{[^}]*gap:/s);
+  });
 });

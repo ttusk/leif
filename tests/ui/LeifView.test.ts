@@ -688,7 +688,7 @@ describe("LeifView", () => {
     expect(subjectRows[1]?.querySelector(".leif-cycle-status.leif-status-inactive")).not.toBeNull();
     expect(subjectRows[0]?.textContent).toContain("No ciclo");
     expect(subjectRows[1]?.textContent).toContain("Pausada");
-    expect(subjectRows[0]?.textContent).toContain("60 min");
+    expect(subjectRows[0]?.textContent).toContain("1h");
     expect(subjectRows[0]?.textContent).toContain("75% (15/20)");
     expect(subjectRows[0]?.querySelector(".leif-key-value")).toBeNull();
     expect(
@@ -696,6 +696,34 @@ describe("LeifView", () => {
     ).toMatch(/Pausar|Ativar/);
     expect(upButton).not.toBeNull();
     expect(downButton).not.toBeNull();
+  });
+
+  it("formats cycle summary duration as hours and minutes with separated chips", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiData(dataStore);
+
+    const { leaf } = await openLeifView(dataStore);
+    const planTabButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='cycle']");
+
+    if (!planTabButton) {
+      throw new Error("Plan tab button was not rendered.");
+    }
+
+    planTabButton.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const summary = leaf.containerEl.querySelector<HTMLElement>(".leif-cycle-summary");
+    const chips = Array.from(
+      leaf.containerEl.querySelectorAll<HTMLElement>(".leif-cycle-summary-chip")
+    );
+
+    expect(summary).not.toBeNull();
+    expect(chips).toHaveLength(3);
+    expect(chips.map((chip) => chip.textContent)).toEqual([
+      "Matérias:2",
+      "No ciclo:2",
+      "Tempo total:1h 45min"
+    ]);
   });
 
   it("makes subject cycle activation explicit and notifies the user", async () => {
