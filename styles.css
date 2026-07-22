@@ -337,6 +337,26 @@ form.leif-card,
   font-size: var(--font-ui-medium);
 }
 
+.leif-first-run {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-3);
+  max-width: 560px;
+}
+
+.leif-setup-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+  margin: 0;
+  padding-inline-start: var(--size-4-6);
+}
+
+.leif-setup-step {
+  padding-inline-start: var(--size-4-1);
+  color: var(--leif-text);
+}
+
 /* Forms */
 
 .leif-grid {
@@ -678,6 +698,10 @@ form.leif-card,
 }
 
 .leif-session-feedback {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--size-4-3);
   padding-inline-start: var(--size-4-3);
   border-inline-start: 2px solid var(--leif-success);
   color: var(--leif-success);

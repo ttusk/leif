@@ -50,7 +50,12 @@ export class LeifView extends ItemView {
     private readonly dataStore: PluginDataStore
   ) {
     super(leaf);
-    this.dashboardTab = new DashboardTab(dataStore, (tabId) => this.selectTab(tabId));
+    this.dashboardTab = new DashboardTab(dataStore, (tabId, registration) => {
+      if (tabId === "sessions" && registration) {
+        this.sessionsTab.startRecommendedStudy(registration);
+      }
+      return this.selectTab(tabId);
+    });
     this.contestsTab = new ContestsTab(dataStore, () => this.refresh());
     this.cycleTab = new CycleTab(dataStore, () => this.refresh());
     this.itemsTab = new ItemsTab(dataStore, () => this.refresh());
@@ -119,11 +124,8 @@ export class LeifView extends ItemView {
     this.shell = DomHelpers.createElement("div", "leif-shell");
 
     const header = DomHelpers.createElement("header", "leif-header");
-    const titleGroup = DomHelpers.createElement("div", "leif-title-group");
-    titleGroup.append(DomHelpers.createHeading("Leif"));
-
     this.headerActions = DomHelpers.createElement("div", "leif-header-actions");
-    header.append(titleGroup, this.headerActions);
+    header.appendChild(this.headerActions);
 
     this.workspace = DomHelpers.createElement("div", "leif-workspace");
     const navigation = DomHelpers.createElement("nav", "leif-navigation");

@@ -5,7 +5,11 @@ import { DeleteStudySessionUseCase } from "@/application/use-cases/DeleteStudySe
 import { GetActiveContestSummaryUseCase } from "@/application/use-cases/GetActiveContestSummaryUseCase";
 import { GetActiveCycleSnapshotUseCase } from "@/application/use-cases/GetActiveCycleSnapshotUseCase";
 import { ListSubjectsForActiveContestUseCase } from "@/application/use-cases/ListSubjectsForActiveContestUseCase";
-import { RegisterStudySessionUseCase } from "@/application/use-cases/RegisterStudySessionUseCase";
+import {
+  RegisterRecommendedStudySessionUseCase,
+  type RegisterRecommendedStudySessionResult
+} from "@/application/use-cases/RegisterRecommendedStudySessionUseCase";
+import { RestoreCyclePositionUseCase } from "@/application/use-cases/RestoreCyclePositionUseCase";
 import { UpdateStudySessionUseCase } from "@/application/use-cases/UpdateStudySessionUseCase";
 import { StudySessionType } from "@/domain/entities/StudySession";
 import type { StudySession } from "@/domain/entities/StudySession";
@@ -13,12 +17,14 @@ import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 import { createId } from "@/application/Id";
+import type { RecommendedStudyRegistration } from "@/ui/view/components/DashboardTab";
 
 /**
  * Sessions tab component with unified CRUD pattern.
  */
 export class SessionsTab {
-  private readonly registerStudySessionUseCase: RegisterStudySessionUseCase;
+  private readonly registerStudySessionUseCase: RegisterRecommendedStudySessionUseCase;
+  private readonly restoreCyclePositionUseCase: RestoreCyclePositionUseCase;
   private readonly deleteStudySessionUseCase: DeleteStudySessionUseCase;
   private readonly getActiveContestSummaryUseCase: GetActiveContestSummaryUseCase;
   private readonly listSubjectsForActiveContestUseCase: ListSubjectsForActiveContestUseCase;
@@ -34,22 +40,29 @@ export class SessionsTab {
   private historyFromFilter = "";
   private historyToFilter = "";
   private lastSessionFeedback: string | null = null;
+  private recommendedRegistration: RecommendedStudyRegistration | null = null;
+  private lastCycleAdvance: RegisterRecommendedStudySessionResult | null = null;
 
   constructor(
     private readonly dataStore: PluginDataStore,
     private readonly onUpdate: () => Promise<void>
   ) {
     const repositoryFactory = new EntityRepositoryFactory(dataStore);
-    this.registerStudySessionUseCase = new RegisterStudySessionUseCase(
-      dataStore,
-      repositoryFactory
-    );
+    this.registerStudySessionUseCase = new RegisterRecommendedStudySessionUseCase(dataStore);
+    this.restoreCyclePositionUseCase = new RestoreCyclePositionUseCase(dataStore);
     this.deleteStudySessionUseCase = new DeleteStudySessionUseCase(dataStore, repositoryFactory);
     this.getActiveContestSummaryUseCase = new GetActiveContestSummaryUseCase(dataStore);
     this.listSubjectsForActiveContestUseCase = new ListSubjectsForActiveContestUseCase(dataStore);
     this.updateStudySessionUseCase = new UpdateStudySessionUseCase(dataStore, repositoryFactory);
     this.advanceCycleUseCase = new AdvanceCycleUseCase(dataStore);
     this.getActiveCycleSnapshotUseCase = new GetActiveCycleSnapshotUseCase(dataStore);
+  }
+
+  startRecommendedStudy(registration: RecommendedStudyRegistration): void {
+    this.recommendedRegistration = registration;
+    this.isCreatingSession = true;
+    this.lastSessionFeedback = null;
+    this.lastCycleAdvance = null;
   }
 
   async render(container: HTMLElement, data: LeifPluginData): Promise<void> {
@@ -131,6 +144,8 @@ export class SessionsTab {
       DomHelpers.createIconButton("add", "Nova sessão", {
         onClick: async () => {
           this.isCreatingSession = true;
+          this.recommendedRegistration = null;
+          this.lastCycleAdvance = null;
           this.lastSessionFeedback = null;
           await this.onUpdate();
         }
@@ -141,7 +156,16 @@ export class SessionsTab {
     if (this.lastSessionFeedback) {
       const feedback = DomHelpers.createElement("div", "leif-session-feedback");
       feedback.setAttribute("role", "status");
-      feedback.textContent = this.lastSessionFeedback;
+      const message = DomHelpers.createElement("span");
+      message.textContent = this.lastSessionFeedback;
+      feedback.appendChild(message);
+      if (this.lastCycleAdvance) {
+        feedback.appendChild(
+          DomHelpers.createButton("Desfazer", {
+            onClick: async () => this.undoLastCycleAdvance()
+          })
+        );
+      }
       recentSessions.appendChild(feedback);
     }
 
@@ -430,7 +454,7 @@ export class SessionsTab {
         const correctAnswers =
           sessionType === StudySessionType.QUESTIONS ? Math.min(rawCorrect, rawCount) : undefined;
 
-        const session = await this.registerStudySessionUseCase.execute({
+        const result = await this.registerStudySessionUseCase.execute({
           id: createId("session"),
           contestId: activeContest.id,
           subjectId: subjectSelect.value,
@@ -443,10 +467,18 @@ export class SessionsTab {
           completed: true
         });
         this.isCreatingSession = false;
+        this.recommendedRegistration = null;
+        this.lastCycleAdvance = result.cycleAdvanced ? result : null;
         this.lastSessionFeedback = this.formatCreatedSessionFeedback(
-          session,
+          result.session,
           subjectSelect.selectedOptions[0]?.textContent ?? "Sem matéria"
         );
+        if (result.cycleAdvanced) {
+          const nextSubject = data.subjects.find(
+            (subject) => subject.id === result.newPosition.subjectId
+          );
+          this.lastSessionFeedback += ` Agora vem ${nextSubject?.name ?? "a próxima matéria"}.`;
+        }
         await this.onUpdate();
       } catch (error) {
         DomHelpers.notifyError(error, "Não consegui salvar esse registro.");
@@ -454,8 +486,10 @@ export class SessionsTab {
     });
 
     const subjectSelect = DomHelpers.createSelect(
-      subjects.map((subject) => [subject.id, subject.name])
+      subjects.map((subject) => [subject.id, subject.name]),
+      this.recommendedRegistration?.subjectId
     );
+    subjectSelect.dataset.field = "subject";
     const typeSelect = DomHelpers.createSelect([
       ["pdf", "PDF"],
       ["video", "Vídeo"],
@@ -476,7 +510,11 @@ export class SessionsTab {
         .map((topic): [string, string] => [topic.id, topic.name])
     ];
 
-    const itemSelect = DomHelpers.createSelect(getItemOptions());
+    const itemSelect = DomHelpers.createSelect(
+      getItemOptions(),
+      this.recommendedRegistration?.itemId
+    );
+    itemSelect.dataset.field = "item";
     const topicSelect = DomHelpers.createSelect(getTopicOptions());
     const countInput = DomHelpers.createInput("number", "Páginas ou quantidade", "0");
     const correctInput = DomHelpers.createInput("number", "Acertos", "0");
@@ -528,6 +566,14 @@ export class SessionsTab {
     subjectSelect.addEventListener("change", syncDependentSelects);
     typeSelect.addEventListener("change", syncQuestionField);
     syncDependentSelects();
+    if (
+      this.recommendedRegistration?.itemId &&
+      Array.from(itemSelect.options).some(
+        (option) => option.value === this.recommendedRegistration?.itemId
+      )
+    ) {
+      itemSelect.value = this.recommendedRegistration.itemId;
+    }
     syncQuestionField();
 
     const formGrid = DomHelpers.createElement("div", "leif-grid leif-grid-2");
@@ -540,7 +586,7 @@ export class SessionsTab {
       correctLabel,
       DomHelpers.createStackedLabel("Data do estudo", dateInput)
     );
-    form.classList.add("leif-card");
+    form.classList.add("leif-card", "leif-registration-form");
     form.append(
       DomHelpers.createSectionSubtitle("Novo registro"),
       formGrid,
@@ -552,6 +598,7 @@ export class SessionsTab {
       DomHelpers.createButton("Cancelar", {
         onClick: async () => {
           this.isCreatingSession = false;
+          this.recommendedRegistration = null;
           await this.onUpdate();
         }
       }),
@@ -562,6 +609,25 @@ export class SessionsTab {
     );
 
     return form;
+  }
+
+  private async undoLastCycleAdvance(): Promise<void> {
+    const advance = this.lastCycleAdvance;
+    if (!advance) return;
+
+    try {
+      await this.restoreCyclePositionUseCase.execute({
+        contestId: advance.session.contestId,
+        expectedPosition: advance.newPosition,
+        restorePosition: advance.previousPosition
+      });
+      this.lastCycleAdvance = null;
+      this.lastSessionFeedback = "Avanço do ciclo desfeito. O registro foi mantido.";
+      new Notice("Avanço do ciclo desfeito.");
+      await this.onUpdate();
+    } catch (error) {
+      DomHelpers.notifyError(error, "Não foi possível desfazer o avanço.");
+    }
   }
 
   private formatSessionType(type: StudySessionType): string {

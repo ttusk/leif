@@ -7,6 +7,11 @@ import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import type { LeifTabId } from "@/ui/constants";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 
+export interface RecommendedStudyRegistration {
+  subjectId: string;
+  itemId?: string;
+}
+
 /**
  * Dashboard tab component - shows contest overview and summary.
  */
@@ -17,7 +22,10 @@ export class DashboardTab {
 
   constructor(
     private readonly dataStore: PluginDataStore,
-    private readonly onNavigate: (tabId: LeifTabId) => Promise<void>
+    private readonly onNavigate: (
+      tabId: LeifTabId,
+      registration?: RecommendedStudyRegistration
+    ) => Promise<void>
   ) {
     this.getActiveCycleSnapshotUseCase = new GetActiveCycleSnapshotUseCase(dataStore);
     this.getActiveContestSummaryUseCase = new GetActiveContestSummaryUseCase(dataStore);
@@ -34,13 +42,7 @@ export class DashboardTab {
       data.contests.find((contest) => contest.id === data.activeContestId) ?? null;
 
     if (!activeContest) {
-      container.append(
-        DomHelpers.createSectionTitle("Hoje"),
-        DomHelpers.createEmptyState(
-          "Nada escolhido ainda",
-          "Escolha um concurso para o Leif saber por onde começar."
-        )
-      );
+      container.append(DomHelpers.createSectionTitle("Hoje"), this.renderFirstRun());
       return;
     }
 
@@ -75,6 +77,8 @@ export class DashboardTab {
         nextSubjectName: afterRecommendedSubject?.name,
         nextItemName: itemMap.get(afterRecommendedItemId ?? ""),
         canRegisterStudy: Boolean(recommendedSubject),
+        subjectId: recommendedSubject?.id,
+        itemId: recommendedItemId ?? undefined,
         recommendationReason: recommendedSubject
           ? this.buildRecommendationReason(data, recommendedSubject.id)
           : undefined
@@ -171,6 +175,8 @@ export class DashboardTab {
     nextItemName?: string;
     canRegisterStudy?: boolean;
     recommendationReason?: string;
+    subjectId?: string;
+    itemId?: string;
   }): HTMLElement {
     const panel = DomHelpers.createElement("section", "leif-next-activity");
     const intro = DomHelpers.createElement("div", "leif-next-activity-intro");
@@ -198,10 +204,15 @@ export class DashboardTab {
 
     if (activity.canRegisterStudy) {
       meta.appendChild(
-        DomHelpers.createButton("Ir para Registros", {
-          icon: "arrow-right",
-          className: "leif-next-activity-action",
-          onClick: () => this.onNavigate("sessions")
+        DomHelpers.createButton("Registrar estudo", {
+          className: "mod-cta leif-next-activity-action",
+          onClick: () =>
+            this.onNavigate(
+              "sessions",
+              activity.subjectId
+                ? { subjectId: activity.subjectId, itemId: activity.itemId }
+                : undefined
+            )
         })
       );
     }
@@ -245,6 +256,23 @@ export class DashboardTab {
 
   private renderActivityMeta(label: string, value: string): HTMLElement {
     return DomHelpers.createMetric(label, value);
+  }
+
+  private renderFirstRun(): HTMLElement {
+    const section = DomHelpers.createElement("section", "leif-first-run");
+    section.appendChild(DomHelpers.createSectionSubtitle("Comece por aqui"));
+    const list = DomHelpers.createElement("ol", "leif-setup-steps");
+    [
+      "Criar ou escolher um concurso",
+      "Informar a data da prova",
+      "Adicionar e ordenar as matérias"
+    ].forEach((text) => {
+      const step = DomHelpers.createElement("li", "leif-setup-step");
+      step.textContent = text;
+      list.appendChild(step);
+    });
+    section.appendChild(list);
+    return section;
   }
 
   private buildRecommendationReason(data: LeifPluginData, subjectId: string): string {

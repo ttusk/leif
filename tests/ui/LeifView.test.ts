@@ -167,7 +167,7 @@ describe("LeifView", () => {
       "Abrir painel"
     );
     expect(leaf.containerEl.querySelector(".view-content.leif-view")).not.toBeNull();
-    expect(leaf.containerEl.textContent).toContain("Nada escolhido ainda");
+    expect(leaf.containerEl.textContent).toContain("Comece por aqui");
 
     const primaryNavigation = leaf.containerEl.querySelector(".leif-primary-navigation");
     const primaryTabs = Array.from(
@@ -365,7 +365,7 @@ describe("LeifView", () => {
     const { leaf } = await openLeifView(dataStore);
     const nextActivity = leaf.containerEl.querySelector<HTMLElement>(".leif-next-activity");
     const registerButton = Array.from(nextActivity?.querySelectorAll("button") ?? []).find(
-      (button) => button.textContent?.includes("Ir para Registros")
+      (button) => button.textContent?.includes("Registrar estudo")
     );
 
     expect(nextActivity?.textContent).not.toContain("Registre o estudo na aba Registros");
