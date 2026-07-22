@@ -45,7 +45,6 @@ export class ContestsTab {
       })
     );
     container.appendChild(header);
-    container.appendChild(DomHelpers.createParagraph("Escolha qual concurso está na mesa agora."));
 
     if (this.isCreatingContest) {
       container.appendChild(this.renderCreateContestForm());

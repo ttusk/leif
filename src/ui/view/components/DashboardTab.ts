@@ -59,9 +59,6 @@ export class DashboardTab {
     const afterRecommendedItemId = snapshot.currentItemId ? snapshot.nextItemId : null;
 
     container.appendChild(DomHelpers.createSectionTitle("Hoje"));
-    container.appendChild(
-      DomHelpers.createParagraph("O que estudar agora e como o dia está andando.")
-    );
     const examPlanPanel = this.renderExamPlanPanel(activeContest);
     if (examPlanPanel) {
       container.appendChild(examPlanPanel);

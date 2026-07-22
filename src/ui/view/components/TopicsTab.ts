@@ -52,11 +52,6 @@ export class TopicsTab {
       })
     );
     container.appendChild(header);
-    container.appendChild(
-      DomHelpers.createParagraph(
-        "Transforme o edital em assuntos pequenos e conecte cadernos de questões quando fizer sentido."
-      )
-    );
 
     const subject = SubjectPicker.getSelectedSubject(data, this.selectedSubjectId);
     if (!subject) {

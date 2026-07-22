@@ -59,11 +59,6 @@ export class ItemsTab {
       })
     );
     container.appendChild(header);
-    container.appendChild(
-      DomHelpers.createParagraph(
-        "Guarde materiais de estudo por matéria — PDFs, vídeos e links — e acompanhe o avanço de leitura sem sair do Obsidian."
-      )
-    );
 
     const subject = SubjectPicker.getSelectedSubject(data, this.selectedSubjectId);
     if (!subject) {

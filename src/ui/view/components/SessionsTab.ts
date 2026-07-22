@@ -69,9 +69,6 @@ export class SessionsTab {
     const header = DomHelpers.createElement("div", "leif-section-header");
     header.appendChild(DomHelpers.createSectionTitle("Registros"));
     container.appendChild(header);
-    container.appendChild(
-      DomHelpers.createParagraph("Anote o que você estudou. O Leif cuida do resto.")
-    );
 
     const activeContest =
       data.contests.find((contest) => contest.id === data.activeContestId) ?? null;

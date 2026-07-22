@@ -64,9 +64,6 @@ export class CycleTab {
       })
     );
     container.appendChild(header);
-    container.appendChild(
-      DomHelpers.createParagraph("Ajuste a ordem das matérias e o tempo de cada uma.")
-    );
 
     if (this.isCreatingSubject) {
       container.appendChild(this.renderCreateSubjectForm(data));
