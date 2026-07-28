@@ -120,9 +120,6 @@ export class RegisterStudySessionUseCase {
       );
       const existingState = stateIndex >= 0 ? draft.cycleStates[stateIndex] : undefined;
       const state = existingState ?? new CycleState(input.contestId);
-      if (stateIndex === -1) {
-        draft.cycleStates.push(state);
-      }
 
       const previousPosition = this.cycleService.getRecommendation(
         subjects,
@@ -133,40 +130,11 @@ export class RegisterStudySessionUseCase {
 
       draft.studySessions.push(session);
 
-      if (draft.activeContestId !== input.contestId) {
-        return {
-          session,
-          cycleAdvanced: false,
-          previousPosition,
-          newPosition: previousPosition
-        };
-      }
-
-      const advancement = this.cycleService.advanceForCompletedRecords(
-        subjects,
-        resources,
-        draft.studySessions.filter(
-          (entry) => entry.contestId === input.contestId && entry.id !== session.id
-        ),
-        state,
-        records
-      );
-      const newPosition = advancement.advancements > 0 ? advancement.position : previousPosition;
-      const updatedState = new CycleState(
-        input.contestId,
-        newPosition.subjectId,
-        newPosition.resourceId
-      );
-      const updatedStateIndex = draft.cycleStates.findIndex(
-        (entry) => entry.contestId === input.contestId
-      );
-      draft.cycleStates[updatedStateIndex] = updatedState;
-
       return {
         session,
-        cycleAdvanced: advancement.advancements > 0,
+        cycleAdvanced: false,
         previousPosition,
-        newPosition
+        newPosition: previousPosition
       };
     });
   }
