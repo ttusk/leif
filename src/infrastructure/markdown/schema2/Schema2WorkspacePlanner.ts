@@ -1,11 +1,11 @@
 import type { Contest } from "@/domain/entities/Contest";
 import type { Resource } from "@/domain/entities/Resource";
-import { StudyRecord } from "@/domain/entities/StudyRecord";
-import type { StudySession } from "@/domain/entities/StudySession";
+import type { StudyRecord } from "@/domain/entities/StudyRecord";
 import type { Subject } from "@/domain/entities/Subject";
 import type { Topic } from "@/domain/entities/Topic";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { Schema2EntityDocumentCodec } from "./Schema2EntityDocumentCodec";
+import { Schema2StudyRecordsDocumentCodec } from "./Schema2StudyRecordsDocumentCodec";
 import type { Schema2Diagnostic } from "./Schema2WorkspaceValidator";
 import { Schema2WorkspaceValidator } from "./Schema2WorkspaceValidator";
 import type { IndexedSchema2Document, Schema2MarkdownFile } from "./Schema2WorkspaceIndex";
@@ -46,8 +46,7 @@ interface PlannedPaths {
   subjects: ReadonlyMap<string, string>;
   topics: ReadonlyMap<string, string>;
   resources: ReadonlyMap<string, string>;
-  sessions: ReadonlyMap<string, string>;
-  records: ReadonlyMap<string, string>;
+  recordMonths: ReadonlyMap<string, string>;
 }
 
 export class Schema2WorkspacePlanner {
@@ -142,18 +141,10 @@ function buildDesiredDocuments(
   const resources = ordered(data.resources, (resource) =>
     [paths.subjects.get(resource.subjectId) ?? "", resource.order, resource.title].join("|")
   ).map((resource) => desiredResource(resource, data, paths));
-  const sessions = ordered(data.studySessions, (session) =>
-    [
-      paths.contests.get(session.contestId) ?? "",
-      session.date,
-      session.startTime ?? "",
-      session.id
-    ].join("|")
-  ).map((session) => desiredSession(session, paths));
-  const records = data.studySessions.flatMap((session) =>
-    session.records.map((record, index) => desiredRecord(record, index, paths))
+  const recordMonths = groupRecordsByContestMonth(data.studyRecords).map(
+    ({ contestId, month, records }) => desiredRecordMonth(contestId, month, records, data, paths)
   );
-  return [...contests, ...murals, ...subjects, ...topics, ...resources, ...sessions, ...records];
+  return [...contests, ...murals, ...subjects, ...topics, ...resources, ...recordMonths];
 }
 
 function desiredContest(
@@ -288,33 +279,24 @@ function desiredResource(
   };
 }
 
-function desiredSession(session: StudySession, paths: PlannedPaths): DesiredDocument {
-  const path = requiredPath(paths.sessions, session.id);
+function desiredRecordMonth(
+  contestId: string,
+  month: string,
+  records: readonly StudyRecord[],
+  data: LeifPluginData,
+  paths: PlannedPaths
+): DesiredDocument {
+  const id = recordMonthDocumentId(contestId, month);
+  const path = requiredPath(paths.recordMonths, recordMonthKey(contestId, month));
   return {
-    id: session.id,
+    id,
     path,
     render(existing) {
-      const recordLinks = session.records.map((record, index) => ({
-        target: relativeLink(path, requiredPath(paths.records, record.id)),
-        alias: `Registro ${index + 1}`
-      }));
-      if (existing) {
-        return Schema2EntityDocumentCodec.updateSession(existing.document, session, {
-          recordLinks
-        }).toString();
-      }
-      return Schema2EntityDocumentCodec.renderSession(session, { recordLinks });
-    }
-  };
-}
-
-function desiredRecord(record: StudyRecord, index: number, paths: PlannedPaths): DesiredDocument {
-  const path = requiredPath(paths.records, record.id);
-  return {
-    id: record.id,
-    path,
-    render(existing) {
-      const options = {
+      const entries = ordered(records, (record) => `${record.date}|${record.id}`).map((record) => ({
+        record,
+        subjectName:
+          data.subjects.find((subject) => subject.id === record.subjectId)?.name ??
+          "Matéria removida",
         subjectLink: relativeLink(path, requiredPath(paths.subjects, record.subjectId)),
         resourceLink: record.resourceId
           ? relativeLink(path, requiredPath(paths.resources, record.resourceId))
@@ -322,28 +304,11 @@ function desiredRecord(record: StudyRecord, index: number, paths: PlannedPaths):
         topicLink: record.topicId
           ? relativeLink(path, requiredPath(paths.topics, record.topicId))
           : undefined
-      };
+      }));
       if (existing) {
-        return Schema2EntityDocumentCodec.updateRecord(
-          existing.document,
-          record,
-          options
-        ).toString();
+        return Schema2StudyRecordsDocumentCodec.update(existing.document, month, entries);
       }
-      return Schema2EntityDocumentCodec.renderRecord(
-        new StudyRecord(
-          record.id,
-          record.subjectId,
-          record.resourceId,
-          record.topicId,
-          record.quantity,
-          record.unit,
-          record.correctAnswers,
-          record.completed,
-          record.notes ?? `Registro ${index + 1}`
-        ),
-        options
-      );
+      return Schema2StudyRecordsDocumentCodec.render(id, month, entries);
     }
   };
 }
@@ -358,8 +323,7 @@ function planPaths(
   const subjects = new Map<string, string>();
   const topics = new Map<string, string>();
   const resources = new Map<string, string>();
-  const sessions = new Map<string, string>();
-  const records = new Map<string, string>();
+  const recordMonths = new Map<string, string>();
 
   ordered(data.contests, (contest) => contest.name).forEach((contest) => {
     const root = dirname(
@@ -419,36 +383,43 @@ function planPaths(
     );
   });
 
-  ordered(
-    data.studySessions,
-    (session) => `${session.contestId}|${session.date}|${session.startTime ?? ""}|${session.id}`
-  ).forEach((session) => {
-    const contestRoot = dirname(requiredPath(contests, session.contestId));
-    const sessionSlug = slugify(`${session.date}-${session.startTime ?? session.id}`);
-    sessions.set(
-      session.id,
+  groupRecordsByContestMonth(data.studyRecords).forEach(({ contestId, month }) => {
+    const contestRoot = dirname(requiredPath(contests, contestId));
+    const id = recordMonthDocumentId(contestId, month);
+    recordMonths.set(
+      recordMonthKey(contestId, month),
       reuseOrAllocate(
         currentById,
-        session.id,
-        `${contestRoot}/sessoes/${session.date.slice(0, 7)}/${sessionSlug}/sessao.md`,
+        id,
+        `${contestRoot}/registros/${month}.md`,
         used
       )
     );
-    session.records.forEach((record, index) => {
-      const title = record.notes ?? `registro-${index + 1}`;
-      records.set(
-        record.id,
-        reuseOrAllocate(
-          currentById,
-          record.id,
-          `${dirname(requiredPath(sessions, session.id))}/registros/${slugify(index > 0 ? `${title}-${index + 1}` : title)}.md`,
-          used
-        )
-      );
-    });
   });
 
-  return { contests, murals, subjects, topics, resources, sessions, records };
+  return { contests, murals, subjects, topics, resources, recordMonths };
+}
+
+function groupRecordsByContestMonth(
+  records: readonly StudyRecord[]
+): Array<{ contestId: string; month: string; records: StudyRecord[] }> {
+  const groups = new Map<string, { contestId: string; month: string; records: StudyRecord[] }>();
+  records.forEach((record) => {
+    const month = record.date.slice(0, 7);
+    const key = recordMonthKey(record.contestId, month);
+    const group = groups.get(key) ?? { contestId: record.contestId, month, records: [] };
+    group.records.push(record);
+    groups.set(key, group);
+  });
+  return ordered([...groups.values()], (group) => `${group.contestId}|${group.month}`);
+}
+
+function recordMonthKey(contestId: string, month: string): string {
+  return `${contestId}|${month}`;
+}
+
+function recordMonthDocumentId(contestId: string, month: string): string {
+  return `registros-${contestId}-${month}`;
 }
 
 function reuseOrAllocate(
