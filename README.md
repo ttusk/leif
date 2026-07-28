@@ -40,7 +40,7 @@ Enable Leif under **Community plugins** and open the panel from the ribbon icon 
 
 The command palette offers:
 
-- **Abrir painel**, **Abrir Hoje**, **Novo registro de estudo**, **Registrar estudo recomendado**, **Avançar recomendação**
+- **Abrir painel**, **Abrir Hoje**, **Novos registros de estudo**, **Registrar estudo recomendado**, **Avançar recomendação**
 - **Validar Markdown**, **Validar e sincronizar Markdown**, **Abrir relatório de diagnósticos**
 - **Criar backup agora**, **Recuperar backup**
 

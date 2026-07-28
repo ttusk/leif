@@ -95,7 +95,7 @@ export default class LeifPlugin extends Plugin {
 
     this.addCommand({
       id: "new-study-records",
-      name: "Novos registros",
+      name: "Novos registros de estudo",
       callback: async () => {
         await this.openLeifTab("records");
       }
