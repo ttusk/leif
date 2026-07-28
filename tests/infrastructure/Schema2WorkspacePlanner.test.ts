@@ -6,7 +6,6 @@ import { Mural } from "@/domain/entities/Mural";
 import { Resource } from "@/domain/entities/Resource";
 import { ResourceGoal } from "@/domain/entities/ResourceGoal";
 import { StudyRecord } from "@/domain/entities/StudyRecord";
-import { StudySession } from "@/domain/entities/StudySession";
 import { Subject } from "@/domain/entities/Subject";
 import { Topic } from "@/domain/entities/Topic";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
@@ -19,6 +18,8 @@ import {
 function data(): LeifPluginData {
   const record = new StudyRecord(
     "record-1",
+    "contest-1",
+    "2026-07-27",
     "subject-1",
     "resource-1",
     "topic-1",
@@ -28,7 +29,7 @@ function data(): LeifPluginData {
     true
   );
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     activeContestId: "contest-1",
     contests: [new Contest("contest-1", "TRT Brasil", ["subject-1"], new Mural("Notas do mural."))],
     cycleStates: [new CycleState("contest-1", "subject-1", "resource-1")],
@@ -58,9 +59,7 @@ function data(): LeifPluginData {
         ["topic-1"]
       )
     ],
-    studySessions: [
-      new StudySession("session-1", "contest-1", "2026-07-27", [record], "19:00", "20:00")
-    ]
+    studyRecords: [record]
   };
 }
 
@@ -75,8 +74,7 @@ describe("Schema2WorkspacePlanner", () => {
       "create:Leif/concursos/trt-brasil/materias/portugues/materia.md",
       "create:Leif/concursos/trt-brasil/materias/portugues/assuntos/concordancia-verbal/assunto.md",
       "create:Leif/concursos/trt-brasil/materias/portugues/recursos/pdf-01/recurso.md",
-      "create:Leif/concursos/trt-brasil/sessoes/2026-07/2026-07-27-19-00/sessao.md",
-      "create:Leif/concursos/trt-brasil/sessoes/2026-07/2026-07-27-19-00/registros/registro-1.md"
+      "create:Leif/concursos/trt-brasil/registros/2026-07.md"
     ]);
     expect(contentFor(plan.changes, "concurso.md")).toContain(
       "[[materias/portugues/materia|Português]]"
@@ -90,33 +88,63 @@ describe("Schema2WorkspacePlanner", () => {
     expect(contentFor(plan.changes, "recurso.md")).toContain(
       "[[../../assuntos/concordancia-verbal/assunto|Concordância Verbal]]"
     );
-    expect(contentFor(plan.changes, "registro-1.md")).toContain(
-      'recurso: "[[../../../../materias/portugues/recursos/pdf-01/recurso]]"'
+    expect(contentFor(plan.changes, "registros/2026-07.md")).toContain(
+      "recurso:: [[../materias/portugues/recursos/pdf-01/recurso]]"
     );
-    expect(contentFor(plan.changes, "registro-1.md")).not.toContain("atividade:");
+    expect(contentFor(plan.changes, "registros/2026-07.md")).not.toContain("atividade::");
   });
 
-  it("keeps record wikilink aliases on one line when notes contain line breaks", () => {
+  it("keeps multiline record notes on one parseable property line", () => {
     const source = data();
-    source.studySessions[0] = new StudySession("session-1", "contest-1", "2026-07-27", [
+    source.studyRecords[0] = new StudyRecord(
+      "record-1",
+      "contest-1",
+      "2026-07-27",
+      "subject-1",
+      "resource-1",
+      "topic-1",
+      20,
+      "paginas",
+      undefined,
+      true,
+      "Fase: Teoria\nReferência: Aula 1"
+    );
+
+    const plan = Schema2WorkspacePlanner.plan(source, []);
+    const month = contentFor(plan.changes, "registros/2026-07.md");
+
+    expect(month).toContain('notas:: "Fase: Teoria\\nReferência: Aula 1"');
+    expect(month).not.toContain("notas:: Fase: Teoria\nReferência:");
+  });
+
+  it("persists all records from the same contest month in one monthly document", () => {
+    const source = data();
+    source.studyRecords.push(
       new StudyRecord(
-        "record-1",
+        "record-2",
+        "contest-1",
+        "2026-07-28",
         "subject-1",
         "resource-1",
         "topic-1",
-        20,
-        "paginas",
-        undefined,
-        true,
-        "Fase: Teoria\nReferência: Aula 1"
+        15,
+        "paginas"
       )
-    ]);
+    );
 
     const plan = Schema2WorkspacePlanner.plan(source, []);
-    const session = contentFor(plan.changes, "sessao.md");
+    const studyPaths = plan.changes
+      .map((change) => change.path)
+      .filter((path) => path.includes("/registros/") || path.includes("/sessoes/"));
 
-    expect(session).toContain("[[registros/fase-teoria-referencia-aula-1|Registro 1]]");
-    expect(session).not.toContain("|Fase: Teoria\n");
+    expect(studyPaths).toEqual(["Leif/concursos/trt-brasil/registros/2026-07.md"]);
+    expect(studyPaths.every((path) => !path.includes("/sessoes/"))).toBe(true);
+
+    const month = contentFor(plan.changes, "registros/2026-07.md");
+    expect(month).toContain("record-1");
+    expect(month).toContain("record-2");
+    expect(month).toContain("2026-07-27");
+    expect(month).toContain("2026-07-28");
   });
 
   it("plans updates with source fingerprints and preserves unmanaged Markdown", () => {
