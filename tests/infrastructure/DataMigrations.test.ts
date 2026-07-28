@@ -190,7 +190,7 @@ describe("DataMigrationService", () => {
     expect(migrated.subjects[0].resourceIds).toEqual(["shared-notebook"]);
   });
 
-  it("projects old flat study sessions into one-record session aggregates", () => {
+  it("projects old flat study sessions directly into dated records", () => {
     const migrated = service.migrate({
       ...createDefaultLeifPluginData(),
       schemaVersion: 1,
@@ -208,21 +208,66 @@ describe("DataMigrationService", () => {
       ] as never
     });
 
-    expect(migrated.studySessions).toHaveLength(1);
-    expect(migrated.studySessions[0]).toMatchObject({
+    expect(
+      (migrated as unknown as { studyRecords: unknown[] }).studyRecords
+    ).toHaveLength(1);
+    expect(
+      (migrated as unknown as { studyRecords: unknown[] }).studyRecords[0]
+    ).toMatchObject({
+      id: "old-session-1",
       contestId: "contest-1",
       date: "2026-07-27",
-      records: [
+      subjectId: "subject-1",
+      resourceId: "item-1",
+      quantity: 30,
+      unit: GoalUnit.PAGINAS,
+      notes: "Fase: Teoria"
+    });
+  });
+
+  it("flattens schema-3 sessions into dated records without changing their IDs", () => {
+    const legacy = {
+      ...createDefaultLeifPluginData(),
+      schemaVersion: 3,
+      studySessions: [
         {
-          id: "old-session-1",
-          subjectId: "subject-1",
-          resourceId: "item-1",
-          quantity: 30,
-          unit: GoalUnit.PAGINAS,
-          notes: "Fase: Teoria"
+          id: "session-1",
+          contestId: "contest-1",
+          date: "2026-07-27",
+          records: [
+            {
+              id: "record-1",
+              subjectId: "subject-1",
+              resourceId: "resource-1",
+              quantity: 30,
+              unit: GoalUnit.PAGINAS
+            },
+            {
+              id: "record-2",
+              subjectId: "subject-2",
+              quantity: 20,
+              unit: GoalUnit.QUESTOES,
+              correctAnswers: 15
+            }
+          ]
         }
       ]
-    });
+    } as never;
+
+    const once = service.migrate(legacy);
+    const records = (
+      once as unknown as {
+        studyRecords: Array<{ id: string; contestId: string; date: string }>;
+        studySessions?: unknown[];
+      }
+    ).studyRecords;
+
+    expect(records).toMatchObject([
+      { id: "record-1", contestId: "contest-1", date: "2026-07-27" },
+      { id: "record-2", contestId: "contest-1", date: "2026-07-27" }
+    ]);
+    expect((once as unknown as { studySessions?: unknown[] }).studySessions).toBeUndefined();
+    expect(service.migrate(once)).toEqual(once);
   });
 
   it("is idempotent for schema-3 data", () => {
