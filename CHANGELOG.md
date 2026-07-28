@@ -4,6 +4,22 @@ Todas as mudanças notáveis do Leif são documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [3.1.3] - 2026-07-28
+
+### Melhorado
+
+- Registros de estudo agora são independentes: salvar, editar ou excluir um registro não altera a recomendação do ciclo.
+- A recomendação do ciclo agora é puramente visual e controlada pelo usuário, com ações para avançar ou escolher diretamente qualquer matéria ativa.
+- O histórico agora consolida os registros em um arquivo Markdown por concurso e mês, reduzindo drasticamente a quantidade de arquivos sem criar entidades ou pastas de sessão.
+
+### Migração
+
+- Na primeira inicialização, estruturas antigas de sessão são convertidas automaticamente em registros mensais, com backup integral, validação semântica e recibo idempotente.
+
+### Qualidade
+
+- A suíte de validação cobre registros independentes, salvamento atômico em lote, edição e exclusão individuais, neutralidade do ciclo, migração mensal, recuperação e reinicialização sem duplicações.
+
 ## [3.1.2] - 2026-07-28
 
 ### Melhorado
@@ -205,6 +221,7 @@ Consolida as mudanças das versões 2.0.0 a 2.0.3:
 - Bloqueios de segurança reportados em português no painel.
 - Prévia de migração compacta, abas de navegação sem interferência do tema, progresso de assuntos e posições de reordenação em uma única linha, e estados de data e pendências mais claros.
 
+[3.1.3]: https://github.com/ttusk/leif/compare/3.1.2...3.1.3
 [3.0.1]: https://github.com/ttusk/leif/compare/3.0.0...3.0.1
 [3.0.0]: https://github.com/ttusk/leif/compare/2.1.1...3.0.0
 [2.1.1]: https://github.com/ttusk/leif/compare/2.1.0...2.1.1

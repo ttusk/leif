@@ -2,6 +2,24 @@ import type { BundledReleaseNote } from "@/application/services/ChangelogService
 
 export const BUNDLED_RELEASES: readonly BundledReleaseNote[] = [
   {
+    version: "3.1.3",
+    title: "Leif 3.1.3",
+    body: `## Melhorado
+
+- Registros de estudo agora são independentes: salvar, editar ou excluir um registro não altera a recomendação do ciclo.
+- A recomendação do ciclo agora é puramente visual e controlada pelo usuário, com ações para avançar ou escolher diretamente qualquer matéria ativa.
+- O histórico agora consolida os registros em um arquivo Markdown por concurso e mês, reduzindo drasticamente a quantidade de arquivos sem criar entidades ou pastas de sessão.
+
+## Migração
+
+- Na primeira inicialização, estruturas antigas de sessão são convertidas automaticamente em registros mensais, com backup integral, validação semântica e recibo idempotente.
+
+## Qualidade
+
+- A suíte de validação cobre registros independentes, salvamento atômico em lote, edição e exclusão individuais, neutralidade do ciclo, migração mensal, recuperação e reinicialização sem duplicações.`,
+    githubUrl: "https://github.com/ttusk/leif/releases/tag/3.1.3"
+  },
+  {
     version: "3.1.2",
     title: "Leif 3.1.2",
     body: `## Melhorado
