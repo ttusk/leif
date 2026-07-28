@@ -128,6 +128,64 @@ describe("Schema2PluginDataStore", () => {
     expect(loaded.contests.map((contest) => contest.id)).not.toContain("json-contest");
   });
 
+  it("backs up and consolidates legacy session Markdown on startup", async () => {
+    const legacySessionFiles = {
+      ...markdownFiles,
+      "Leif/concursos/trt/sessoes/2026-07/2026-07-28/sessao.md": `---
+leif-type: sessao
+leif-schema: 2
+leif-id: session-1
+data: 2026-07-28
+---
+
+# Sessão 2026-07-28
+
+## Registros
+
+<!-- leif:registros:start -->
+1. [[registros/registro-1|Registro 1]]
+<!-- leif:registros:end -->
+`,
+      "Leif/concursos/trt/sessoes/2026-07/2026-07-28/registros/registro-1.md": `---
+leif-type: registro
+leif-schema: 2
+leif-id: legacy-record-1
+materia: "[[../../../materias/portugues/materia]]"
+quantidade: 25
+unidade: paginas
+concluido: true
+---
+
+# Registro
+`
+    };
+    const storage = new MemoryStorageAdapter(createDefaultLeifPluginData());
+    const markdown = new MemoryMarkdownFileStore(legacySessionFiles);
+    const store = new Schema2PluginDataStore(storage, markdown, () => "tx-flatten");
+
+    const first = await store.load();
+    const second = await store.load();
+
+    expect(first.studyRecords).toMatchObject([
+      { id: "legacy-record-1", contestId: "contest-1", date: "2026-07-28" }
+    ]);
+    expect(second.studyRecords).toHaveLength(1);
+    expect(markdown.files.get("Leif/concursos/trt/registros/2026-07.md")).toContain(
+      "leif-id:: legacy-record-1"
+    );
+    expect([...markdown.files.keys()].some((path) => path.includes("/sessoes/"))).toBe(false);
+    expect(markdown.files.get("Leif/.backups/migration-tx-flatten/manifest.json")).toContain(
+      "legacy-record-1"
+    );
+    expect(storage.saved?.runtimeState?.migrationReceipts).toContainEqual(
+      expect.objectContaining({
+        id: "migration-tx-flatten",
+        source: "markdown-schema-2-sessions",
+        status: "migrated"
+      })
+    );
+  });
+
   it("migrates legacy JSON study data into schema-2 Markdown on startup", async () => {
     const legacy = {
       ...createDefaultLeifPluginData(),
