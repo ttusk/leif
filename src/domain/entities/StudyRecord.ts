@@ -1,13 +1,18 @@
 import { ValidationError } from "@/domain/errors/DomainErrors";
 import type { GoalUnit } from "@/domain/types/GoalUnit";
 
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
 /**
- * Registro de estudo: one measured study entry within a Sessão de estudo
- * for exactly one Matéria, optionally narrowed to one Recurso and one Assunto.
+ * Registro de estudo: an independent, dated historical fact belonging to one
+ * Concurso and exactly one Matéria, optionally narrowed to one Recurso and one
+ * Assunto.
  */
 export class StudyRecord {
   constructor(
     public readonly id: string,
+    public readonly contestId: string,
+    public readonly date: string,
     public readonly subjectId: string,
     public readonly resourceId?: string,
     public readonly topicId?: string,
@@ -18,6 +23,10 @@ export class StudyRecord {
     public readonly notes?: string
   ) {
     if (!id?.trim()) throw new ValidationError("StudyRecord ID is required");
+    if (!contestId?.trim()) throw new ValidationError("StudyRecord contestId is required");
+    if (!date?.trim() || !DATE_PATTERN.test(date)) {
+      throw new ValidationError("StudyRecord date must use YYYY-MM-DD");
+    }
     if (!subjectId?.trim()) throw new ValidationError("StudyRecord subjectId is required");
     if (quantity !== undefined) {
       if (!Number.isFinite(quantity) || quantity < 0) {
