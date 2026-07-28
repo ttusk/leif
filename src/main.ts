@@ -29,6 +29,7 @@ export default class LeifPlugin extends Plugin {
   private dataStore!: PluginDataStorePort;
   private markdownStore!: MarkdownFileStore;
   private markdownSyncTimer?: number;
+  private markdownSyncInProgress = false;
   private readonly suppressedSelfWritePaths = new Map<string, number>();
 
   override onload(): void {
@@ -249,6 +250,7 @@ export default class LeifPlugin extends Plugin {
   private scheduleMarkdownSyncForPath(path: string): void {
     const normalized = normalizeLeifPath(path);
     if (!shouldScheduleMarkdownSync(normalized)) return;
+    if (this.markdownSyncInProgress) return;
     if (consumeSuppressedSelfWritePath(normalized, this.suppressedSelfWritePaths)) return;
     if (this.markdownSyncTimer) {
       window.clearTimeout(this.markdownSyncTimer);
@@ -269,11 +271,17 @@ export default class LeifPlugin extends Plugin {
   }
 
   private async runMarkdownSync(): Promise<void> {
-    const before = await this.snapshotSyncRelevantFiles();
-    const data = await this.dataStore.load();
-    await this.dataStore.save(data);
-    const after = await this.snapshotSyncRelevantFiles();
-    markChangedPathsForSuppression(before, after, this.suppressedSelfWritePaths);
+    if (this.markdownSyncInProgress) return;
+    this.markdownSyncInProgress = true;
+    try {
+      const before = await this.snapshotSyncRelevantFiles();
+      const data = await this.dataStore.load();
+      await this.dataStore.save(data);
+      const after = await this.snapshotSyncRelevantFiles();
+      markChangedPathsForSuppression(before, after, this.suppressedSelfWritePaths);
+    } finally {
+      this.markdownSyncInProgress = false;
+    }
   }
 
   private async snapshotSyncRelevantFiles(): Promise<Map<string, string>> {
@@ -399,6 +407,5 @@ function consumeSuppressedSelfWritePath(
   });
   const expiresAt = suppressedPaths.get(path);
   if (!expiresAt || expiresAt <= now) return false;
-  suppressedPaths.delete(path);
   return true;
 }

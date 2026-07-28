@@ -313,6 +313,36 @@ describe("LeifPlugin", () => {
     }
   });
 
+  it("does not schedule another sync from Vault events emitted during an active sync", async () => {
+    vi.useFakeTimers();
+    try {
+      const app = new App();
+      await seedSchema2WorkspaceWithoutMural(app);
+      const plugin = new LeifPlugin(app as never, { version: "2.1.1" } as never);
+      await plugin.initialize();
+      const dataStore = (
+        plugin as unknown as {
+          dataStore: { save: (data: unknown) => Promise<void> };
+        }
+      ).dataStore;
+      const originalSave = dataStore.save.bind(dataStore);
+      const save = vi.spyOn(dataStore, "save").mockImplementation(async (data) => {
+        app.vault.trigger("delete", new TFile("Leif/concursos/trt/concurso.md"));
+        app.vault.trigger("rename", new TFile("Leif/concursos/trt/concurso.md"), "old.md");
+        app.vault.trigger("create", new TFile("Leif/concursos/trt/concurso.md"));
+        app.vault.trigger("modify", new TFile("Leif/concursos/trt/concurso.md"));
+        await originalSave(data);
+      });
+
+      app.vault.trigger("modify", new TFile("Leif/concursos/trt/concurso.md"));
+      await vi.advanceTimersByTimeAsync(2_000);
+
+      expect(save).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("opens a backup picker when multiple compatible backups are available", async () => {
     resetOpenModals();
     resetRecordedNotices();
