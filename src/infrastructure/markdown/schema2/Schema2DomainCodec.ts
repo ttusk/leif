@@ -6,7 +6,6 @@ import { Resource } from "@/domain/entities/Resource";
 import { ResourceAccess } from "@/domain/entities/ResourceAccess";
 import { ResourceGoal } from "@/domain/entities/ResourceGoal";
 import { StudyRecord } from "@/domain/entities/StudyRecord";
-import { StudySession } from "@/domain/entities/StudySession";
 import { Subject } from "@/domain/entities/Subject";
 import { Topic } from "@/domain/entities/Topic";
 import { isGoalUnit, type GoalUnit } from "@/domain/types/GoalUnit";
@@ -33,7 +32,7 @@ export interface DecodedSchema2Domain {
   subjects: Subject[];
   topics: Topic[];
   resources: Resource[];
-  studySessions: StudySession[];
+  studyRecords: StudyRecord[];
 }
 
 interface DecodeContext {
@@ -51,13 +50,18 @@ const ACCESS_LINK = /^\s*(?:[-*]|\d+\.)\s+\[([^\]]+)\]\(([^)]+)\)\s*$/;
 export class Schema2DomainCodec {
   static decode(index: Schema2WorkspaceIndex): DecodedSchema2Domain {
     const context = buildDecodeContext(index);
+    const studyRecords = [
+      ...index.recordMonths.flatMap((month) => decodeRecordMonth(month, context)),
+      ...index.sessions.flatMap((session) => decodeLegacySession(session, context))
+    ];
+    assertUniqueRecordIds(studyRecords);
     return {
       contests: index.contests.map((contest) => decodeContest(contest, context)),
       cycleStates: index.contests.flatMap((contest) => decodeCycleState(contest, context)),
       subjects: index.subjects.map((subject) => decodeSubject(subject, context)),
       topics: index.topics.map(decodeTopic),
       resources: index.resources.map((resource) => decodeResource(resource, context)),
-      studySessions: index.sessions.map((session) => decodeSession(session, context))
+      studyRecords
     };
   }
 }
@@ -194,9 +198,13 @@ function decodeResource(resource: IndexedSchema2Document, context: DecodeContext
   );
 }
 
-function decodeSession(session: IndexedSchema2Document, context: DecodeContext): StudySession {
+function decodeLegacySession(
+  session: IndexedSchema2Document,
+  context: DecodeContext
+): StudyRecord[] {
   const contestId = requiredParent(session, "contestId");
-  const records = readResolvedRegion(context.index, session, "registros", "registro").map(
+  const date = requiredProperty(session, "data");
+  return readResolvedRegion(context.index, session, "registros", "registro").map(
     (record) => {
       const sessionId = requiredParent(record, "sessionId");
       if (sessionId !== session.id) {
@@ -205,21 +213,17 @@ function decodeSession(session: IndexedSchema2Document, context: DecodeContext):
           `Record "${record.id}" must belong to session "${session.id}".`
         );
       }
-      return decodeRecord(record, context);
+      return decodeLegacyRecord(record, contestId, date, context);
     }
-  );
-
-  return new StudySession(
-    session.id,
-    contestId,
-    requiredProperty(session, "data"),
-    records,
-    optionalProperty(session, "inicio"),
-    optionalProperty(session, "fim")
   );
 }
 
-function decodeRecord(record: IndexedSchema2Document, context: DecodeContext): StudyRecord {
+function decodeLegacyRecord(
+  record: IndexedSchema2Document,
+  contestId: string,
+  date: string,
+  context: DecodeContext
+): StudyRecord {
   const subject = resolvePropertyLink(context.index, record, "materia", "materia");
   const resource = resolveOptionalPropertyLink(context.index, record, "recurso", "recurso");
   const topic = resolveOptionalPropertyLink(context.index, record, "assunto", "assunto");
@@ -233,14 +237,217 @@ function decodeRecord(record: IndexedSchema2Document, context: DecodeContext): S
 
   return new StudyRecord(
     record.id,
+    contestId,
+    date,
     subject.id,
     resource?.id,
     topic?.id,
     parseOptionalNumber(record, "quantidade"),
     parseOptionalGoalUnit(record, "unidade"),
     parseOptionalNumber(record, "acertos"),
-    parseBoolean(record, "concluido", false)
+    parseBoolean(record, "concluido", false),
+    record.title === "Registro" ? undefined : record.title
   );
+}
+
+function decodeRecordMonth(
+  month: IndexedSchema2Document,
+  context: DecodeContext
+): StudyRecord[] {
+  const contestId = requiredParent(month, "contestId");
+  return parseMonthlyRecordProperties(readOptionalRegion(month, "registros")).map((properties) => {
+    const id = requiredInlineProperty(properties, "leif-id", month);
+    const date = requiredInlineProperty(properties, "data", month);
+    const subject = resolveInlinePropertyLink(
+      context.index,
+      month,
+      properties,
+      "materia",
+      "materia"
+    );
+    const resource = resolveOptionalInlinePropertyLink(
+      context.index,
+      month,
+      properties,
+      "recurso",
+      "recurso"
+    );
+    const topic = resolveOptionalInlinePropertyLink(
+      context.index,
+      month,
+      properties,
+      "assunto",
+      "assunto"
+    );
+    if (requiredParent(subject, "contestId") !== contestId) {
+      throw new Schema2DomainCodecError(
+        "invalid-link-target",
+        `Record "${id}" subject must belong to contest "${contestId}".`
+      );
+    }
+    if (resource) assertSameSubject(subject.id, requiredParent(resource, "subjectId"), resource.id);
+    if (topic) assertSameSubject(subject.id, requiredParent(topic, "subjectId"), topic.id);
+
+    return new StudyRecord(
+      id,
+      contestId,
+      date,
+      subject.id,
+      resource?.id,
+      topic?.id,
+      parseOptionalInlineNumber(properties, "quantidade", month),
+      parseOptionalInlineGoalUnit(properties, "unidade", month),
+      parseOptionalInlineNumber(properties, "acertos", month),
+      parseInlineBoolean(properties, "concluido", false, month),
+      optionalInlineProperty(properties, "notas")
+    );
+  });
+}
+
+function parseMonthlyRecordProperties(source: string): Array<ReadonlyMap<string, string>> {
+  return source
+    .split(/(?=^##\s+)/gm)
+    .filter((section) => /^##\s+/.test(section))
+    .map((section) => {
+      const properties = new Map<string, string>();
+      for (const match of section.matchAll(/^([a-z0-9-]+)::\s*(.*)$/gm)) {
+        properties.set(match[1], unwrapInlineValue(match[2].trim()));
+      }
+      return properties;
+    });
+}
+
+function resolveInlinePropertyLink(
+  index: Schema2WorkspaceIndex,
+  source: IndexedSchema2Document,
+  properties: ReadonlyMap<string, string>,
+  property: string,
+  expectedType: string
+): IndexedSchema2Document {
+  const value = requiredInlineProperty(properties, property, source);
+  const match = value.match(/^\[\[([^\]]+)\]\]$/);
+  if (!match) {
+    throw new Schema2DomainCodecError(
+      "invalid-property",
+      `Property "${property}" in ${source.path} must be a wikilink.`
+    );
+  }
+  const target = match[1].split("|")[0].split("#")[0].trim();
+  const resolved = index.resolveWikiLink(source.path, target);
+  if (resolved.type !== expectedType) {
+    throw new Schema2DomainCodecError(
+      "invalid-link-target",
+      `Property "${property}" in ${source.path} must point to ${expectedType}.`
+    );
+  }
+  return resolved;
+}
+
+function resolveOptionalInlinePropertyLink(
+  index: Schema2WorkspaceIndex,
+  source: IndexedSchema2Document,
+  properties: ReadonlyMap<string, string>,
+  property: string,
+  expectedType: string
+): IndexedSchema2Document | undefined {
+  return properties.has(property)
+    ? resolveInlinePropertyLink(index, source, properties, property, expectedType)
+    : undefined;
+}
+
+function requiredInlineProperty(
+  properties: ReadonlyMap<string, string>,
+  property: string,
+  source: IndexedSchema2Document
+): string {
+  const value = optionalInlineProperty(properties, property);
+  if (value === undefined) {
+    throw new Schema2DomainCodecError(
+      "invalid-property",
+      `Record property "${property}" in ${source.path} is required.`
+    );
+  }
+  return value;
+}
+
+function optionalInlineProperty(
+  properties: ReadonlyMap<string, string>,
+  property: string
+): string | undefined {
+  const value = properties.get(property)?.trim();
+  return value ? value : undefined;
+}
+
+function parseOptionalInlineNumber(
+  properties: ReadonlyMap<string, string>,
+  property: string,
+  source: IndexedSchema2Document
+): number | undefined {
+  const value = optionalInlineProperty(properties, property);
+  if (value === undefined) return undefined;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    throw new Schema2DomainCodecError(
+      "invalid-property",
+      `Record property "${property}" in ${source.path} must be a number.`
+    );
+  }
+  return parsed;
+}
+
+function parseOptionalInlineGoalUnit(
+  properties: ReadonlyMap<string, string>,
+  property: string,
+  source: IndexedSchema2Document
+): GoalUnit | undefined {
+  const value = optionalInlineProperty(properties, property);
+  if (value === undefined) return undefined;
+  if (!isGoalUnit(value)) {
+    throw new Schema2DomainCodecError(
+      "invalid-property",
+      `Record property "${property}" in ${source.path} must be a known goal unit.`
+    );
+  }
+  return value;
+}
+
+function parseInlineBoolean(
+  properties: ReadonlyMap<string, string>,
+  property: string,
+  defaultValue: boolean,
+  source: IndexedSchema2Document
+): boolean {
+  const value = optionalInlineProperty(properties, property);
+  if (value === undefined) return defaultValue;
+  if (value === "true") return true;
+  if (value === "false") return false;
+  throw new Schema2DomainCodecError(
+    "invalid-property",
+    `Record property "${property}" in ${source.path} must be true or false.`
+  );
+}
+
+function unwrapInlineValue(value: string): string {
+  if (!value.startsWith('"') || !value.endsWith('"')) return value;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return typeof parsed === "string" ? parsed : value;
+  } catch {
+    return value;
+  }
+}
+
+function assertUniqueRecordIds(records: readonly StudyRecord[]): void {
+  const ids = new Set<string>();
+  records.forEach((record) => {
+    if (ids.has(record.id)) {
+      throw new Schema2DomainCodecError(
+        "invalid-property",
+        `Duplicate study record ID "${record.id}".`
+      );
+    }
+    ids.add(record.id);
+  });
 }
 
 function decodeMural(contestId: string, context: DecodeContext): Mural {

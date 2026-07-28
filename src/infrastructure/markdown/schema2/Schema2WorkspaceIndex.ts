@@ -60,6 +60,11 @@ export interface IndexedStudyRecord extends IndexedSchema2Document {
   sessionId?: string;
 }
 
+export interface IndexedStudyRecordMonth extends IndexedSchema2Document {
+  type: "registros";
+  contestId?: string;
+}
+
 interface ParsedPath {
   contestSlug?: string;
   subjectSlug?: string;
@@ -87,6 +92,7 @@ export class Schema2WorkspaceIndex {
     public readonly resources: readonly IndexedResource[],
     public readonly sessions: readonly IndexedSession[],
     public readonly records: readonly IndexedStudyRecord[],
+    public readonly recordMonths: readonly IndexedStudyRecordMonth[],
     private readonly documentsByPath: ReadonlyMap<string, IndexedSchema2Document>
   ) {}
 
@@ -126,6 +132,10 @@ export class Schema2WorkspaceIndex {
       ...document,
       sessionId: parentSessionId(document.path, documentsByPath)
     }));
+    const recordMonths = documents.filter(isStudyRecordMonth).map((document) => ({
+      ...document,
+      contestId: parentContestId(document.path, documentsByPath)
+    }));
     const murals = documents.filter(isMural).map((document) => ({
       ...document,
       contestId: parentContestId(document.path, documentsByPath)
@@ -139,11 +149,19 @@ export class Schema2WorkspaceIndex {
       ...resources,
       ...sessions,
       ...records,
+      ...recordMonths,
       ...documents.filter(
         (document) =>
-          !["concurso", "mural", "materia", "assunto", "recurso", "sessao", "registro"].includes(
-            document.type
-          )
+          ![
+            "concurso",
+            "mural",
+            "materia",
+            "assunto",
+            "recurso",
+            "sessao",
+            "registro",
+            "registros"
+          ].includes(document.type)
       )
     ];
 
@@ -156,6 +174,7 @@ export class Schema2WorkspaceIndex {
       resources,
       sessions,
       records,
+      recordMonths,
       new Map(enrichedDocuments.map((document) => [document.path, document]))
     );
   }
@@ -337,4 +356,10 @@ function isSession(document: IndexedSchema2Document): document is IndexedSession
 
 function isStudyRecord(document: IndexedSchema2Document): document is IndexedStudyRecord {
   return document.type === "registro";
+}
+
+function isStudyRecordMonth(
+  document: IndexedSchema2Document
+): document is IndexedStudyRecordMonth {
+  return document.type === "registros";
 }
