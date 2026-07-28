@@ -4,6 +4,13 @@ Todas as mudanças notáveis do Leif são documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [3.1.2] - 2026-07-28
+
+### Melhorado
+
+- Quantidade, Unidade e Acertos agora ficam lado a lado no formulário de registro em painéis largos, mantendo a adaptação para painéis menores.
+- Registros agora oferece um botão para avançar diretamente à próxima matéria do ciclo sem criar uma sessão, com opção de desfazer.
+
 ## [3.1.1] - 2026-07-28
 
 ### Corrigido

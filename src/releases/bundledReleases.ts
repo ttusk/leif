@@ -2,6 +2,15 @@ import type { BundledReleaseNote } from "@/application/services/ChangelogService
 
 export const BUNDLED_RELEASES: readonly BundledReleaseNote[] = [
   {
+    version: "3.1.2",
+    title: "Leif 3.1.2",
+    body: `## Melhorado
+
+- Quantidade, Unidade e Acertos agora ficam lado a lado no formulário de registro em painéis largos, mantendo a adaptação para painéis menores.
+- Registros agora oferece um botão para avançar diretamente à próxima matéria do ciclo sem criar uma sessão, com opção de desfazer.`,
+    githubUrl: "https://github.com/ttusk/leif/releases/tag/3.1.2"
+  },
+  {
     version: "3.1.1",
     title: "Leif 3.1.1",
     body: `## Corrigido
