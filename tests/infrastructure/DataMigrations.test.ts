@@ -206,7 +206,7 @@ describe("DataMigrationService", () => {
           phase: "Teoria"
         }
       ] as never
-    });
+    } as never);
 
     expect(
       (migrated as unknown as { studyRecords: unknown[] }).studyRecords
