@@ -2,6 +2,14 @@ import type { BundledReleaseNote } from "@/application/services/ChangelogService
 
 export const BUNDLED_RELEASES: readonly BundledReleaseNote[] = [
   {
+    version: "3.0.3",
+    title: "Leif 3.0.3",
+    body: `## Corrigido
+
+- Migração do JSON legado agora consolida cadernos de questões compartilhados em um único recurso, preservando vínculos com todos os assuntos e evitando colisões de arquivos Markdown.`,
+    githubUrl: "https://github.com/ttusk/leif/releases/tag/3.0.3"
+  },
+  {
     version: "3.0.2",
     title: "Leif 3.0.2",
     body: `## Corrigido

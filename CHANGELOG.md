@@ -4,6 +4,12 @@ Todas as mudanças notáveis do Leif são documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [3.0.3] - 2026-07-28
+
+### Corrigido
+
+- Migração do JSON legado agora consolida cadernos de questões compartilhados em um único recurso, preservando vínculos com todos os assuntos e evitando colisões de arquivos Markdown.
+
 ## [3.0.2] - 2026-07-28
 
 ### Corrigido
