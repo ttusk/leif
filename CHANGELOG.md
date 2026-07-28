@@ -4,6 +4,16 @@ Todas as mudanças notáveis do Leif são documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [3.0.4] - 2026-07-28
+
+### Corrigido
+
+- Migração de registros legados com notas em várias linhas agora mantém os links de sessão válidos, preservando todo o histórico de estudo no Markdown.
+- Leitura do schema 2 aceita wikilinks de propriedades que o Obsidian reescreve com aspas adicionais durante a ativação do staging.
+- O botão “Entendi” das novidades fecha a janela imediatamente, sem ficar travado enquanto o reconhecimento é salvo.
+- O resumo por matéria e o histórico de estudos voltaram a usar tabelas compactas, com colunas legíveis e rolagem em painéis estreitos.
+- A edição de recursos voltou a permitir vincular, abrir, alterar e remover materiais da web com título, URL e observação.
+
 ## [3.0.3] - 2026-07-28
 
 ### Corrigido

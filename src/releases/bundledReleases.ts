@@ -2,6 +2,18 @@ import type { BundledReleaseNote } from "@/application/services/ChangelogService
 
 export const BUNDLED_RELEASES: readonly BundledReleaseNote[] = [
   {
+    version: "3.0.4",
+    title: "Leif 3.0.4",
+    body: `## Corrigido
+
+- Migração de registros legados com notas em várias linhas agora mantém os links de sessão válidos, preservando todo o histórico de estudo no Markdown.
+- Leitura do schema 2 aceita wikilinks de propriedades que o Obsidian reescreve com aspas adicionais durante a ativação do staging.
+- O botão “Entendi” das novidades fecha a janela imediatamente, sem ficar travado enquanto o reconhecimento é salvo.
+- O resumo por matéria e o histórico de estudos voltaram a usar tabelas compactas, com colunas legíveis e rolagem em painéis estreitos.
+- A edição de recursos voltou a permitir vincular, abrir, alterar e remover materiais da web com título, URL e observação.`,
+    githubUrl: "https://github.com/ttusk/leif/releases/tag/3.0.4"
+  },
+  {
     version: "3.0.3",
     title: "Leif 3.0.3",
     body: `## Corrigido
