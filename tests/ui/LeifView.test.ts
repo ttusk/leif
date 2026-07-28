@@ -355,7 +355,6 @@ describe("LeifView", () => {
     const table = view.contentEl.querySelector(".leif-session-table");
     expect(Array.from(table?.querySelectorAll("th") ?? []).map((th) => th.textContent)).toEqual([
       "Data",
-      "Horário",
       "Matéria",
       "Recurso",
       "Assunto",
@@ -369,19 +368,27 @@ describe("LeifView", () => {
     );
 
     expect(session?.textContent).toContain("27/07/2026");
-    expect(session?.textContent).toContain("19:00–20:30");
     expect(session?.textContent).toContain("Bloco noturno");
     expect(records).toHaveLength(2);
+    expect(records[1]?.textContent).toContain("27/07/2026");
     expect(records[0]?.textContent).toContain("Português");
     expect(records[0]?.textContent).toContain("PDF 01");
-    expect(records[0]?.textContent).toContain("leitura");
-    expect(records[0]?.textContent).toContain("12 paginas");
+    expect(records[0]?.textContent).toContain("Leitura");
+    expect(records[0]?.textContent).toContain("12 páginas");
     expect(records[1]?.textContent).toContain("Direito Constitucional");
     expect(records[1]?.textContent).toContain("Controle de constitucionalidade");
     expect(records[1]?.textContent).toContain("Controle concentrado");
-    expect(records[1]?.textContent).toContain("questoes");
-    expect(records[1]?.textContent).toContain("16/20 acertos");
+    expect(records[1]?.textContent).toContain("Questões");
+    expect(records[1]?.textContent).toContain("80% (16/20)");
     expect(session?.querySelectorAll(".leif-menu-trigger")).toHaveLength(1);
+
+    const unit = view.contentEl.querySelector("[data-record-editor-unit]") as HTMLSelectElement;
+    expect(Array.from(unit.options).map((option) => [option.value, option.textContent])).toEqual([
+      ["paginas", "Páginas"],
+      ["questoes", "Questões"],
+      ["aulas", "Aulas"],
+      ["minutos", "Minutos"]
+    ]);
   });
 
   it("opens a native session menu with session-level actions", async () => {
@@ -446,12 +453,10 @@ describe("LeifView", () => {
     const editor = view.contentEl.querySelector(".leif-session-editor");
     expect(editor?.textContent).toContain("Editar sessão");
     const date = editor?.querySelector("[data-session-editor-date]") as HTMLInputElement;
-    const start = editor?.querySelector("[data-session-editor-start]") as HTMLInputElement;
-    const end = editor?.querySelector("[data-session-editor-end]") as HTMLInputElement;
     const notes = editor?.querySelector("[data-session-editor-notes]") as HTMLTextAreaElement;
+    expect(editor?.querySelector("[data-session-editor-start]")).toBeNull();
+    expect(editor?.querySelector("[data-session-editor-end]")).toBeNull();
     date.value = "2026-07-28";
-    start.value = "20:00";
-    end.value = "21:15";
     notes.value = "Bloco ajustado";
 
     const firstRecord = editor?.querySelector("[data-record-editor-index='0']");
@@ -497,8 +502,8 @@ describe("LeifView", () => {
     await vi.waitFor(async () => {
       const data = await dataStore.load();
       expect(data.studySessions[0].date).toBe("2026-07-28");
-      expect(data.studySessions[0].startTime).toBe("20:00");
-      expect(data.studySessions[0].endTime).toBe("21:15");
+      expect(data.studySessions[0].startTime).toBe("19:00");
+      expect(data.studySessions[0].endTime).toBe("20:30");
       expect(data.studySessions[0].notes).toBe("Bloco ajustado");
       expect(data.studySessions[0].records).toHaveLength(2);
       expect(data.studySessions[0].records[0].id).toBe("record-1");
@@ -584,7 +589,7 @@ describe("LeifView", () => {
     activity.dispatchEvent(new Event("change", { bubbles: true }));
     await vi.waitFor(() => {
       expect(view.contentEl.querySelector("[data-session-id='session-1']")?.textContent).toContain(
-        "questoes"
+        "Questões"
       );
       expect(
         view.contentEl.querySelector("[data-session-id='session-1']")?.textContent

@@ -14,6 +14,7 @@ import { GoalUnit, isGoalUnit } from "@/domain/types/GoalUnit";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { CycleRecommendationPanel } from "@/ui/view/shared/CycleRecommendationPanel";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
+import { formatActivity, formatGoalQuantity, goalUnitOptions } from "@/ui/view/shared/StudyLabels";
 import type { RecommendedStudyRegistration } from "@/ui/view/components/DashboardTab";
 
 interface SessionFilters {
@@ -133,7 +134,6 @@ export class SessionsTab {
 
     const { container: tableContainer, tbody } = DomHelpers.createCrudTable([
       "Data",
-      "Horário",
       "Matéria",
       "Recurso",
       "Assunto",
@@ -216,7 +216,7 @@ export class SessionsTab {
       ["", "Todas as atividades"],
       ...[...activities]
         .sort((left, right) => left.localeCompare(right))
-        .map((activity): [string, string] => [activity, activity])
+        .map((activity): [string, string] => [activity, formatActivity(activity)])
     ];
   }
 
@@ -259,17 +259,16 @@ export class SessionsTab {
           dateContent.appendChild(notes);
         }
         const dateCell = DomHelpers.createCell(null, dateContent, "leif-table-cell-numeric");
-        const timeCell = DomHelpers.createNumericCell(this.formatSessionTime(session));
-        dateCell.setAttribute("rowspan", String(visibleRecords.length));
-        timeCell.setAttribute("rowspan", String(visibleRecords.length));
-        row.append(dateCell, timeCell);
+        row.appendChild(dateCell);
+      } else {
+        row.appendChild(DomHelpers.createNumericCell(this.formatSessionDate(session.date)));
       }
 
       row.append(
         DomHelpers.createNameCell(subject?.name ?? "Matéria removida"),
         DomHelpers.createNameCell(resource?.title ?? "Sem recurso"),
         DomHelpers.createNameCell(topic?.name ?? "Sem assunto"),
-        DomHelpers.createCell(record.activity),
+        DomHelpers.createCell(formatActivity(record.activity)),
         DomHelpers.createNumericCell(this.formatRecordResult(record))
       );
 
@@ -330,10 +329,6 @@ export class SessionsTab {
   ): HTMLElement {
     const date = DomHelpers.createInput("date", "Data", session.date);
     date.dataset.sessionEditorDate = "true";
-    const start = DomHelpers.createInput("time", "Início", session.startTime ?? "");
-    start.dataset.sessionEditorStart = "true";
-    const end = DomHelpers.createInput("time", "Fim", session.endTime ?? "");
-    end.dataset.sessionEditorEnd = "true";
     const notes = DomHelpers.createTextarea("Notas", session.notes ?? "");
     notes.dataset.sessionEditorNotes = "true";
     const records = DomHelpers.createElement("div", "leif-session-record-editor-list");
@@ -343,8 +338,6 @@ export class SessionsTab {
         await this.updateSession.execute({
           sessionId: session.id,
           date: date.value,
-          startTime: start.value || null,
-          endTime: end.value || null,
           notes: notes.value || null,
           records: this.readRecordEditors(records)
         });
@@ -368,8 +361,6 @@ export class SessionsTab {
     }
     form.append(
       DomHelpers.createStackedLabel("Data", date),
-      DomHelpers.createStackedLabel("Início", start),
-      DomHelpers.createStackedLabel("Fim", end),
       DomHelpers.createStackedLabel("Notas", notes)
     );
 
@@ -441,10 +432,7 @@ export class SessionsTab {
       record?.quantity !== undefined ? String(record.quantity) : ""
     );
     quantity.dataset.recordEditorQuantity = "true";
-    const unit = DomHelpers.createSelect(
-      Object.values(GoalUnit).map((value) => [value, value]),
-      record?.unit ?? GoalUnit.PAGINAS
-    );
+    const unit = DomHelpers.createSelect(goalUnitOptions(), record?.unit ?? GoalUnit.PAGINAS);
     unit.dataset.recordEditorUnit = "true";
     const correct = DomHelpers.createInput(
       "number",
@@ -567,9 +555,8 @@ export class SessionsTab {
     records.appendChild(this.renderRecordEditor(data, undefined, this.recommendedRegistration));
     this.refreshRecordEditorIndexes(records);
 
-    form.append(
-      DomHelpers.createStackedLabel("Data", date),
-      records,
+    const actions = DomHelpers.createElement("div", "leif-form-actions");
+    actions.append(
       DomHelpers.createButton("Adicionar registro", {
         dataset: { sessionCreateAddRecord: "true" },
         onClick: () => {
@@ -578,6 +565,7 @@ export class SessionsTab {
         }
       }),
       DomHelpers.createButton("Registrar", {
+        className: "mod-cta",
         dataset: { sessionCreateSave: "true" },
         onClick: async () => {
           const result = await this.registerSession.execute({
@@ -598,6 +586,7 @@ export class SessionsTab {
         }
       })
     );
+    form.append(DomHelpers.createStackedLabel("Data", date), records, actions);
     return form;
   }
 
@@ -652,18 +641,15 @@ export class SessionsTab {
     return `${day}/${month}/${year}`;
   }
 
-  private formatSessionTime(session: StudySession): string {
-    if (session.startTime && session.endTime) return `${session.startTime}–${session.endTime}`;
-    if (session.startTime) return session.startTime;
-    if (session.endTime) return `até ${session.endTime}`;
-    return "Sem horário";
-  }
-
   private formatRecordResult(record: StudyRecord): string {
     const quantity =
-      record.quantity !== undefined ? `${record.quantity} ${record.unit}` : "sem quantidade";
+      record.quantity !== undefined && record.unit
+        ? formatGoalQuantity(record.quantity, record.unit)
+        : "Sem quantidade";
     if (record.correctAnswers !== undefined && record.quantity !== undefined) {
-      return `${record.correctAnswers}/${record.quantity} acertos`;
+      const percentage =
+        record.quantity === 0 ? 0 : Math.round((record.correctAnswers / record.quantity) * 100);
+      return `${percentage}% (${record.correctAnswers}/${record.quantity})`;
     }
     return record.completed ? `${quantity} · concluído` : quantity;
   }

@@ -11,6 +11,7 @@ import { GoalUnit, isGoalUnit } from "@/domain/types/GoalUnit";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
+import { formatGoalQuantity, goalUnitOptions } from "@/ui/view/shared/StudyLabels";
 import { SubjectPicker } from "@/ui/view/shared/SubjectPicker";
 
 /**
@@ -124,7 +125,7 @@ export class ItemsTab {
       DomHelpers.createNameCell(null, title),
       DomHelpers.createNumericCell(resource.format ?? "outro"),
       DomHelpers.createNumericCell(
-        resource.goal ? `${resource.goal.amount} ${resource.goal.unit}` : "Sem meta"
+        resource.goal ? formatGoalQuantity(resource.goal.amount, resource.goal.unit) : "Sem meta"
       ),
       DomHelpers.createCell(null, this.renderAccesses(resource)),
       DomHelpers.createActionsCell(actions)
@@ -147,7 +148,7 @@ export class ItemsTab {
     );
     amount.dataset.resourceEditorAmount = "true";
     const unit = DomHelpers.createSelect(
-      Object.values(GoalUnit).map((value) => [value, value]),
+      goalUnitOptions(),
       resource.goal?.unit ?? GoalUnit.PAGINAS
     );
     unit.dataset.resourceEditorUnit = "true";
@@ -356,10 +357,7 @@ export class ItemsTab {
     format.dataset.resourceCreateFormat = "true";
     const amount = DomHelpers.createInput("number", "Meta");
     amount.dataset.resourceCreateAmount = "true";
-    const unit = DomHelpers.createSelect(
-      Object.values(GoalUnit).map((value) => [value, value]),
-      GoalUnit.PAGINAS
-    );
+    const unit = DomHelpers.createSelect(goalUnitOptions(), GoalUnit.PAGINAS);
     unit.dataset.resourceCreateUnit = "true";
     const fields = form.querySelector("form") ?? form;
     fields.append(

@@ -692,6 +692,26 @@ form.leif-card,
   flex-wrap: wrap;
 }
 
+.leif-session-record-editor-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-2);
+}
+
+.leif-session-record-editor {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: var(--size-4-2) var(--size-4-3);
+  min-width: 0;
+  padding-block: var(--size-4-3);
+  border-block: 1px solid var(--leif-border);
+}
+
+.leif-session-record-editor > .leif-inline-actions {
+  grid-column: 1 / -1;
+  justify-content: flex-end;
+}
+
 /* Tables and dense lists */
 
 .leif-table-wrapper {
@@ -859,7 +879,7 @@ form.leif-card,
 }
 
 .leif-session-table {
-  min-width: 1040px;
+  min-width: 900px;
 }
 
 .leif-session-table td {
@@ -1026,11 +1046,16 @@ form.leif-card,
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.leif-view.is-narrow .leif-session-record-editor {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
 .leif-view.is-compact {
   padding: var(--size-4-3);
 }
 
 .leif-view.is-compact .leif-session-filters,
+.leif-view.is-compact .leif-session-record-editor,
 .leif-view.is-compact .leif-resource-material-editor,
 .leif-view.is-compact .leif-resource-material-form,
 .leif-view.is-compact .leif-topic-question-editor,
