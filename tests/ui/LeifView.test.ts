@@ -346,6 +346,34 @@ describe("LeifView", () => {
     });
   });
 
+  it("lets the learner choose any active subject as the visual recommendation", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiCycleData(dataStore);
+
+    const { view } = await openLeifView(dataStore);
+    await (view as unknown as { openTab: (tabId: "sessions") => Promise<void> }).openTab(
+      "sessions"
+    );
+    const subject = view.contentEl.querySelector(
+      "[data-record-cycle-subject]"
+    ) as HTMLSelectElement;
+
+    subject.value = "subject-2";
+    subject.dispatchEvent(new Event("change", { bubbles: true }));
+
+    await vi.waitFor(async () => {
+      const data = await dataStore.load();
+      expect(data.cycleStates[0]).toMatchObject({
+        currentSubjectId: "subject-2",
+        currentResourceId: "resource-2"
+      });
+      expect(data.studyRecords).toEqual([]);
+      expect(
+        view.contentEl.querySelector(".leif-cycle-recommendation-summary")?.textContent
+      ).toContain("Direito Constitucional");
+    });
+  });
+
   it("renders the subject summary as a compact table", async () => {
     const dataStore = new InMemoryPluginDataStore();
     await seedUiRecordHistory(dataStore);
