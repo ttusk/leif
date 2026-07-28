@@ -116,6 +116,28 @@ describe("DataMigrationService", () => {
     });
   });
 
+  it("keeps a legacy resource format but omits a zero-valued goal", () => {
+    const migrated = service.migrate({
+      ...createDefaultLeifPluginData(),
+      schemaVersion: 1,
+      studyItems: [
+        {
+          id: "item-without-known-length",
+          subjectId: "subject-1",
+          title: "PDF sem total informado",
+          order: 1,
+          totalPages: 0
+        }
+      ] as never
+    } as never);
+
+    expect(migrated.resources[0]).toMatchObject({
+      id: "item-without-known-length",
+      format: "pdf",
+      goal: undefined
+    });
+  });
+
   it("projects old flat study sessions into one-record session aggregates", () => {
     const migrated = service.migrate({
       ...createDefaultLeifPluginData(),

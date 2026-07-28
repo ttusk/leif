@@ -289,4 +289,24 @@ Edital publicado.
       }
     ]);
   });
+
+  it("keeps a schema-1 item format but omits a zero-valued goal", () => {
+    const projected = Schema1MarkdownProjector.project([
+      {
+        path: "Leif/concursos/trt/itens/pdf-sem-total.md",
+        content: doc(
+          "item",
+          "resource-1",
+          "PDF sem total informado",
+          "subject-id: subject-1\ntotal-pages: 0\n"
+        )
+      }
+    ]);
+
+    expect(projected.resources[0]).toMatchObject({
+      id: "resource-1",
+      format: "pdf",
+      goal: undefined
+    });
+  });
 });

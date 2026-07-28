@@ -143,9 +143,9 @@ function decodeResource(
   const totalPages = parseNumber(optional(document, "total-pages"));
   const questionCount = parseNumber(optional(document, "question-count"));
   const goal =
-    totalPages !== undefined
+    totalPages !== undefined && totalPages > 0
       ? new ResourceGoal(totalPages, "paginas")
-      : questionCount !== undefined
+      : questionCount !== undefined && questionCount > 0
         ? new ResourceGoal(questionCount, "questoes")
         : undefined;
   const format =

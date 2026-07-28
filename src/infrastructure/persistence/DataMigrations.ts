@@ -379,10 +379,10 @@ function muralFromLegacy(wall: LegacyContest["wall"]): Mural {
 }
 
 function legacyItemGoal(item: LegacyStudyItem): ResourceGoal | undefined {
-  if (item.totalPages !== undefined) {
+  if (item.totalPages !== undefined && item.totalPages > 0) {
     return new ResourceGoal(item.totalPages, GoalUnit.PAGINAS);
   }
-  if (item.questionCount !== undefined) {
+  if (item.questionCount !== undefined && item.questionCount > 0) {
     return new ResourceGoal(item.questionCount, GoalUnit.QUESTOES);
   }
   return undefined;
