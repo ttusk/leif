@@ -8,6 +8,8 @@ import { CycleState } from "@/domain/entities/CycleState";
 import { Resource } from "@/domain/entities/Resource";
 import { Subject } from "@/domain/entities/Subject";
 import { createDefaultLeifPluginData } from "@/domain/types/LeifPluginData";
+import { RegisterStudySessionUseCase } from "@/application/use-cases/RegisterStudySessionUseCase";
+import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import {
   App,
   getOpenModals,
@@ -343,6 +345,130 @@ describe("LeifPlugin", () => {
     }
   });
 
+  it("settles after a real record save emits Obsidian-style Vault events", async () => {
+    vi.useFakeTimers();
+    try {
+      const app = new App();
+      await seedSchema2WorkspaceWithoutMural(app);
+      const operational = createDefaultLeifPluginData();
+      operational.activeContestId = "contest-1";
+      const plugin = new LeifPlugin(app as never, { version: "2.1.1" } as never);
+      await plugin.saveData(operational);
+      await plugin.initialize();
+      emitAdapterVaultEvents(app);
+      const dataStore = markdownDataStore(plugin) as PluginDataStore;
+      const save = vi.spyOn(dataStore, "save");
+
+      await new RegisterStudySessionUseCase(dataStore).execute({
+        id: "session-regression",
+        contestId: "contest-1",
+        date: "2026-07-28",
+        records: [{ id: "record-regression", subjectId: "subject-1", completed: true }]
+      });
+      await vi.advanceTimersByTimeAsync(0);
+
+      for (let window = 0; window < 6; window += 1) {
+        await vi.advanceTimersByTimeAsync(400);
+        expect(save).toHaveBeenCalledTimes(1);
+      }
+
+      const data = await dataStore.load();
+      expect(data.studySessions).toHaveLength(1);
+      expect(data.studySessions[0].records).toHaveLength(1);
+      expect(data.studySessions[0].records[0].id).toBe("record-regression");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("coalesces a burst of external Vault events into exactly one sync", async () => {
+    vi.useFakeTimers();
+    try {
+      const app = new App();
+      await seedSchema2WorkspaceWithoutMural(app);
+      const plugin = new LeifPlugin(app as never, { version: "2.1.1" } as never);
+      await plugin.initialize();
+      const save = vi.spyOn(markdownDataStore(plugin), "save");
+
+      app.vault.trigger("modify", new TFile("Leif/concursos/trt/concurso.md"));
+      app.vault.trigger("modify", new TFile("Leif/concursos/trt/materias/portugues/materia.md"));
+      app.vault.trigger("create", new TFile("Leif/concursos/trt/novo.md"));
+      await vi.advanceTimersByTimeAsync(399);
+      expect(save).not.toHaveBeenCalled();
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(save).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(save).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("suppresses every duplicate event for a self-written path only during its TTL", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-27T12:00:00.000Z"));
+    try {
+      const app = new App();
+      await seedSchema2WorkspaceWithoutMural(app);
+      const plugin = new LeifPlugin(app as never, { version: "2.1.1" } as never);
+      await plugin.initialize();
+      await app.vault.adapter.remove("Leif/concursos/trt/mural.md");
+      const save = vi.spyOn(markdownDataStore(plugin), "save");
+
+      app.vault.trigger("modify", new TFile("Leif/concursos/trt/concurso.md"));
+      await vi.advanceTimersByTimeAsync(400);
+      expect(save).toHaveBeenCalledTimes(1);
+
+      const mural = new TFile("Leif/concursos/trt/mural.md");
+      app.vault.trigger("create", mural);
+      app.vault.trigger("modify", mural);
+      app.vault.trigger("rename", mural, "Leif/.staging/tx/mural.md");
+      app.vault.trigger("delete", mural);
+      await vi.advanceTimersByTimeAsync(400);
+      expect(save).toHaveBeenCalledTimes(1);
+
+      await vi.advanceTimersByTimeAsync(401);
+      app.vault.trigger("modify", mural);
+      await vi.advanceTimersByTimeAsync(400);
+      expect(save).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("releases the sync guard after a failed synchronization", async () => {
+    vi.useFakeTimers();
+    try {
+      const app = new App();
+      await seedSchema2WorkspaceWithoutMural(app);
+      const plugin = new LeifPlugin(app as never, { version: "2.1.1" } as never);
+      await plugin.initialize();
+      const dataStore = markdownDataStore(plugin);
+      const originalSave = dataStore.save.bind(dataStore);
+      const save = vi
+        .spyOn(dataStore, "save")
+        .mockRejectedValueOnce(new Error("simulated write failure"))
+        .mockImplementation(originalSave);
+
+      app.vault.trigger("modify", new TFile("Leif/concursos/trt/concurso.md"));
+      await vi.advanceTimersByTimeAsync(400);
+      expect(save).toHaveBeenCalledTimes(1);
+      await vi.waitFor(() => {
+        expect(
+          (plugin as unknown as { markdownSyncInProgress: boolean }).markdownSyncInProgress
+        ).toBe(false);
+      });
+
+      app.vault.trigger("modify", new TFile("Leif/concursos/trt/novo-apos-falha.md"));
+      await vi.advanceTimersByTimeAsync(400);
+      expect(save).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("opens a backup picker when multiple compatible backups are available", async () => {
     resetOpenModals();
     resetRecordedNotices();
@@ -495,6 +621,41 @@ describe("LeifPlugin", () => {
     });
   });
 });
+
+function markdownDataStore(plugin: LeifPlugin): { save: (data: unknown) => Promise<void> } {
+  return (
+    plugin as unknown as {
+      dataStore: { save: (data: unknown) => Promise<void> };
+    }
+  ).dataStore;
+}
+
+function emitAdapterVaultEvents(app: App): void {
+  const adapter = app.vault.adapter;
+  const write = adapter.write.bind(adapter);
+  const remove = adapter.remove.bind(adapter);
+  const rename = adapter.rename.bind(adapter);
+
+  adapter.write = async (path, content) => {
+    const existed = await adapter.exists(path);
+    await write(path, content);
+    window.setTimeout(() => {
+      app.vault.trigger(existed ? "modify" : "create", new TFile(path));
+    }, 0);
+  };
+  adapter.remove = async (path) => {
+    await remove(path);
+    window.setTimeout(() => {
+      app.vault.trigger("delete", new TFile(path));
+    }, 0);
+  };
+  adapter.rename = async (source, destination) => {
+    await rename(source, destination);
+    window.setTimeout(() => {
+      app.vault.trigger("rename", new TFile(destination), source);
+    }, 0);
+  };
+}
 
 function schema1Doc(type: string, id: string, title: string, extra = ""): string {
   return `---
