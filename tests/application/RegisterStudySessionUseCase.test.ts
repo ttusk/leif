@@ -6,7 +6,6 @@ import { CreateContestUseCase } from "@/application/use-cases/CreateContestUseCa
 import { CreateResourceUseCase } from "@/application/use-cases/CreateResourceUseCase";
 import { CreateSubjectUseCase } from "@/application/use-cases/CreateSubjectUseCase";
 import { RegisterStudySessionUseCase } from "@/application/use-cases/RegisterStudySessionUseCase";
-import { ResourceGoal } from "@/domain/entities/ResourceGoal";
 import { GoalUnit } from "@/domain/types/GoalUnit";
 import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
 import { NotFoundError, ValidationError } from "@/domain/errors/DomainErrors";
@@ -113,6 +112,33 @@ describe("RegisterStudySessionUseCase", () => {
     expect(persisted.studySessions[0].startTime).toBe("19:00");
   });
 
+  it.each([
+    [
+      "one",
+      [{ subjectId: "subject-a", resourceId: "resource-a1", completed: true }]
+    ],
+    [
+      "many",
+      [
+        { subjectId: "subject-a", resourceId: "resource-a1", completed: true },
+        { subjectId: "subject-b", resourceId: "resource-b1", completed: true }
+      ]
+    ]
+  ])(
+    "does not change cycle state when saving %s independent study records",
+    async (_label, records) => {
+      const before = structuredClone((await store.load()).cycleStates);
+
+      await useCase.execute({
+        contestId: "contest-1",
+        date: "2026-07-27",
+        records
+      });
+
+      expect((await store.load()).cycleStates).toEqual(before);
+    }
+  );
+
   it("rejects a session without records so empty sessions never persist", async () => {
     await expect(
       useCase.execute({ contestId: "contest-1", date: "2026-07-27", records: [] })
@@ -149,79 +175,6 @@ describe("RegisterStudySessionUseCase", () => {
     expect((await store.load()).studySessions).toHaveLength(0);
   });
 
-  it("advances through consecutive completed records in one mutation", async () => {
-    const result = await useCase.execute({
-      contestId: "contest-1",
-      date: "2026-07-27",
-      records: [
-        { subjectId: "subject-a", resourceId: "resource-a1", completed: true },
-        { subjectId: "subject-b", resourceId: "resource-b1", completed: true }
-      ]
-    });
-
-    expect(result.cycleAdvanced).toBe(true);
-    expect(result.previousPosition).toEqual({ subjectId: "subject-a", resourceId: "resource-a1" });
-    expect(result.newPosition).toEqual({ subjectId: "subject-a", resourceId: "resource-a1" });
-
-    const state = (await store.load()).cycleStates.find((entry) => entry.contestId === "contest-1");
-    // Two consecutive matches wrap the two-subject cycle back to subject-a.
-    expect(state?.currentSubjectId).toBe("subject-a");
-    expect(adapter.saveCount).toBe(1);
-  });
-
-  it("saves valid records but stops advancing at the first mismatch", async () => {
-    const result = await useCase.execute({
-      contestId: "contest-1",
-      date: "2026-07-27",
-      records: [
-        { subjectId: "subject-a", resourceId: "resource-a1", completed: true },
-        { subjectId: "subject-a", completed: true },
-        { subjectId: "subject-b", resourceId: "resource-b1", completed: true }
-      ]
-    });
-
-    expect(result.cycleAdvanced).toBe(true);
-    expect(result.newPosition).toEqual({ subjectId: "subject-b", resourceId: "resource-b1" });
-
-    const state = (await store.load()).cycleStates.find((entry) => entry.contestId === "contest-1");
-    expect(state?.currentSubjectId).toBe("subject-b");
-    expect((await store.load()).studySessions[0].records).toHaveLength(3);
-  });
-
-  it("does not advance when the record does not match the recommendation", async () => {
-    const result = await useCase.execute({
-      contestId: "contest-1",
-      date: "2026-07-27",
-      records: [{ subjectId: "subject-b", resourceId: "resource-b1", completed: true }]
-    });
-
-    expect(result.cycleAdvanced).toBe(false);
-    expect(result.newPosition).toEqual(result.previousPosition);
-
-    const state = (await store.load()).cycleStates.find((entry) => entry.contestId === "contest-1");
-    expect(state?.currentSubjectId).toBe("subject-a");
-  });
-
-  it("does not advance the cycle of a contest that is not active", async () => {
-    await new CreateContestUseCase(store, factory).execute({ id: "contest-2", name: "SEFAZ" });
-    await new CreateSubjectUseCase(store, factory).execute({
-      id: "subject-c",
-      contestId: "contest-2",
-      name: "Raciocínio",
-      plannedStudyMinutes: 30
-    });
-
-    const result = await useCase.execute({
-      contestId: "contest-2",
-      date: "2026-07-27",
-      records: [{ subjectId: "subject-c", completed: true }]
-    });
-
-    expect(result.cycleAdvanced).toBe(false);
-    const state = (await store.load()).cycleStates.find((entry) => entry.contestId === "contest-2");
-    expect(state?.currentSubjectId).toBeNull();
-  });
-
   it("rejects duplicate session ids and unknown contests", async () => {
     await useCase.execute({
       id: "session-1",
@@ -248,36 +201,4 @@ describe("RegisterStudySessionUseCase", () => {
     ).rejects.toThrow(NotFoundError);
   });
 
-  it("recommends the next incomplete resource after a goal is met mid-session", async () => {
-    const factoryStore = new EntityRepositoryFactory(store);
-    await new CreateResourceUseCase(store, factoryStore).execute({
-      id: "resource-a2",
-      subjectId: "subject-a",
-      title: "Aula 02",
-      goal: new ResourceGoal(30, GoalUnit.PAGINAS)
-    });
-    // Reorder so resource-a2 comes first and carries a goal met by this session.
-    await store.mutate((draft) => {
-      const subject = draft.subjects.find((entry) => entry.id === "subject-a");
-      if (!subject) throw new Error("missing subject");
-      subject.resourceIds.splice(0, subject.resourceIds.length, "resource-a2", "resource-a1");
-    });
-
-    const result = await useCase.execute({
-      contestId: "contest-1",
-      date: "2026-07-27",
-      records: [
-        {
-          subjectId: "subject-a",
-          resourceId: "resource-a2",
-          quantity: 30,
-          unit: GoalUnit.PAGINAS,
-          completed: true
-        }
-      ]
-    });
-
-    expect(result.cycleAdvanced).toBe(true);
-    expect(result.newPosition).toEqual({ subjectId: "subject-b", resourceId: "resource-b1" });
-  });
 });
