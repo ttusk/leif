@@ -405,7 +405,7 @@ function requiredProperty(document: IndexedSchema2Document, property: string): s
 }
 
 function requiredWikiLinkProperty(document: IndexedSchema2Document, property: string): string {
-  const value = requiredProperty(document, property);
+  const value = unwrapObsidianQuotedWikiLink(requiredProperty(document, property));
   const match = value.match(/^\[\[([^\]]+)\]\]$/);
   if (!match) {
     throw new Schema2DomainCodecError(
@@ -414,6 +414,16 @@ function requiredWikiLinkProperty(document: IndexedSchema2Document, property: st
     );
   }
   return match[1].split("|")[0].split("#")[0].trim();
+}
+
+function unwrapObsidianQuotedWikiLink(value: string): string {
+  if (!value.startsWith('"') || !value.endsWith('"')) return value;
+  try {
+    const parsed = JSON.parse(value);
+    return typeof parsed === "string" ? parsed : value;
+  } catch {
+    return value;
+  }
 }
 
 function requiredParent(document: IndexedSchema2Document, property: string): string {

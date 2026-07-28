@@ -180,6 +180,20 @@ describe("Schema2DomainCodec", () => {
     ]);
   });
 
+  it("accepts wikilink properties re-quoted by Obsidian during a staged move", () => {
+    const rewritten = workspace.map((file) => ({
+      ...file,
+      content: file.content.replace(/^((?:materia|recurso): )"(\[\[.+\]\])"$/gm, '$1"\\"$2\\""')
+    }));
+
+    const decoded = Schema2DomainCodec.decode(Schema2WorkspaceIndex.build(rewritten));
+
+    expect(decoded.studySessions[0].records[0]).toMatchObject({
+      subjectId: "subject-1",
+      resourceId: "resource-1"
+    });
+  });
+
   it("rejects linked topics that do not belong to the resource subject", () => {
     const index = Schema2WorkspaceIndex.build([
       workspace[0],
