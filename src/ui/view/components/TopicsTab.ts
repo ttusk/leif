@@ -96,6 +96,8 @@ export class TopicsTab {
             label: "Excluir",
             icon: "trash-2",
             onClick: async () => {
+              const confirmed = window.confirm(`Excluir o assunto "${topic.name}"?`);
+              if (!confirmed) return;
               await this.deleteTopic.execute({ topicId: topic.id });
               await this.onUpdate();
             }

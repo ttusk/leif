@@ -258,6 +258,11 @@ export class SessionsTab {
             label: "Excluir sessão",
             icon: "trash-2",
             onClick: async () => {
+              const date = this.formatSessionDate(session.date);
+              const confirmed = window.confirm(
+                `Excluir a sessão de ${date} e todos os seus registros?`
+              );
+              if (!confirmed) return;
               await this.deleteSession.execute({ sessionId: session.id });
               await this.onUpdate();
             }

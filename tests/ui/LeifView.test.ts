@@ -228,6 +228,74 @@ describe("LeifView", () => {
     expect(leaf.view?.contentEl.textContent).toContain("TRT");
   });
 
+  it("opens the concurso switcher through an Obsidian native menu", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiData(dataStore);
+    await new CreateContestUseCase(dataStore, new EntityRepositoryFactory(dataStore)).execute({
+      id: "contest-2",
+      name: "INSS"
+    });
+
+    const { view } = await openLeifView(dataStore);
+    view.contentEl
+      .querySelector(".leif-contest-selector")
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    const [menu] = getShownMenus();
+    expect(menu?.useNativeMenu).toBe(true);
+    expect(menu?.items.map((item) => item.title)).toEqual(["TRT", "INSS", "Gerenciar concursos"]);
+    expect(menu?.items[0]?.disabled).toBe(true);
+
+    await (menu?.items[1]?.callback?.(new MouseEvent("click")) as Promise<void>);
+    await vi.waitFor(async () => {
+      expect((await dataStore.load()).activeContestId).toBe("contest-2");
+    });
+    expect(view.contentEl.querySelector(".leif-contest-selector")?.textContent).toContain("INSS");
+    expect(view.contentEl.querySelector(".leif-contest-menu")).toBeNull();
+  });
+
+  it("renders concurso management as a readable table with native row actions", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiData(dataStore);
+
+    const { view } = await openLeifView(dataStore);
+    view.contentEl
+      .querySelector(".leif-contest-selector")
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await (getShownMenus()[0]?.items[1]?.callback?.(new MouseEvent("click")) as Promise<void>);
+
+    await vi.waitFor(() => {
+      expect(view.contentEl.textContent).toContain("Seus concursos");
+    });
+    const table = view.contentEl.querySelector(".leif-table");
+    expect(Array.from(table?.querySelectorAll("th") ?? []).map((th) => th.textContent)).toEqual([
+      "Concurso",
+      "Status",
+      "Ações"
+    ]);
+    const row = table?.querySelector("[data-contest-id='contest-1']");
+    expect(row?.querySelector(".leif-table-cell-name")?.textContent).toBe("TRT");
+    expect(row?.querySelector(".leif-table-cell-status")?.textContent).toBe("Ativo");
+    expect(row?.querySelector(".leif-table-actions .leif-menu-trigger")).not.toBeNull();
+    expect(row?.querySelectorAll("button")).toHaveLength(1);
+
+    row
+      ?.querySelector(".leif-menu-trigger")
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    const rowMenu = getShownMenus()[1];
+    expect(rowMenu?.items.map((item) => item.title)).toEqual(["Ativar", "Editar", "Excluir"]);
+    expect(rowMenu?.items[0]?.disabled).toBe(true);
+    await (rowMenu?.items[1]?.callback?.(new MouseEvent("click")) as Promise<void>);
+
+    await vi.waitFor(() => {
+      expect(
+        view.contentEl.querySelector(
+          "[data-contest-id='contest-1'].leif-editing-row [data-contest-editor-name]"
+        )
+      ).not.toBeNull();
+    });
+  });
+
   it("renders the same plain cycle recommendation in Hoje and Registros", async () => {
     const dataStore = new InMemoryPluginDataStore();
     await seedUiCycleData(dataStore);
@@ -303,6 +371,25 @@ describe("LeifView", () => {
       "Adicionar registro",
       "Excluir sessão"
     ]);
+  });
+
+  it("keeps a session when its targeted deletion confirmation is cancelled", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiSessionHistory(dataStore);
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    const { view } = await openLeifView(dataStore);
+    await (view as unknown as { openTab: (tabId: "sessions") => Promise<void> }).openTab(
+      "sessions"
+    );
+    view.contentEl
+      .querySelector("[data-session-id='session-1'] .leif-menu-trigger")
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await (getShownMenus()[0]?.items[2]?.callback?.(new MouseEvent("click")) as Promise<void>);
+
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining("27/07/2026"));
+    expect((await dataStore.load()).studySessions).toHaveLength(2);
+    confirm.mockRestore();
   });
 
   it("edits a grouped session and saves all records together", async () => {
@@ -607,6 +694,25 @@ describe("LeifView", () => {
     ).toBe("PDF 01");
   });
 
+  it("keeps a recurso when its targeted deletion confirmation is cancelled", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiCycleData(dataStore);
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    const { view } = await openLeifView(dataStore);
+    await (view as unknown as { openTab: (tabId: "items") => Promise<void> }).openTab("items");
+    view.contentEl
+      .querySelector("[data-resource-id='resource-1'] .leif-menu-trigger")
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await (getShownMenus()[0]?.items[1]?.callback?.(new MouseEvent("click")) as Promise<void>);
+
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining("PDF 01"));
+    expect(
+      (await dataStore.load()).resources.some((resource) => resource.id === "resource-1")
+    ).toBe(true);
+    confirm.mockRestore();
+  });
+
   it("renders the Assuntos view as a readable table with the sticky actions column", async () => {
     const dataStore = new InMemoryPluginDataStore();
     await seedUiCycleData(dataStore);
@@ -626,6 +732,26 @@ describe("LeifView", () => {
     expect(row.querySelector(".leif-table-cell-name")?.textContent).toBe("Concordância nominal");
     expect(row.querySelector(".leif-table-actions .leif-menu-trigger")).not.toBeNull();
     expect(row.querySelectorAll("button")).toHaveLength(1);
+  });
+
+  it("keeps an assunto when its targeted deletion confirmation is cancelled", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiCycleData(dataStore);
+    await dataStore.mutate((draft) => {
+      draft.topics.push(new Topic("topic-1", "subject-1", "Concordância nominal"));
+    });
+    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
+
+    const { view } = await openLeifView(dataStore);
+    await (view as unknown as { openTab: (tabId: "topics") => Promise<void> }).openTab("topics");
+    view.contentEl
+      .querySelector("[data-topic-id='topic-1'] .leif-menu-trigger")
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await (getShownMenus()[0]?.items[1]?.callback?.(new MouseEvent("click")) as Promise<void>);
+
+    expect(confirm).toHaveBeenCalledWith(expect.stringContaining("Concordância nominal"));
+    expect((await dataStore.load()).topics.some((topic) => topic.id === "topic-1")).toBe(true);
+    confirm.mockRestore();
   });
 
   it("renders the Matérias table with a sticky Actions column and one-line No ciclo", async () => {

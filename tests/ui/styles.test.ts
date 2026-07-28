@@ -98,7 +98,6 @@ describe("Leif Native visual system", () => {
     expect(styles).toMatch(
       /\.leif-wall-editor\s*{[^}]*display:\s*flex;[^}]*flex-direction:\s*column;/s
     );
-    expect(styles).toMatch(/\.leif-wall-link-url\s*{[^}]*overflow-wrap:\s*anywhere;/s);
     expect(styles).not.toContain("grid-template-rows: subgrid");
   });
 
@@ -193,7 +192,8 @@ describe("Leif Native visual system", () => {
   it("keeps readable contest and long reference content from breaking mid-word", () => {
     const styles = readStyles();
 
-    expect(styles).not.toMatch(/\.leif-contest-card-title\s*{[^}]*overflow-wrap:\s*anywhere;/s);
-    expect(styles).toMatch(/\.leif-contest-card-title\s*{[^}]*overflow-wrap:\s*break-word;/s);
+    expect(styles).not.toContain(".leif-contest-menu");
+    expect(styles).not.toContain(".leif-contest-option");
+    expect(styles).not.toContain(".leif-contest-card");
   });
 });

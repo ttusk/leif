@@ -103,6 +103,10 @@ export class ItemsTab {
             label: "Excluir",
             icon: "trash-2",
             onClick: async () => {
+              const confirmed = window.confirm(
+                `Excluir o recurso "${resource.title}" e remover suas referências?`
+              );
+              if (!confirmed) return;
               await this.deleteResource.execute({ resourceId: resource.id });
               await this.onUpdate();
             }

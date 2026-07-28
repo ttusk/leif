@@ -2,9 +2,9 @@ import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import { CreateContestUseCase } from "@/application/use-cases/CreateContestUseCase";
 import { DeleteContestUseCase } from "@/application/use-cases/DeleteContestUseCase";
 import { SetActiveContestUseCase } from "@/application/use-cases/SetActiveContestUseCase";
-import { UpdateContestMuralUseCase } from "@/application/use-cases/UpdateContestMuralUseCase";
 import { UpdateContestUseCase } from "@/application/use-cases/UpdateContestUseCase";
 import { createLeifId } from "@/application/Id";
+import type { Contest } from "@/domain/entities/Contest";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
@@ -13,8 +13,8 @@ export class ContestsTab {
   private readonly createContest: CreateContestUseCase;
   private readonly setActiveContest: SetActiveContestUseCase;
   private readonly updateContest: UpdateContestUseCase;
-  private readonly updateMural: UpdateContestMuralUseCase;
   private readonly deleteContest: DeleteContestUseCase;
+  private editingContestId: string | null = null;
 
   constructor(
     dataStore: PluginDataStore,
@@ -24,7 +24,6 @@ export class ContestsTab {
     this.createContest = new CreateContestUseCase(dataStore, factory);
     this.setActiveContest = new SetActiveContestUseCase(dataStore, factory);
     this.updateContest = new UpdateContestUseCase(dataStore, factory);
-    this.updateMural = new UpdateContestMuralUseCase(dataStore, factory);
     this.deleteContest = new DeleteContestUseCase(dataStore);
   }
 
@@ -33,47 +32,103 @@ export class ContestsTab {
     container.appendChild(this.renderCreateForm());
 
     const list = DomHelpers.createCard("Seus concursos");
+    const { container: table, tbody } = DomHelpers.createCrudTable(["Concurso", "Status", "Ações"]);
     data.contests.forEach((contest) => {
-      const row = DomHelpers.createElement("section", "leif-contest-card");
-      const title = DomHelpers.createStrong(contest.name);
-      const status = DomHelpers.createBadge(
-        contest.id === data.activeContestId ? "Ativo" : "Guardado"
+      tbody.appendChild(
+        this.editingContestId === contest.id
+          ? this.renderEditableRow(contest, contest.id === data.activeContestId)
+          : this.renderDisplayRow(contest, contest.id === data.activeContestId)
       );
-      const nameInput = DomHelpers.createInput("text", "Nome", contest.name);
-      const notesInput = DomHelpers.createTextarea("Notas", contest.mural.notes ?? "");
-      notesInput.rows = 3;
-      const actions = DomHelpers.createElement("div", "leif-inline-actions");
-      actions.append(
-        DomHelpers.createButton("Ativar", {
-          onClick: async () => {
-            await this.setActiveContest.execute({ contestId: contest.id });
-            await this.onUpdate();
-          }
-        }),
-        DomHelpers.createButton("Salvar", {
-          onClick: async () => {
-            await this.updateContest.execute({ contestId: contest.id, name: nameInput.value });
-            await this.updateMural.execute({ contestId: contest.id, notes: notesInput.value });
-            await this.onUpdate();
-          }
-        }),
-        DomHelpers.createButton("Excluir", {
-          onClick: async () => {
-            await this.deleteContest.execute({ contestId: contest.id });
-            await this.onUpdate();
-          }
-        })
-      );
-      row.append(
-        title,
-        status,
-        DomHelpers.createStackedLabel("Nome", nameInput),
-        DomHelpers.createStackedLabel("Mural", notesInput),
-        actions
-      );
-      list.appendChild(row);
     });
+    list.appendChild(table);
     container.appendChild(list);
+  }
+
+  private renderDisplayRow(contest: Contest, isActive: boolean): HTMLTableRowElement {
+    const row = DomHelpers.createElement("tr");
+    row.dataset.contestId = contest.id;
+    const name = DomHelpers.createStrong(contest.name);
+    const status = DomHelpers.createBadge(isActive ? "Ativo" : "Guardado");
+    const actions = DomHelpers.createElement(
+      "div",
+      "leif-inline-actions leif-inline-actions-compact"
+    );
+    actions.appendChild(
+      DomHelpers.createMenuButton(
+        [
+          {
+            label: "Ativar",
+            icon: "check",
+            disabled: isActive,
+            onClick: async () => {
+              await this.setActiveContest.execute({ contestId: contest.id });
+              await this.onUpdate();
+            }
+          },
+          {
+            label: "Editar",
+            icon: "edit",
+            onClick: async () => {
+              this.editingContestId = contest.id;
+              await this.onUpdate();
+            }
+          },
+          {
+            label: "Excluir",
+            icon: "trash-2",
+            onClick: async () => {
+              const confirmed = window.confirm(
+                `Excluir o concurso "${contest.name}" e todo o seu conteúdo de estudo?`
+              );
+              if (!confirmed) return;
+              await this.deleteContest.execute({ contestId: contest.id });
+              await this.onUpdate();
+            }
+          }
+        ],
+        `Ações de ${contest.name}`
+      )
+    );
+    row.append(
+      DomHelpers.createNameCell(null, name),
+      DomHelpers.createStatusCell(status),
+      DomHelpers.createActionsCell(actions)
+    );
+    return row;
+  }
+
+  private renderEditableRow(contest: Contest, isActive: boolean): HTMLTableRowElement {
+    const row = DomHelpers.createElement("tr", "leif-editing-row");
+    row.dataset.contestId = contest.id;
+    const name = DomHelpers.createInput("text", "Nome", contest.name);
+    name.dataset.contestEditorName = "true";
+    const actions = DomHelpers.createElement(
+      "div",
+      "leif-inline-actions leif-inline-actions-compact"
+    );
+    actions.append(
+      DomHelpers.createIconButton("save", "Salvar", {
+        dataset: { contestEditorSave: "true" },
+        onClick: async () => {
+          await this.updateContest.execute({ contestId: contest.id, name: name.value });
+          this.editingContestId = null;
+          await this.onUpdate();
+        }
+      }),
+      DomHelpers.createIconButton("cancel", "Cancelar", {
+        dataset: { contestEditorCancel: "true" },
+        onClick: async () => {
+          this.editingContestId = null;
+          await this.onUpdate();
+        }
+      })
+    );
+    row.append(
+      DomHelpers.createNameCell(null, name),
+      DomHelpers.createStatusCell(DomHelpers.createBadge(isActive ? "Ativo" : "Guardado")),
+      DomHelpers.createActionsCell(actions)
+    );
+    return row;
   }
 
   private renderCreateForm(): HTMLElement {

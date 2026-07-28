@@ -378,22 +378,47 @@ export class DomHelpers {
     return this.createIconButton("more-horizontal", label, {
       className: "clickable-icon leif-menu-trigger",
       onClick: (event) => {
-        const menu = new Menu().setUseNativeMenu(true);
-        actions.forEach((action) => {
-          menu.addItem((item) => {
-            item
-              .setTitle(action.label)
-              .setIcon(action.icon ?? null)
-              .setDisabled(action.disabled ?? false)
-              .onClick((menuEvent) => {
-                if (action.disabled) return;
-                void action.onClick(menuEvent);
-              });
-          });
-        });
-        menu.showAtMouseEvent(event);
+        this.showNativeMenu(actions, event);
       }
     });
+  }
+
+  /** Opens a native menu from a visible text selector such as the active concurso. */
+  static createTextMenuButton(
+    text: string,
+    actions: MenuButtonAction[],
+    className: string,
+    label = text
+  ): HTMLButtonElement {
+    const button = this.createButton(text, {
+      className,
+      onClick: (event) => {
+        this.showNativeMenu(actions, event);
+      }
+    });
+    button.setAttribute("aria-label", label);
+    button.setAttribute("aria-haspopup", "menu");
+    return button;
+  }
+
+  private static showNativeMenu(
+    actions: MenuButtonAction[],
+    event: MouseEvent | KeyboardEvent
+  ): void {
+    const menu = new Menu().setUseNativeMenu(true);
+    actions.forEach((action) => {
+      menu.addItem((item) => {
+        item
+          .setTitle(action.label)
+          .setIcon(action.icon ?? null)
+          .setDisabled(action.disabled ?? false)
+          .onClick((menuEvent) => {
+            if (action.disabled) return;
+            void action.onClick(menuEvent);
+          });
+      });
+    });
+    menu.showAtMouseEvent(event as MouseEvent);
   }
 
   /**

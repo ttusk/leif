@@ -233,46 +233,30 @@ export class LeifView extends ItemView {
     this.headerActions.innerHTML = "";
 
     const switcher = DomHelpers.createElement("div", "leif-contest-switcher");
-    const selector = DomHelpers.createElement("button", "leif-contest-selector");
-    selector.type = "button";
-    selector.textContent = activeContest?.name ?? "Escolha um concurso";
-    selector.setAttribute("aria-haspopup", "menu");
-    selector.setAttribute("aria-expanded", "false");
-
-    const menu = DomHelpers.createElement("div", "leif-contest-menu");
-    menu.setAttribute("role", "menu");
-    menu.setAttribute("aria-label", "Concursos");
-    menu.hidden = true;
-
-    data.contests.forEach((contest) => {
-      const option = DomHelpers.createElement("button", "leif-contest-option");
-      option.type = "button";
-      option.textContent = contest.name;
-      option.setAttribute("role", "menuitemradio");
-      option.setAttribute("aria-checked", String(contest.id === data.activeContestId));
-      option.addEventListener("click", () => {
-        void this.activateContest(contest.id);
-      });
-      menu.appendChild(option);
-    });
-
-    const manage = DomHelpers.createElement("button", "leif-contest-manage");
-    manage.type = "button";
-    manage.id = "leif-contest-management";
-    manage.dataset.tab = "contests";
-    manage.textContent = "Gerenciar concursos";
-    manage.setAttribute("role", "menuitem");
-    manage.addEventListener("click", () => {
-      menu.hidden = true;
-      void this.selectTab("contests");
-    });
-    menu.appendChild(manage);
-
-    selector.addEventListener("click", () => {
-      menu.hidden = !menu.hidden;
-      selector.setAttribute("aria-expanded", String(!menu.hidden));
-    });
-    switcher.append(selector, menu);
+    const selector = DomHelpers.createTextMenuButton(
+      activeContest?.name ?? "Escolha um concurso",
+      [
+        ...data.contests.map((contest) => ({
+          label: contest.name,
+          icon: contest.id === data.activeContestId ? "check" : undefined,
+          disabled: contest.id === data.activeContestId,
+          onClick: async () => {
+            await this.activateContest(contest.id);
+          }
+        })),
+        {
+          label: "Gerenciar concursos",
+          icon: "settings",
+          onClick: async () => {
+            await this.selectTab("contests");
+          }
+        }
+      ],
+      "leif-contest-selector",
+      "Escolher concurso"
+    );
+    selector.id = "leif-contest-selector";
+    switcher.appendChild(selector);
     this.headerActions.appendChild(switcher);
   }
 
@@ -398,7 +382,7 @@ export class LeifView extends ItemView {
       this.planTabBar.hidden = primaryTabId !== "plan";
     }
     const labelledBy =
-      this.activeTab === "contests" ? "leif-contest-management" : `leif-tab-${this.activeTab}`;
+      this.activeTab === "contests" ? "leif-contest-selector" : `leif-tab-${this.activeTab}`;
     this.activeTabContainer?.setAttribute("aria-labelledby", labelledBy);
   }
 
