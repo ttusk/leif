@@ -27,16 +27,12 @@ _Avoid_: Resource reference, material
 **Meta do recurso**:
 An optional measurable completion target for a Recurso, expressed in pages, questions, lessons, or minutes. A Recurso without a Meta do recurso is completed explicitly by the learner.
 
-**Sessão de estudo**:
-A study sitting that groups one or more Registros de estudo performed together.
-_Avoid_: Record, event
-
 **Registro de estudo**:
-One measured study entry within a Sessão de estudo for exactly one Matéria, optionally narrowed to one Recurso and one Assunto.
-_Avoid_: Session, event
+An independent, dated historical fact belonging to one Concurso and exactly one Matéria, optionally narrowed to one Recurso and one Assunto.
+_Avoid_: Session, event, sitting
 
 **Estado do ciclo**:
-The learner's current Matéria and Recurso position in a Concurso study cycle.
+The learner-controlled Matéria and Recurso recommendation position in a Concurso study cycle. Recording study never changes it implicitly.
 _Avoid_: Contest state
 
 **Mural**:
