@@ -123,7 +123,11 @@ export class Schema2PluginDataStore implements PluginDataStorePort {
       return operational;
     }
 
-    const decoded = Schema2DomainCodec.decode(Schema2WorkspaceIndex.build(markdownFiles));
+    const index = Schema2WorkspaceIndex.build(markdownFiles);
+    const decoded = Schema2DomainCodec.decode(index);
+    if (index.sessions.length > 0) {
+      return this.migrateSchema2SessionsToMonthlyRecords(operational, markdownFiles, decoded);
+    }
     return mergeStudyData(operational, decoded);
   }
 
@@ -321,6 +325,91 @@ export class Schema2PluginDataStore implements PluginDataStorePort {
           path: backupPath,
           guidance:
             "Corrija os arquivos schema 1 ou recupere o backup antes de tentar migrar novamente."
+        }
+      ];
+      this.lastReadOnlyContestIds = data.contests.map((contest) => contest.id);
+      return failedOperational;
+    }
+  }
+
+  private async migrateSchema2SessionsToMonthlyRecords(
+    operational: LeifPluginData,
+    files: readonly Schema2MarkdownFile[],
+    decoded: ReturnType<typeof Schema2DomainCodec.decode>
+  ): Promise<LeifPluginData> {
+    const transactionId = this.transactionIdFactory();
+    const receiptId = `migration-${transactionId}`;
+    const backupPath = `Leif/.backups/${receiptId}/manifest.json`;
+    await this.writeMarkdownBackupManifest(backupPath, files);
+
+    const data = mergeStudyData(operational, decoded);
+    const startedAt = new Date().toISOString();
+    const startedReceipt = buildMigrationReceipt(
+      data,
+      receiptId,
+      backupPath,
+      "started",
+      [],
+      startedAt,
+      "markdown-schema-2-sessions"
+    );
+    await this.storageAdapter.save(withMigrationReceipt(data, startedReceipt));
+
+    try {
+      const plan = Schema2WorkspacePlanner.plan(data, files);
+      if (plan.diagnostics.length > 0) {
+        throw new Error("Session Markdown could not be planned as monthly record documents.");
+      }
+      await this.writer.apply(plan.changes, { transactionId });
+
+      const migratedFiles = await this.readMarkdownFiles();
+      const migratedDiagnostics = Schema2WorkspaceValidator.validate(migratedFiles);
+      if (migratedDiagnostics.length > 0) {
+        throw new Error("Monthly record documents failed validation after migration.");
+      }
+      const migrated = Schema2DomainCodec.decode(Schema2WorkspaceIndex.build(migratedFiles));
+      assertMigratedStudyDataMatches(data, migrated);
+
+      const completedAt = new Date().toISOString();
+      const receipt = buildMigrationReceipt(
+        data,
+        receiptId,
+        backupPath,
+        "migrated",
+        [],
+        completedAt,
+        "markdown-schema-2-sessions"
+      );
+      const migratedOperational = withMigrationReceipt(data, receipt);
+      await this.storageAdapter.save(toOperationalState(migratedOperational));
+      this.lastDiagnostics = [];
+      this.lastReadOnlyContestIds = [];
+      return mergeStudyData(migratedOperational, migrated);
+    } catch (error) {
+      const diagnostic = {
+        code: "SCHEMA2_SESSION_FLATTENING_FAILED",
+        message:
+          error instanceof Error ? error.message : "Session Markdown flattening failed."
+      };
+      const completedAt = new Date().toISOString();
+      const receipt = buildMigrationReceipt(
+        data,
+        receiptId,
+        backupPath,
+        "failed",
+        [diagnostic],
+        completedAt,
+        "markdown-schema-2-sessions"
+      );
+      const failedOperational = withMigrationReceipt(data, receipt);
+      await this.storageAdapter.save(toOperationalState(failedOperational));
+      this.lastDiagnostics = [
+        {
+          ...diagnostic,
+          severity: "erro",
+          path: backupPath,
+          guidance:
+            "Recupere o backup da migração antes de editar os registros deste concurso."
         }
       ];
       this.lastReadOnlyContestIds = data.contests.map((contest) => contest.id);

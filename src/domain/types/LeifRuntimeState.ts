@@ -1,12 +1,15 @@
 /**
  * Operational state owned by plugin JSON. Study content (concursos, matérias,
- * assuntos, recursos, sessões, registros, mural and cycle position) lives in
+ * assuntos, recursos, registros, mural and cycle position) lives in
  * Markdown and never appears here.
  */
 
-export const STORAGE_SCHEMA_VERSION = 3;
+export const STORAGE_SCHEMA_VERSION = 4;
 
-export type MigrationSource = "legacy-json" | "markdown-schema-1";
+export type MigrationSource =
+  | "legacy-json"
+  | "markdown-schema-1"
+  | "markdown-schema-2-sessions";
 export type MigrationStatus = "started" | "migrated" | "failed";
 
 export interface MigrationDiagnostic {
