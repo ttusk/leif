@@ -5,7 +5,6 @@ import { Resource } from "@/domain/entities/Resource";
 import { ResourceAccess } from "@/domain/entities/ResourceAccess";
 import { ResourceGoal } from "@/domain/entities/ResourceGoal";
 import { StudyRecord } from "@/domain/entities/StudyRecord";
-import { StudySession } from "@/domain/entities/StudySession";
 import { Subject } from "@/domain/entities/Subject";
 import { Topic } from "@/domain/entities/Topic";
 import { GoalUnit } from "@/domain/types/GoalUnit";
@@ -26,12 +25,10 @@ interface Schema1Document {
 
 type ProjectedSchema1StudyData = Pick<
   LeifPluginData,
-  "contests" | "cycleStates" | "subjects" | "topics" | "resources" | "studySessions"
+  "contests" | "cycleStates" | "subjects" | "topics" | "resources" | "studyRecords"
 >;
 
-export interface Schema1ProjectOptions {
-  sessionIdForRecord?: (recordId: string) => string;
-}
+export interface Schema1ProjectOptions {}
 
 const REGION_MARKER = (name: string) =>
   new RegExp(`<!-- leif:${name}:start -->([\\s\\S]*?)<!-- leif:${name}:end -->`, "m");
@@ -62,10 +59,10 @@ export class Schema1MarkdownProjector {
       ...topicResources
     ]);
     const resources = [...itemResources, ...topicResources, ...notebookResources];
-    const studySessions = documents
+    const studyRecords = documents
       .filter((document) => document.type === "registro")
-      .map((document) => decodeStudySession(document, options))
-      .filter((session): session is StudySession => session !== null);
+      .map((document) => decodeStudyRecord(document, options))
+      .filter((record): record is StudyRecord => record !== null);
 
     return {
       contests,
@@ -73,7 +70,7 @@ export class Schema1MarkdownProjector {
       subjects,
       topics,
       resources,
-      studySessions
+      studyRecords
     };
   }
 }
@@ -286,18 +283,20 @@ function decodeAccessDocument(document: Schema1Document): ResourceAccess {
   );
 }
 
-function decodeStudySession(
+function decodeStudyRecord(
   document: Schema1Document,
-  options: Schema1ProjectOptions
-): StudySession | null {
+  _options: Schema1ProjectOptions
+): StudyRecord | null {
   const subjectId = optional(document, "subject-id");
   if (!subjectId) {
     return null;
   }
   const type = optional(document, "type");
   const quantity = parseNumber(optional(document, "count"));
-  const record = new StudyRecord(
+  return new StudyRecord(
     document.id,
+    required(document.properties, "contest-id"),
+    (optional(document, "studied-at") ?? "1970-01-01").slice(0, 10),
     subjectId,
     optional(document, "item-id"),
     optional(document, "topic-id"),
@@ -306,13 +305,6 @@ function decodeStudySession(
     parseNumber(optional(document, "correct")),
     parseBoolean(optional(document, "completed"), false),
     legacyNotes(document)
-  );
-
-  return new StudySession(
-    options.sessionIdForRecord?.(document.id) ?? `session-${document.id}`,
-    required(document.properties, "contest-id"),
-    (optional(document, "studied-at") ?? "1970-01-01").slice(0, 10),
-    [record]
   );
 }
 

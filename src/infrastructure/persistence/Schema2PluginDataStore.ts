@@ -529,7 +529,7 @@ function mergeStudyData(
   operational: LeifPluginData,
   study: Pick<
     LeifPluginData,
-    "contests" | "cycleStates" | "subjects" | "topics" | "resources" | "studySessions"
+    "contests" | "cycleStates" | "subjects" | "topics" | "resources" | "studyRecords"
   >
 ): LeifPluginData {
   return {
@@ -539,13 +539,13 @@ function mergeStudyData(
     subjects: study.subjects,
     topics: study.topics,
     resources: study.resources,
-    studySessions: study.studySessions
+    studyRecords: study.studyRecords
   };
 }
 
 function emptyStudyData(): Pick<
   LeifPluginData,
-  "contests" | "cycleStates" | "subjects" | "topics" | "resources" | "studySessions"
+  "contests" | "cycleStates" | "subjects" | "topics" | "resources" | "studyRecords"
 > {
   return {
     contests: [],
@@ -553,7 +553,7 @@ function emptyStudyData(): Pick<
     subjects: [],
     topics: [],
     resources: [],
-    studySessions: []
+    studyRecords: []
   };
 }
 
@@ -580,7 +580,7 @@ function hasStudyData(data: LeifPluginData): boolean {
     data.subjects.length > 0 ||
     data.topics.length > 0 ||
     data.resources.length > 0 ||
-    data.studySessions.length > 0 ||
+    data.studyRecords.length > 0 ||
     data.cycleStates.length > 0
   );
 }
@@ -623,7 +623,7 @@ function assertMigratedStudyDataMatches(
   before: LeifPluginData,
   after: Pick<
     LeifPluginData,
-    "contests" | "cycleStates" | "subjects" | "topics" | "resources" | "studySessions"
+    "contests" | "cycleStates" | "subjects" | "topics" | "resources" | "studyRecords"
   >
 ): void {
   const expected = {
@@ -632,7 +632,7 @@ function assertMigratedStudyDataMatches(
     subjects: before.subjects.map((entry) => entry.id).sort(),
     topics: before.topics.map((entry) => entry.id).sort(),
     resources: before.resources.map((entry) => entry.id).sort(),
-    studySessions: before.studySessions.map((entry) => entry.id).sort()
+    studyRecords: before.studyRecords.map((entry) => entry.id).sort()
   };
   const actual = {
     contests: after.contests.map((entry) => entry.id).sort(),
@@ -640,7 +640,7 @@ function assertMigratedStudyDataMatches(
     subjects: after.subjects.map((entry) => entry.id).sort(),
     topics: after.topics.map((entry) => entry.id).sort(),
     resources: after.resources.map((entry) => entry.id).sort(),
-    studySessions: after.studySessions.map((entry) => entry.id).sort()
+    studyRecords: after.studyRecords.map((entry) => entry.id).sort()
   };
   if (JSON.stringify(actual) !== JSON.stringify(expected)) {
     throw new Error("Schema 2 migration semantic comparison failed.");

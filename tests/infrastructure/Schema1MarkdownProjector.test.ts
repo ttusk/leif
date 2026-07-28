@@ -201,28 +201,22 @@ describe("Schema1MarkdownProjector", () => {
             "contest-id: contest-1\ntype: pdf\nstudied-at: 2026-07-27T20:00:00.000Z\n"
           )
         }
-      ],
-      { sessionIdForRecord: (recordId) => `session-${recordId}` }
+      ]
     );
 
-    expect(projected.studySessions).toMatchObject([
+    expect(projected.studyRecords).toMatchObject([
       {
-        id: "session-record-1",
+        id: "record-1",
         contestId: "contest-1",
         date: "2026-07-27",
-        records: [
-          {
-            id: "record-1",
-            subjectId: "subject-1",
-            resourceId: "resource-1",
-            topicId: "topic-1",
-            quantity: 30,
-            unit: GoalUnit.QUESTOES,
-            correctAnswers: 24,
-            completed: true,
-            notes: "Fase: Teoria\nReferência: Bateria 01"
-          }
-        ]
+        subjectId: "subject-1",
+        resourceId: "resource-1",
+        topicId: "topic-1",
+        quantity: 30,
+        unit: GoalUnit.QUESTOES,
+        correctAnswers: 24,
+        completed: true,
+        notes: "Fase: Teoria\nReferência: Bateria 01"
       }
     ]);
   });

@@ -5,8 +5,6 @@ import type { PersistentStorageAdapter } from "@/application/ports/PersistentSto
 import { Contest } from "@/domain/entities/Contest";
 import { CycleState } from "@/domain/entities/CycleState";
 import { Resource } from "@/domain/entities/Resource";
-import { StudyRecord } from "@/domain/entities/StudyRecord";
-import { StudySession } from "@/domain/entities/StudySession";
 import { Subject } from "@/domain/entities/Subject";
 import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
 import { Schema2PluginDataStore } from "@/infrastructure/persistence/Schema2PluginDataStore";
@@ -133,6 +131,7 @@ describe("Schema2PluginDataStore", () => {
   it("migrates legacy JSON study data into schema-2 Markdown on startup", async () => {
     const legacy = {
       ...createDefaultLeifPluginData(),
+      schemaVersion: 3,
       activeContestId: "contest-1",
       contests: [new Contest("contest-1", "TRT", ["subject-1"])],
       cycleStates: [new CycleState("contest-1", "subject-1", "resource-1")],
@@ -141,21 +140,24 @@ describe("Schema2PluginDataStore", () => {
       ],
       resources: [new Resource("resource-1", "subject-1", "PDF 01", 1)],
       studySessions: [
-        new StudySession("session-1", "contest-1", "2026-07-28", [
-          new StudyRecord(
-            "record-1",
-            "subject-1",
-            "resource-1",
-            undefined,
-            20,
-            "paginas",
-            undefined,
-            true,
-            "Fase: Teoria\nReferência: Aula 1"
-          )
-        ])
+        {
+          id: "session-1",
+          contestId: "contest-1",
+          date: "2026-07-28",
+          records: [
+            {
+              id: "record-1",
+              subjectId: "subject-1",
+              resourceId: "resource-1",
+              quantity: 20,
+              unit: "paginas",
+              completed: true,
+              notes: "Fase: Teoria\nReferência: Aula 1"
+            }
+          ]
+        }
       ]
-    };
+    } as never;
     const storage = new MemoryStorageAdapter(legacy);
     const markdown = new MemoryMarkdownFileStore();
     const store = new Schema2PluginDataStore(storage, markdown, () => "tx-migrate");
@@ -166,12 +168,16 @@ describe("Schema2PluginDataStore", () => {
     expect(loaded.cycleStates).toMatchObject([
       { contestId: "contest-1", currentSubjectId: "subject-1", currentResourceId: "resource-1" }
     ]);
-    expect(loaded.studySessions).toMatchObject([
+    expect(loaded.studyRecords).toMatchObject([
       {
-        id: "session-1",
-        records: [{ id: "record-1", notes: undefined }]
+        id: "record-1",
+        date: "2026-07-28",
+        notes: "Fase: Teoria\nReferência: Aula 1"
       }
     ]);
+    expect(markdown.files.get("Leif/concursos/trt/registros/2026-07.md")).toContain(
+      "leif-id:: record-1"
+    );
     expect(markdown.files.get("Leif/concursos/trt/concurso.md")).toContain("# TRT");
     expect(markdown.files.get("Leif/.backups/migration-tx-migrate/data.json")).toContain(
       '"contest-1"'
@@ -436,22 +442,17 @@ Edital publicado.
     });
     expect(loaded.contests[0].mural.notes).toContain("Edital publicado.");
     expect(loaded.contests[0].mural.notes).toContain("[Edital](https://example.com/edital)");
-    expect(loaded.studySessions).toMatchObject([
+    expect(loaded.studyRecords).toMatchObject([
       {
-        id: "session-record-1",
+        id: "record-1",
         contestId: "contest-1",
         date: "2026-07-27",
-        records: [
-          {
-            id: "record-1",
-            subjectId: "subject-1",
-            resourceId: "resource-1",
-            quantity: 30,
-            unit: "questoes",
-            correctAnswers: 24,
-            completed: true
-          }
-        ]
+        subjectId: "subject-1",
+        resourceId: "resource-1",
+        quantity: 30,
+        unit: "questoes",
+        correctAnswers: 24,
+        completed: true
       }
     ]);
     expect(markdown.files.get("Leif/concursos/trt/concurso.md")).toContain("leif-schema: 2");
@@ -475,12 +476,10 @@ Edital publicado.
     expect(markdown.files.get("Leif/concursos/trt/mural.md")).toContain(
       "[Edital](https://example.com/edital)"
     );
-    const migratedRecord = [...markdown.files.entries()].find(
-      ([path]) => path.includes("/sessoes/") && path.includes("/registros/")
-    )?.[1];
-    expect(migratedRecord).toContain("leif-type: registro");
-    expect(migratedRecord).not.toContain("atividade:");
-    expect(migratedRecord).toContain("acertos: 24");
+    const migratedRecords = markdown.files.get("Leif/concursos/trt/registros/2026-07.md");
+    expect(migratedRecords).toContain("leif-type: registros");
+    expect(migratedRecords).not.toContain("atividade::");
+    expect(migratedRecords).toContain("acertos:: 24");
     expect(markdown.files.get("Leif/.backups/migration-tx-schema1/manifest.json")).toContain(
       "portugues-abc123.md"
     );
@@ -545,7 +544,7 @@ Edital publicado.
       subjects: [],
       topics: [],
       resources: [],
-      studySessions: []
+      studyRecords: []
     });
   });
 
