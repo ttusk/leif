@@ -96,6 +96,30 @@ describe("Schema2WorkspacePlanner", () => {
     );
   });
 
+  it("keeps record wikilink aliases on one line when notes contain line breaks", () => {
+    const source = data();
+    source.studySessions[0] = new StudySession("session-1", "contest-1", "2026-07-27", [
+      new StudyRecord(
+        "record-1",
+        "subject-1",
+        "leitura",
+        "resource-1",
+        "topic-1",
+        20,
+        "paginas",
+        undefined,
+        true,
+        "Fase: Teoria\nReferência: Aula 1"
+      )
+    ]);
+
+    const plan = Schema2WorkspacePlanner.plan(source, []);
+    const session = contentFor(plan.changes, "sessao.md");
+
+    expect(session).toContain("[[registros/fase-teoria-referencia-aula-1|leitura]]");
+    expect(session).not.toContain("|Fase: Teoria\n");
+  });
+
   it("plans updates with source fingerprints and preserves unmanaged Markdown", () => {
     const currentResource = `---
 leif-type: recurso

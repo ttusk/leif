@@ -5,6 +5,8 @@ import type { PersistentStorageAdapter } from "@/application/ports/PersistentSto
 import { Contest } from "@/domain/entities/Contest";
 import { CycleState } from "@/domain/entities/CycleState";
 import { Resource } from "@/domain/entities/Resource";
+import { StudyRecord } from "@/domain/entities/StudyRecord";
+import { StudySession } from "@/domain/entities/StudySession";
 import { Subject } from "@/domain/entities/Subject";
 import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
 import { Schema2PluginDataStore } from "@/infrastructure/persistence/Schema2PluginDataStore";
@@ -137,7 +139,23 @@ describe("Schema2PluginDataStore", () => {
       subjects: [
         new Subject("subject-1", "contest-1", "Português", 1, true, 0, undefined, ["resource-1"])
       ],
-      resources: [new Resource("resource-1", "subject-1", "PDF 01", 1)]
+      resources: [new Resource("resource-1", "subject-1", "PDF 01", 1)],
+      studySessions: [
+        new StudySession("session-1", "contest-1", "2026-07-28", [
+          new StudyRecord(
+            "record-1",
+            "subject-1",
+            "leitura",
+            "resource-1",
+            undefined,
+            20,
+            "paginas",
+            undefined,
+            true,
+            "Fase: Teoria\nReferência: Aula 1"
+          )
+        ])
+      ]
     };
     const storage = new MemoryStorageAdapter(legacy);
     const markdown = new MemoryMarkdownFileStore();
@@ -148,6 +166,12 @@ describe("Schema2PluginDataStore", () => {
     expect(loaded.contests).toMatchObject([{ id: "contest-1", name: "TRT" }]);
     expect(loaded.cycleStates).toMatchObject([
       { contestId: "contest-1", currentSubjectId: "subject-1", currentResourceId: "resource-1" }
+    ]);
+    expect(loaded.studySessions).toMatchObject([
+      {
+        id: "session-1",
+        records: [{ id: "record-1", activity: "leitura", notes: undefined }]
+      }
     ]);
     expect(markdown.files.get("Leif/concursos/trt/concurso.md")).toContain("# TRT");
     expect(markdown.files.get("Leif/.backups/migration-tx-migrate/data.json")).toContain(

@@ -296,7 +296,7 @@ function desiredSession(session: StudySession, paths: PlannedPaths): DesiredDocu
     render(existing) {
       const recordLinks = session.records.map((record) => ({
         target: relativeLink(path, requiredPath(paths.records, record.id)),
-        alias: record.notes ?? record.activity
+        alias: record.activity
       }));
       if (existing) {
         return Schema2EntityDocumentCodec.updateSession(existing.document, session, {
