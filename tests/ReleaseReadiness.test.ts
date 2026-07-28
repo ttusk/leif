@@ -37,6 +37,7 @@ describe("community release readiness", () => {
 
     expect(viewRegistration).not.toContain("workspace.revealLeaf");
     expect(domHelpers).not.toContain("document.createElement");
+    expect(source).not.toContain("document.createElement");
     expect(domHelpers).not.toMatch(/addEventListener\([^,]+,\s*options\.onClick\)/);
     expect(source).not.toContain("window.confirm");
   });
