@@ -2,8 +2,6 @@ import type { Contest } from "@/domain/entities/Contest";
 import type { Mural } from "@/domain/entities/Mural";
 import type { Resource } from "@/domain/entities/Resource";
 import type { ResourceAccess } from "@/domain/entities/ResourceAccess";
-import type { StudyRecord } from "@/domain/entities/StudyRecord";
-import type { StudySession } from "@/domain/entities/StudySession";
 import type { Subject } from "@/domain/entities/Subject";
 import type { Topic } from "@/domain/entities/Topic";
 import { Schema2Document, type WikiLink, renderWikiLinkList } from "./Schema2Document";
@@ -23,16 +21,6 @@ interface ResourceRenderOptions {
   topicLinks: readonly WikiLink[];
 }
 
-interface SessionRenderOptions {
-  recordLinks: readonly WikiLink[];
-}
-
-interface RecordRenderOptions {
-  subjectLink: string;
-  resourceLink?: string;
-  topicLink?: string;
-}
-
 const CONTEST_MANAGED_KEYS = new Set([
   "data-prova",
   "banca",
@@ -49,17 +37,6 @@ const RESOURCE_MANAGED_KEYS = new Set([
   "concluido",
   "progresso-importado",
   "acertos-importados"
-]);
-const SESSION_MANAGED_KEYS = new Set(["data", "inicio", "fim"]);
-const RECORD_MANAGED_KEYS = new Set([
-  "materia",
-  "recurso",
-  "assunto",
-  "atividade",
-  "quantidade",
-  "unidade",
-  "acertos",
-  "concluido"
 ]);
 
 export class Schema2EntityDocumentCodec {
@@ -202,61 +179,6 @@ export class Schema2EntityDocumentCodec {
       .replaceRegion("acessos", renderAccesses(resource.accesses));
   }
 
-  static renderSession(session: StudySession, options: SessionRenderOptions): string {
-    return [
-      renderFrontmatter("sessao", session.id, [
-        ["data", session.date],
-        ["inicio", session.startTime],
-        ["fim", session.endTime]
-      ]),
-      renderTitle(`Sessão ${session.date}`),
-      session.notes ?? "",
-      "## Registros",
-      "",
-      "<!-- leif:registros:start -->",
-      renderWikiLinkList(options.recordLinks),
-      "<!-- leif:registros:end -->",
-      ""
-    ].join("\n");
-  }
-
-  static updateSession(
-    document: Schema2Document,
-    session: StudySession,
-    options: SessionRenderOptions
-  ): Schema2Document {
-    return document
-      .replaceProperties(
-        new Map([
-          ["data", session.date],
-          ["inicio", session.startTime],
-          ["fim", session.endTime]
-        ]),
-        SESSION_MANAGED_KEYS
-      )
-      .replaceRegion("registros", renderWikiLinkList(options.recordLinks));
-  }
-
-  static renderRecord(record: StudyRecord, options: RecordRenderOptions): string {
-    return [
-      renderFrontmatter("registro", record.id, recordProperties(record, options)),
-      renderTitle(record.notes?.trim() ? record.notes.trim() : "Registro")
-    ].join("\n");
-  }
-
-  static updateRecord(
-    document: Schema2Document,
-    record: StudyRecord,
-    options: RecordRenderOptions
-  ): Schema2Document {
-    return document.replaceProperties(
-      new Map(
-        recordProperties(record, options).map(([key, value]) => [key, renderOptionalScalar(value)])
-      ),
-      RECORD_MANAGED_KEYS
-    );
-  }
-
   static renderMural(id: string, mural: Mural): string {
     return [renderFrontmatter("mural", id), renderTitle("Mural"), mural.notes ?? "", ""].join("\n");
   }
@@ -290,21 +212,6 @@ function renderFrontmatter(
 
 function renderTitle(title: string): string {
   return `# ${title}\n`;
-}
-
-function recordProperties(
-  record: StudyRecord,
-  options: RecordRenderOptions
-): Array<[string, string | number | boolean | undefined]> {
-  return [
-    ["materia", `[[${options.subjectLink}]]`],
-    ["recurso", options.resourceLink ? `[[${options.resourceLink}]]` : undefined],
-    ["assunto", options.topicLink ? `[[${options.topicLink}]]` : undefined],
-    ["quantidade", record.quantity],
-    ["unidade", record.unit],
-    ["acertos", record.correctAnswers],
-    ["concluido", record.completed]
-  ];
 }
 
 function renderAccesses(accesses: readonly ResourceAccess[]): string {

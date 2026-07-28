@@ -6,8 +6,6 @@ import { Mural } from "@/domain/entities/Mural";
 import { Resource } from "@/domain/entities/Resource";
 import { ResourceAccess } from "@/domain/entities/ResourceAccess";
 import { ResourceGoal } from "@/domain/entities/ResourceGoal";
-import { StudyRecord } from "@/domain/entities/StudyRecord";
-import { StudySession } from "@/domain/entities/StudySession";
 import { Subject } from "@/domain/entities/Subject";
 import { Topic } from "@/domain/entities/Topic";
 import { Schema2Document } from "@/infrastructure/markdown/schema2/Schema2Document";
@@ -36,24 +34,6 @@ describe("Schema2EntityDocumentCodec", () => {
       ["topic-1"],
       [new ResourceAccess("PDF principal", "https://example.com/pdf")],
       new ImportedProgress(30, 24)
-    );
-    const record = new StudyRecord(
-      "record-1",
-      "subject-1",
-      "resource-1",
-      "topic-1",
-      20,
-      "paginas",
-      undefined,
-      true
-    );
-    const session = new StudySession(
-      "session-1",
-      "contest-1",
-      "2026-07-27",
-      [record],
-      "19:00",
-      "20:00"
     );
 
     expect(
@@ -89,25 +69,6 @@ leif-id: topic-1
         topicLinks: [{ target: "../../assuntos/concordancia/assunto", alias: "Concordância" }]
       })
     ).toContain("progresso-importado: 30\nacertos-importados: 24");
-    expect(
-      Schema2EntityDocumentCodec.renderSession(session, {
-        recordLinks: [{ target: "registros/leitura-pdf-01", alias: "Leitura PDF 01" }]
-      })
-    ).toContain('inicio: "19:00"\nfim: "20:00"');
-    expect(
-      Schema2EntityDocumentCodec.renderRecord(record, {
-        subjectLink: "../../../materias/portugues/materia",
-        resourceLink: "../../../materias/portugues/recursos/pdf-01/recurso",
-        topicLink: "../../../materias/portugues/assuntos/concordancia/assunto"
-      })
-    ).toContain('materia: "[[../../../materias/portugues/materia]]"');
-    expect(
-      Schema2EntityDocumentCodec.renderRecord(record, {
-        subjectLink: "../../../materias/portugues/materia",
-        resourceLink: "../../../materias/portugues/recursos/pdf-01/recurso",
-        topicLink: "../../../materias/portugues/assuntos/concordancia/assunto"
-      })
-    ).not.toContain("atividade:");
     expect(Schema2EntityDocumentCodec.renderMural("mural-1", new Mural("Notas livres."))).toContain(
       "# Mural\n\nNotas livres.\n"
     );
@@ -168,28 +129,5 @@ Notas livres do usuário.
     expect(updated).toContain("acertos-importados: 40");
     expect(updated).toContain("- [[../../assuntos/novo/assunto|Novo]]");
     expect(updated).toContain("- [Novo](vault://novo.pdf)");
-  });
-
-  it("removes the legacy activity property when updating a record", () => {
-    const existing = Schema2Document.parse(`---
-leif-type: registro
-leif-schema: 2
-leif-id: record-1
-materia: "[[../../../materias/portugues/materia]]"
-atividade: leitura
-concluido: false
-custom-key: preserve-me
----
-
-# Leitura
-`);
-    const updated = Schema2EntityDocumentCodec.updateRecord(
-      existing,
-      new StudyRecord("record-1", "subject-1"),
-      { subjectLink: "../../../materias/portugues/materia" }
-    ).toString();
-
-    expect(updated).not.toContain("atividade:");
-    expect(updated).toContain("custom-key: preserve-me");
   });
 });
