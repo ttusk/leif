@@ -1,4 +1,3 @@
-import { createLeifId } from "@/application/Id";
 import { Contest, type ContestExamPlan } from "@/domain/entities/Contest";
 import { CycleState } from "@/domain/entities/CycleState";
 import { ImportedProgress } from "@/domain/entities/ImportedProgress";
@@ -7,7 +6,6 @@ import { Resource } from "@/domain/entities/Resource";
 import { ResourceAccess } from "@/domain/entities/ResourceAccess";
 import { ResourceGoal } from "@/domain/entities/ResourceGoal";
 import { StudyRecord } from "@/domain/entities/StudyRecord";
-import { StudySession } from "@/domain/entities/StudySession";
 import { Subject } from "@/domain/entities/Subject";
 import { Topic } from "@/domain/entities/Topic";
 import { GoalUnit } from "@/domain/types/GoalUnit";
@@ -101,6 +99,28 @@ interface LegacyStudySession {
   notes?: string;
 }
 
+interface LegacySessionRecord {
+  id: string;
+  subjectId: string;
+  resourceId?: string;
+  topicId?: string;
+  quantity?: number;
+  unit?: GoalUnit;
+  correctAnswers?: number;
+  completed?: boolean;
+  notes?: string;
+}
+
+interface LegacySessionAggregate {
+  id: string;
+  contestId: string;
+  date: string;
+  records: LegacySessionRecord[];
+  startTime?: string;
+  endTime?: string;
+  notes?: string;
+}
+
 interface LegacyCycleState {
   contestId: string;
   currentSubjectId?: string | null;
@@ -118,7 +138,8 @@ interface LegacyData {
   topics?: LegacyTopic[];
   studyItems?: LegacyStudyItem[];
   resources?: Resource[];
-  studySessions?: LegacyStudySession[] | StudySession[];
+  studySessions?: Array<LegacyStudySession | LegacySessionAggregate>;
+  studyRecords?: StudyRecord[];
   runtimeState?: LeifPluginData["runtimeState"];
 }
 
@@ -277,9 +298,12 @@ function projectLegacyData(data: LegacyData): LeifPluginData {
 
   collection(data.resources).forEach((resource) => resources.push(resource));
 
-  const studySessions = collection(data.studySessions as Array<LegacyStudySession | StudySession>)
-    .map((session) => projectStudySession(session, notebookResourceByTopic))
-    .filter((session): session is StudySession => session !== null);
+  const studyRecords = [
+    ...collection(data.studyRecords),
+    ...collection(data.studySessions).flatMap((session) =>
+      projectStudyRecords(session, notebookResourceByTopic)
+    )
+  ];
 
   return {
     ...defaults,
@@ -297,7 +321,7 @@ function projectLegacyData(data: LegacyData): LeifPluginData {
     subjects,
     topics,
     resources,
-    studySessions,
+    studyRecords,
     runtimeState: {
       ...defaults.runtimeState!,
       ...data.runtimeState
@@ -317,7 +341,7 @@ function normalizeCurrentData(data: LegacyData): LeifPluginData {
     subjects: collection(data.subjects) as unknown as LeifPluginData["subjects"],
     topics: collection(data.topics),
     resources: collection(data.resources),
-    studySessions: collection(data.studySessions as StudySession[]),
+    studyRecords: collection(data.studyRecords),
     runtimeState: {
       ...defaults.runtimeState!,
       ...data.runtimeState
@@ -325,15 +349,30 @@ function normalizeCurrentData(data: LegacyData): LeifPluginData {
   };
 }
 
-function projectStudySession(
-  session: LegacyStudySession | StudySession,
+function projectStudyRecords(
+  session: LegacyStudySession | LegacySessionAggregate,
   notebookResourceByTopic: Map<string, string>
-): StudySession | null {
+): StudyRecord[] {
   if ("records" in session) {
-    return session;
+    return session.records.map(
+      (record, index) =>
+        new StudyRecord(
+          record.id,
+          session.contestId,
+          session.date,
+          record.subjectId,
+          record.resourceId,
+          record.topicId,
+          record.quantity,
+          record.unit,
+          record.correctAnswers,
+          record.completed ?? false,
+          preserveLegacySessionMetadata(session, record.notes, index)
+        )
+    );
   }
   if (!session.subjectId) {
-    return null;
+    return [];
   }
   const quantity = session.pagesOrCount;
   const unit = legacySessionUnit(session.type);
@@ -349,6 +388,8 @@ function projectStudySession(
     (session.topicId ? notebookResourceByTopic.get(session.topicId) : undefined);
   const record = new StudyRecord(
     session.id,
+    session.contestId,
+    (session.studiedAt ?? session.date ?? "1970-01-01").slice(0, 10),
     session.subjectId,
     resourceId,
     session.topicId,
@@ -358,12 +399,25 @@ function projectStudySession(
     session.completed ?? false,
     notes || undefined
   );
-  return new StudySession(
-    createLeifId(),
-    session.contestId,
-    (session.studiedAt ?? session.date ?? "1970-01-01").slice(0, 10),
-    [record]
-  );
+  return [record];
+}
+
+function preserveLegacySessionMetadata(
+  session: LegacySessionAggregate,
+  recordNotes: string | undefined,
+  recordIndex: number
+): string | undefined {
+  if (recordIndex > 0) return recordNotes;
+  const timing =
+    session.startTime || session.endTime
+      ? `Horário da antiga sessão: ${session.startTime ?? "?"}–${session.endTime ?? "?"}`
+      : undefined;
+  const sessionNotes = session.notes
+    ? `Observações da antiga sessão:\n${session.notes}`
+    : undefined;
+  return [recordNotes, timing, sessionNotes]
+    .filter((value): value is string => Boolean(value))
+    .join("\n\n") || undefined;
 }
 
 function muralFromLegacy(wall: LegacyContest["wall"]): Mural {

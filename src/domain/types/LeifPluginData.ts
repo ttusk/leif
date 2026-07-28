@@ -1,7 +1,7 @@
 import type { Contest } from "@/domain/entities/Contest";
 import type { CycleState } from "@/domain/entities/CycleState";
 import type { Resource } from "@/domain/entities/Resource";
-import type { StudySession } from "@/domain/entities/StudySession";
+import type { StudyRecord } from "@/domain/entities/StudyRecord";
 import type { Subject } from "@/domain/entities/Subject";
 import type { Topic } from "@/domain/entities/Topic";
 import { createDefaultLeifRuntimeState, type LeifRuntimeState } from "./LeifRuntimeState";
@@ -19,7 +19,7 @@ export interface LeifPluginData {
   subjects: Subject[];
   topics: Topic[];
   resources: Resource[];
-  studySessions: StudySession[];
+  studyRecords: StudyRecord[];
   runtimeState?: LeifRuntimeState;
 }
 
@@ -28,12 +28,12 @@ export interface EntityCollections {
   subjects: Subject;
   topics: Topic;
   resources: Resource;
-  studySessions: StudySession;
+  studyRecords: StudyRecord;
 }
 
 export type EntityCollectionKey = keyof EntityCollections;
 
-export const LEIF_DATA_SCHEMA_VERSION = 3;
+export const LEIF_DATA_SCHEMA_VERSION = 4;
 
 export function createDefaultLeifPluginData(): LeifPluginData {
   return {
@@ -44,7 +44,7 @@ export function createDefaultLeifPluginData(): LeifPluginData {
     subjects: [],
     topics: [],
     resources: [],
-    studySessions: [],
+    studyRecords: [],
     runtimeState: createDefaultLeifRuntimeState()
   };
 }
