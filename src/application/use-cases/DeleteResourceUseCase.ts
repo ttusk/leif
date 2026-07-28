@@ -28,6 +28,11 @@ export class DeleteResourceUseCase {
       if (subject) {
         subject.resourceIds = subject.resourceIds.filter((id) => id !== resource.id);
       }
+      draft.studyRecords.forEach((record) => {
+        if (record.resourceId === resource.id) {
+          record.resourceId = undefined;
+        }
+      });
       return resource;
     });
   }

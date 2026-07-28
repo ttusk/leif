@@ -30,6 +30,11 @@ export class DeleteTopicUseCase {
       draft.resources.forEach((resource) => {
         resource.topicIds = resource.topicIds.filter((id) => id !== input.topicId);
       });
+      draft.studyRecords.forEach((record) => {
+        if (record.topicId === input.topicId) {
+          record.topicId = undefined;
+        }
+      });
       return topic;
     });
   }
