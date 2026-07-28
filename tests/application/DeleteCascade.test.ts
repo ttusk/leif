@@ -27,11 +27,17 @@ describe("delete cascades", () => {
       subjectId: "subject-1",
       title: "PDF 01"
     });
+    await new RegisterStudyRecordsUseCase(store).execute({
+      contestId: "contest-1",
+      date: "2026-07-27",
+      records: [{ id: "record-1", subjectId: "subject-1", resourceId: "resource-1" }]
+    });
 
     await new DeleteResourceUseCase(store, factory).execute({ resourceId: "resource-1" });
 
     expect((await store.load()).resources).toHaveLength(0);
     expect((await store.load()).subjects[0].resourceIds).toEqual([]);
+    expect((await store.load()).studyRecords[0].resourceId).toBeUndefined();
     await expect(
       new DeleteResourceUseCase(store, factory).execute({ resourceId: "missing" })
     ).rejects.toThrow(NotFoundError);
@@ -78,6 +84,14 @@ describe("delete cascades", () => {
       data.resources.push(
         new Resource("resource-1", "subject-1", "PDF", 1, undefined, undefined, false, ["topic-1"])
       );
+      data.studyRecords.push({
+        id: "record-1",
+        contestId: "contest-1",
+        date: "2026-07-27",
+        subjectId: "subject-1",
+        topicId: "topic-1",
+        completed: false
+      });
     });
 
     await new DeleteTopicUseCase(store, factory).execute({ topicId: "topic-1" });
@@ -85,5 +99,6 @@ describe("delete cascades", () => {
     const data = await store.load();
     expect(data.subjects[0].topicIds).toEqual([]);
     expect(data.resources[0].topicIds).toEqual([]);
+    expect(data.studyRecords[0].topicId).toBeUndefined();
   });
 });
