@@ -1,9 +1,11 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import { AddResourceAccessUseCase } from "@/application/use-cases/AddResourceAccessUseCase";
 import { CreateResourceUseCase } from "@/application/use-cases/CreateResourceUseCase";
 import { DeleteResourceUseCase } from "@/application/use-cases/DeleteResourceUseCase";
 import { UpdateResourceUseCase } from "@/application/use-cases/UpdateResourceUseCase";
 import { createLeifId } from "@/application/Id";
 import type { Resource } from "@/domain/entities/Resource";
+import { ResourceAccess } from "@/domain/entities/ResourceAccess";
 import { ResourceGoal } from "@/domain/entities/ResourceGoal";
 import { GoalUnit, isGoalUnit } from "@/domain/types/GoalUnit";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
@@ -18,6 +20,7 @@ import { SubjectPicker } from "@/ui/view/shared/SubjectPicker";
  */
 export class ItemsTab {
   private readonly createResource: CreateResourceUseCase;
+  private readonly addResourceAccess: AddResourceAccessUseCase;
   private readonly updateResource: UpdateResourceUseCase;
   private readonly deleteResource: DeleteResourceUseCase;
   private selectedSubjectId: string | null = null;
@@ -29,6 +32,7 @@ export class ItemsTab {
   ) {
     const factory = new EntityRepositoryFactory(dataStore);
     this.createResource = new CreateResourceUseCase(dataStore, factory);
+    this.addResourceAccess = new AddResourceAccessUseCase(dataStore, factory);
     this.updateResource = new UpdateResourceUseCase(dataStore, factory);
     this.deleteResource = new DeleteResourceUseCase(dataStore, factory);
   }
@@ -66,14 +70,15 @@ export class ItemsTab {
       "Recurso",
       "Formato",
       "Meta",
+      "Materiais",
       "Ações"
     ]);
     resources.forEach((resource) => {
-      tbody.appendChild(
-        this.editingResourceId === resource.id
-          ? this.renderEditableRow(resource)
-          : this.renderDisplayRow(resource)
-      );
+      if (this.editingResourceId === resource.id) {
+        tbody.append(this.renderEditableRow(resource), this.renderAccessesEditorRow(resource));
+      } else {
+        tbody.appendChild(this.renderDisplayRow(resource));
+      }
     });
     card.appendChild(tableContainer);
     container.appendChild(card);
@@ -121,6 +126,7 @@ export class ItemsTab {
       DomHelpers.createNumericCell(
         resource.goal ? `${resource.goal.amount} ${resource.goal.unit}` : "Sem meta"
       ),
+      DomHelpers.createCell(null, this.renderAccesses(resource)),
       DomHelpers.createActionsCell(actions)
     );
     return tr;
@@ -190,9 +196,138 @@ export class ItemsTab {
       DomHelpers.createNameCell(null, title),
       DomHelpers.createCell(null, format),
       DomHelpers.createCell(null, metaGroup),
+      DomHelpers.createCell(
+        `${resource.accesses.length} ${resource.accesses.length === 1 ? "material" : "materiais"}`
+      ),
       DomHelpers.createActionsCell(controls)
     );
     return tr;
+  }
+
+  private renderAccesses(resource: Resource): HTMLElement {
+    const list = DomHelpers.createElement("div", "leif-resource-access-list");
+    if (resource.accesses.length === 0) {
+      const empty = DomHelpers.createElement("span", "leif-table-muted");
+      empty.textContent = "Sem link";
+      list.appendChild(empty);
+      return list;
+    }
+    resource.accesses.forEach((access) => {
+      const link = DomHelpers.createElement("a", "leif-resource-access-link");
+      link.href = access.url;
+      link.textContent = access.title;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      list.appendChild(link);
+    });
+    return list;
+  }
+
+  private renderAccessesEditorRow(resource: Resource): HTMLTableRowElement {
+    const row = DomHelpers.createElement("tr", "leif-detail-row");
+    row.dataset.resourceAccessesFor = resource.id;
+    const cell = DomHelpers.createElement("td");
+    cell.colSpan = 5;
+    const content = DomHelpers.createElement("div", "leif-resource-material-section");
+    content.appendChild(DomHelpers.createSectionSubtitle("Materiais e links"));
+    if (resource.accesses.length === 0) {
+      content.appendChild(DomHelpers.createParagraph("Nenhum material vinculado ainda."));
+    } else {
+      const editors = DomHelpers.createElement("div", "leif-resource-material-editor-list");
+      resource.accesses.forEach((access, index) => {
+        editors.appendChild(this.renderAccessEditor(resource, access, index));
+      });
+      content.appendChild(editors);
+    }
+    content.appendChild(this.renderAddAccessForm(resource));
+    cell.appendChild(content);
+    row.appendChild(cell);
+    return row;
+  }
+
+  private renderAccessEditor(
+    resource: Resource,
+    access: ResourceAccess,
+    index: number
+  ): HTMLElement {
+    const title = DomHelpers.createInput("text", "Título", access.title);
+    const url = DomHelpers.createInput("url", "https://…", access.url);
+    const notes = DomHelpers.createInput("text", "Observação", access.notes ?? "");
+    const editor = DomHelpers.createElement("div", "leif-resource-material-editor");
+    editor.dataset.resourceAccessEditorIndex = String(index);
+    const actions = DomHelpers.createElement("div", "leif-resource-material-editor-actions");
+    actions.append(
+      DomHelpers.createIconButton("save", "Salvar material", {
+        onClick: async () => {
+          try {
+            const accesses = resource.accesses.map((entry, entryIndex) =>
+              entryIndex === index
+                ? new ResourceAccess(title.value, url.value, notes.value || undefined)
+                : entry
+            );
+            await this.updateResource.execute({ resourceId: resource.id, accesses });
+            await this.onUpdate();
+          } catch (error) {
+            DomHelpers.notifyError(error, "Não consegui salvar esse material.");
+          }
+        }
+      }),
+      DomHelpers.createIconButton("delete", "Excluir material", {
+        onClick: async () => {
+          try {
+            await this.updateResource.execute({
+              resourceId: resource.id,
+              accesses: resource.accesses.filter((_, entryIndex) => entryIndex !== index)
+            });
+            await this.onUpdate();
+          } catch (error) {
+            DomHelpers.notifyError(error, "Não consegui excluir esse material.");
+          }
+        }
+      })
+    );
+    editor.append(
+      DomHelpers.createStackedLabel("Título", title),
+      DomHelpers.createUrlField("URL", url),
+      DomHelpers.createStackedLabel("Observação", notes),
+      actions
+    );
+    return editor;
+  }
+
+  private renderAddAccessForm(resource: Resource): HTMLElement {
+    const title = DomHelpers.createInput("text", "Título");
+    title.dataset.resourceAccessCreateTitle = "true";
+    const url = DomHelpers.createInput("url", "https://…");
+    url.dataset.resourceAccessCreateUrl = "true";
+    const notes = DomHelpers.createInput("text", "Observação");
+    notes.dataset.resourceAccessCreateNotes = "true";
+    const form = DomHelpers.createForm(async () => {
+      try {
+        await this.addResourceAccess.execute({
+          resourceId: resource.id,
+          title: title.value,
+          url: url.value,
+          notes: notes.value || undefined
+        });
+        this.editingResourceId = null;
+        await this.onUpdate();
+      } catch (error) {
+        DomHelpers.notifyError(error, "Não consegui adicionar esse material.");
+      }
+    });
+    form.className = "leif-resource-material-form";
+    form.append(
+      DomHelpers.createStackedLabel("Título", title),
+      DomHelpers.createUrlField("URL", url),
+      DomHelpers.createStackedLabel("Observação", notes),
+      DomHelpers.createButton("Adicionar", {
+        icon: "add",
+        onClick: () => form.requestSubmit(),
+        dataset: { resourceAccessCreateSave: "true" }
+      })
+    );
+    return form;
   }
 
   private renderCreateForm(subjectId: string): HTMLElement {

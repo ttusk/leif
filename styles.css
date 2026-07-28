@@ -718,6 +718,10 @@ form.leif-card,
 }
 
 .leif-table th {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  background: var(--leif-bg);
   color: var(--leif-text-muted);
   font-size: var(--font-ui-smaller);
   font-weight: var(--font-semibold);
@@ -841,8 +845,50 @@ form.leif-card,
 
 .leif-resource-material-editor,
 .leif-resource-material-form {
-  grid-template-columns: minmax(120px, 0.6fr) minmax(180px, 1fr) minmax(220px, 1.2fr) auto;
+  grid-template-columns: minmax(140px, 0.7fr) minmax(240px, 1.4fr) minmax(160px, 0.8fr) auto;
   align-items: end;
+}
+
+.leif-summary-table {
+  min-width: 440px;
+}
+
+.leif-summary-table th:not(:first-child),
+.leif-summary-table td:not(:first-child) {
+  text-align: end;
+}
+
+.leif-session-table {
+  min-width: 1040px;
+}
+
+.leif-session-table td {
+  vertical-align: top;
+}
+
+.leif-session-date,
+.leif-resource-access-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--size-4-1);
+}
+
+.leif-session-note,
+.leif-table-muted {
+  color: var(--leif-text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-normal);
+  white-space: normal;
+}
+
+.leif-resource-access-list {
+  min-width: 140px;
+}
+
+.leif-resource-access-link {
+  width: fit-content;
+  max-width: 32ch;
+  overflow-wrap: break-word;
 }
 
 .leif-topic-notebook-editor-stacked {

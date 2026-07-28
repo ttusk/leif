@@ -131,8 +131,27 @@ export class SessionsTab {
       return history;
     }
 
+    const { container: tableContainer, tbody } = DomHelpers.createCrudTable([
+      "Data",
+      "Horário",
+      "Matéria",
+      "Recurso",
+      "Assunto",
+      "Atividade",
+      "Resultado",
+      "Ações"
+    ]);
+    tableContainer.querySelector("table")?.classList.add("leif-session-table");
     filteredSessions.forEach(({ session, records }) => {
-      history.appendChild(this.renderSessionGroup(data, session, records));
+      this.renderSessionRows(data, session, records).forEach((row) => tbody.appendChild(row));
+    });
+    history.appendChild(tableContainer);
+    filteredSessions.forEach(({ session }) => {
+      if (this.editingSessionId === session.id || this.addingRecordToSessionId === session.id) {
+        history.appendChild(
+          this.renderSessionEditor(data, session, this.addingRecordToSessionId === session.id)
+        );
+      }
     });
     return history;
   }
@@ -215,81 +234,93 @@ export class SessionsTab {
     return true;
   }
 
-  private renderSessionGroup(
+  private renderSessionRows(
     data: LeifPluginData,
     session: StudySession,
     visibleRecords: StudyRecord[]
-  ): HTMLElement {
-    const group = DomHelpers.createElement("article", "leif-session-group");
-    group.dataset.sessionId = session.id;
+  ): HTMLTableRowElement[] {
+    return visibleRecords.map((record, index) => {
+      const row = DomHelpers.createElement("tr", "leif-session-record");
+      row.dataset.sessionId = session.id;
+      const subject = data.subjects.find((entry) => entry.id === record.subjectId);
+      const resource = record.resourceId
+        ? data.resources.find((entry) => entry.id === record.resourceId)
+        : undefined;
+      const topic = record.topicId
+        ? data.topics.find((entry) => entry.id === record.topicId)
+        : undefined;
 
-    const header = DomHelpers.createElement("header", "leif-session-header");
-    const title = DomHelpers.createElement("div", "leif-session-title-group");
-    const date = DomHelpers.createStrong(this.formatSessionDate(session.date));
-    const time = DomHelpers.createElement("span", "leif-session-time");
-    time.textContent = this.formatSessionTime(session);
-    title.append(date, time);
+      if (index === 0) {
+        const dateContent = DomHelpers.createElement("div", "leif-session-date");
+        dateContent.appendChild(DomHelpers.createStrong(this.formatSessionDate(session.date)));
+        if (session.notes) {
+          const notes = DomHelpers.createElement("span", "leif-session-note");
+          notes.textContent = session.notes;
+          dateContent.appendChild(notes);
+        }
+        const dateCell = DomHelpers.createCell(null, dateContent, "leif-table-cell-numeric");
+        const timeCell = DomHelpers.createNumericCell(this.formatSessionTime(session));
+        dateCell.setAttribute("rowspan", String(visibleRecords.length));
+        timeCell.setAttribute("rowspan", String(visibleRecords.length));
+        row.append(dateCell, timeCell);
+      }
 
-    header.append(
-      title,
-      DomHelpers.createMenuButton(
-        [
-          {
-            label: "Editar sessão",
-            icon: "edit",
-            onClick: async () => {
-              this.editingSessionId = session.id;
-              this.addingRecordToSessionId = null;
-              this.sessionEditorError = null;
-              await this.onUpdate();
-            }
-          },
-          {
-            label: "Adicionar registro",
-            icon: "plus",
-            onClick: async () => {
-              this.addingRecordToSessionId = session.id;
-              this.editingSessionId = null;
-              this.sessionEditorError = null;
-              await this.onUpdate();
-            }
-          },
-          {
-            label: "Excluir sessão",
-            icon: "trash-2",
-            onClick: async () => {
-              const date = this.formatSessionDate(session.date);
-              const confirmed = window.confirm(
-                `Excluir a sessão de ${date} e todos os seus registros?`
-              );
-              if (!confirmed) return;
-              await this.deleteSession.execute({ sessionId: session.id });
-              await this.onUpdate();
-            }
-          }
-        ],
-        `Ações da sessão de ${this.formatSessionDate(session.date)}`
-      )
-    );
-    group.appendChild(header);
-
-    if (session.notes) {
-      group.appendChild(DomHelpers.createParagraph(session.notes));
-    }
-
-    const records = DomHelpers.createElement("div", "leif-session-record-list");
-    visibleRecords.forEach((record) => {
-      records.appendChild(this.renderRecordRow(data, record));
-    });
-    group.appendChild(records);
-
-    if (this.editingSessionId === session.id || this.addingRecordToSessionId === session.id) {
-      group.appendChild(
-        this.renderSessionEditor(data, session, this.addingRecordToSessionId === session.id)
+      row.append(
+        DomHelpers.createNameCell(subject?.name ?? "Matéria removida"),
+        DomHelpers.createNameCell(resource?.title ?? "Sem recurso"),
+        DomHelpers.createNameCell(topic?.name ?? "Sem assunto"),
+        DomHelpers.createCell(record.activity),
+        DomHelpers.createNumericCell(this.formatRecordResult(record))
       );
-    }
 
-    return group;
+      if (index === 0) {
+        const actionsCell = DomHelpers.createActionsCell(this.renderSessionMenu(session));
+        actionsCell.setAttribute("rowspan", String(visibleRecords.length));
+        row.appendChild(actionsCell);
+      }
+      return row;
+    });
+  }
+
+  private renderSessionMenu(session: StudySession): HTMLElement {
+    return DomHelpers.createMenuButton(
+      [
+        {
+          label: "Editar sessão",
+          icon: "edit",
+          onClick: async () => {
+            this.editingSessionId = session.id;
+            this.addingRecordToSessionId = null;
+            this.sessionEditorError = null;
+            await this.onUpdate();
+          }
+        },
+        {
+          label: "Adicionar registro",
+          icon: "plus",
+          onClick: async () => {
+            this.addingRecordToSessionId = session.id;
+            this.editingSessionId = null;
+            this.sessionEditorError = null;
+            await this.onUpdate();
+          }
+        },
+        {
+          label: "Excluir sessão",
+          icon: "trash-2",
+          onClick: async () => {
+            const date = this.formatSessionDate(session.date);
+            const confirmed = window.confirm(
+              `Excluir a sessão de ${date} e todos os seus registros?`
+            );
+            if (!confirmed) return;
+            await this.deleteSession.execute({ sessionId: session.id });
+            await this.onUpdate();
+          }
+        }
+      ],
+      `Ações da sessão de ${this.formatSessionDate(session.date)}`
+    );
   }
 
   private renderSessionEditor(
@@ -511,37 +542,6 @@ export class SessionsTab {
     );
   }
 
-  private renderRecordRow(data: LeifPluginData, record: StudyRecord): HTMLElement {
-    const row = DomHelpers.createElement("div", "leif-session-record");
-    const subject = data.subjects.find((entry) => entry.id === record.subjectId);
-    const resource = record.resourceId
-      ? data.resources.find((entry) => entry.id === record.resourceId)
-      : undefined;
-    const topic = record.topicId
-      ? data.topics.find((entry) => entry.id === record.topicId)
-      : undefined;
-
-    row.append(
-      this.renderRecordMetric("Matéria", subject?.name ?? "Matéria removida"),
-      this.renderRecordMetric("Recurso", resource?.title ?? "Sem recurso"),
-      this.renderRecordMetric("Assunto", topic?.name ?? "Sem assunto"),
-      this.renderRecordMetric("Atividade", record.activity),
-      this.renderRecordMetric("Resultado", this.formatRecordResult(record))
-    );
-
-    return row;
-  }
-
-  private renderRecordMetric(label: string, value: string): HTMLElement {
-    const metric = DomHelpers.createElement("span", "leif-session-record-metric");
-    const labelEl = DomHelpers.createElement("span", "leif-session-record-label");
-    const valueEl = DomHelpers.createElement("span", "leif-session-record-value");
-    labelEl.textContent = label;
-    valueEl.textContent = value;
-    metric.append(labelEl, valueEl);
-    return metric;
-  }
-
   private renderCreateForm(data: LeifPluginData, contestId: string): HTMLElement {
     const form = DomHelpers.createForm(async () => {
       const result = await this.registerSession.execute({
@@ -653,7 +653,7 @@ export class SessionsTab {
   }
 
   private formatSessionTime(session: StudySession): string {
-    if (session.startTime && session.endTime) return `${session.startTime}-${session.endTime}`;
+    if (session.startTime && session.endTime) return `${session.startTime}–${session.endTime}`;
     if (session.startTime) return session.startTime;
     if (session.endTime) return `até ${session.endTime}`;
     return "Sem horário";

@@ -50,16 +50,25 @@ export class DashboardTab {
 
     const summary = await this.summary.execute();
     const card = DomHelpers.createCard("Resumo por matéria");
+    const { container: tableContainer, tbody } = DomHelpers.createCrudTable([
+      "Matéria",
+      "Sessões",
+      "Páginas",
+      "Questões"
+    ]);
+    tableContainer.querySelector("table")?.classList.add("leif-summary-table");
     summary.subjectSummaries.forEach((subject) => {
-      const row = DomHelpers.createElement("div", "leif-summary-row");
+      const row = DomHelpers.createElement("tr");
+      row.dataset.subjectId = subject.subjectId;
       row.append(
-        DomHelpers.createStrong(subject.subjectName),
-        DomHelpers.createMetric("Sessões", String(subject.totalSessions)),
-        DomHelpers.createMetric("Páginas", String(subject.pagesRead)),
-        DomHelpers.createMetric("Questões", String(subject.questionsSolved))
+        DomHelpers.createNameCell(subject.subjectName),
+        DomHelpers.createNumericCell(String(subject.totalSessions)),
+        DomHelpers.createNumericCell(String(subject.pagesRead)),
+        DomHelpers.createNumericCell(String(subject.questionsSolved))
       );
-      card.appendChild(row);
+      tbody.appendChild(row);
     });
+    card.appendChild(tableContainer);
     container.appendChild(card);
   }
 }

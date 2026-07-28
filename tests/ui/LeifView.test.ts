@@ -10,6 +10,7 @@ import { CreateSubjectUseCase } from "@/application/use-cases/CreateSubjectUseCa
 import { CreateTopicUseCase } from "@/application/use-cases/CreateTopicUseCase";
 import { CycleState } from "@/domain/entities/CycleState";
 import { Resource } from "@/domain/entities/Resource";
+import { ResourceAccess } from "@/domain/entities/ResourceAccess";
 import { StudyRecord } from "@/domain/entities/StudyRecord";
 import { StudySession } from "@/domain/entities/StudySession";
 import { Topic } from "@/domain/entities/Topic";
@@ -323,7 +324,26 @@ describe("LeifView", () => {
     expect(view.contentEl.querySelector(".leif-cycle-thread")).toBeNull();
   });
 
-  it("renders Registros as grouped sessions with readable child rows", async () => {
+  it("renders the subject summary as a compact table", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiSessionHistory(dataStore);
+
+    const { view } = await openLeifView(dataStore);
+    const table = view.contentEl.querySelector(".leif-summary-table");
+
+    expect(Array.from(table?.querySelectorAll("th") ?? []).map((th) => th.textContent)).toEqual([
+      "Matéria",
+      "Sessões",
+      "Páginas",
+      "Questões"
+    ]);
+    const portuguese = table?.querySelector("[data-subject-id='subject-1']");
+    expect(
+      Array.from(portuguese?.querySelectorAll("td") ?? []).map((cell) => cell.textContent)
+    ).toEqual(["Português", "2", "12", "0"]);
+  });
+
+  it("renders Registros as a compact table with one row per study record", async () => {
     const dataStore = new InMemoryPluginDataStore();
     await seedUiSessionHistory(dataStore);
 
@@ -332,11 +352,24 @@ describe("LeifView", () => {
       "sessions"
     );
 
-    const session = view.contentEl.querySelector("[data-session-id='session-1']");
-    const records = Array.from(session?.querySelectorAll(".leif-session-record") ?? []);
+    const table = view.contentEl.querySelector(".leif-session-table");
+    expect(Array.from(table?.querySelectorAll("th") ?? []).map((th) => th.textContent)).toEqual([
+      "Data",
+      "Horário",
+      "Matéria",
+      "Recurso",
+      "Assunto",
+      "Atividade",
+      "Resultado",
+      "Ações"
+    ]);
+    const session = table?.querySelector("[data-session-id='session-1']");
+    const records = Array.from(
+      table?.querySelectorAll("[data-session-id='session-1'].leif-session-record") ?? []
+    );
 
-    expect(session?.querySelector(".leif-session-header")?.textContent).toContain("27/07/2026");
-    expect(session?.querySelector(".leif-session-header")?.textContent).toContain("19:00-20:30");
+    expect(session?.textContent).toContain("27/07/2026");
+    expect(session?.textContent).toContain("19:00–20:30");
     expect(session?.textContent).toContain("Bloco noturno");
     expect(records).toHaveLength(2);
     expect(records[0]?.textContent).toContain("Português");
@@ -348,7 +381,7 @@ describe("LeifView", () => {
     expect(records[1]?.textContent).toContain("Controle concentrado");
     expect(records[1]?.textContent).toContain("questoes");
     expect(records[1]?.textContent).toContain("16/20 acertos");
-    expect(session?.querySelectorAll(".leif-session-record button")).toHaveLength(0);
+    expect(session?.querySelectorAll(".leif-menu-trigger")).toHaveLength(1);
   });
 
   it("opens a native session menu with session-level actions", async () => {
@@ -632,6 +665,7 @@ describe("LeifView", () => {
       "Recurso",
       "Formato",
       "Meta",
+      "Materiais",
       "Ações"
     ]);
 
@@ -692,6 +726,44 @@ describe("LeifView", () => {
     expect(
       (editor?.querySelector("[data-resource-editor-title]") as HTMLInputElement | null)?.value
     ).toBe("PDF 01");
+  });
+
+  it("adds and opens a web material link for a recurso in the selected matéria", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiCycleData(dataStore);
+
+    const { view } = await openLeifView(dataStore);
+    await (view as unknown as { openTab: (tabId: "items") => Promise<void> }).openTab("items");
+    view.contentEl
+      .querySelector("[data-resource-id='resource-1'] .leif-menu-trigger")
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await (getShownMenus()[0]?.items[0]?.callback?.(new MouseEvent("click")) as Promise<void>);
+
+    await vi.waitFor(() => {
+      expect(view.contentEl.querySelector("[data-resource-access-create-title]")).not.toBeNull();
+    });
+    const title = view.contentEl.querySelector(
+      "[data-resource-access-create-title]"
+    ) as HTMLInputElement;
+    const url = view.contentEl.querySelector(
+      "[data-resource-access-create-url]"
+    ) as HTMLInputElement;
+    title.value = "Curso na web";
+    url.value = "https://example.com/curso";
+    view.contentEl
+      .querySelector("[data-resource-access-create-save]")
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    await vi.waitFor(async () => {
+      expect((await dataStore.load()).resources[0].accesses).toEqual([
+        new ResourceAccess("Curso na web", "https://example.com/curso")
+      ]);
+    });
+    const link = view.contentEl.querySelector(
+      "[data-resource-id='resource-1'] a[href='https://example.com/curso']"
+    );
+    expect(link?.textContent).toBe("Curso na web");
+    expect(link?.getAttribute("target")).toBe("_blank");
   });
 
   it("keeps a recurso when its targeted deletion confirmation is cancelled", async () => {

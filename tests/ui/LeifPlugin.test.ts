@@ -458,6 +458,7 @@ describe("LeifPlugin", () => {
     expect(modal?.contentEl.textContent).toContain("Leif 2.1.1");
 
     (modal?.contentEl.querySelector("button") as HTMLButtonElement).click();
+    expect(getOpenModals()).toHaveLength(0);
     await vi.waitFor(async () => {
       const saved = (await plugin.loadData()) as ReturnType<typeof createDefaultLeifPluginData>;
       expect(saved.runtimeState?.lastAcknowledgedVersion).toBe("2.1.1");

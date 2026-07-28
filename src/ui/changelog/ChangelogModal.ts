@@ -1,4 +1,4 @@
-import { Component, MarkdownRenderer, Modal } from "obsidian";
+import { Component, MarkdownRenderer, Modal, Notice } from "obsidian";
 
 import type { BundledReleaseNote } from "@/application/services/ChangelogService";
 
@@ -35,7 +35,10 @@ export class ChangelogModal extends Modal {
     actions.appendChild(acknowledgeButton);
     acknowledgeButton.addEventListener("click", () => {
       acknowledgeButton.disabled = true;
-      void this.acknowledge().then(() => this.close());
+      this.close();
+      void this.acknowledge().catch(() => {
+        new Notice("Não consegui registrar a leitura das novidades. Tente novamente ao reiniciar.");
+      });
     });
   }
 
