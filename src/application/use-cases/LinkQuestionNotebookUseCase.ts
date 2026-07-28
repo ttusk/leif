@@ -1,37 +1,40 @@
+import type { RepositoryFactory } from "@/application/ports/EntityRepository";
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
-import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
-import type { QuestionNotebook } from "@/domain/entities/QuestionNotebook";
-import type { Topic } from "@/domain/entities/Topic";
-import { ValidationError } from "@/domain/errors/DomainErrors";
-import { LinkQuestionNotebookValidator } from "@/application/validation/InputValidators";
+import type { ResourceAccess } from "@/domain/entities/ResourceAccess";
+import { ResourceFormat } from "@/domain/entities/Resource";
+import { ResourceGoal } from "@/domain/entities/ResourceGoal";
+import { GoalUnit } from "@/domain/types/GoalUnit";
+import {
+  CreateResourceUseCase,
+  type CreateResourceInput
+} from "@/application/use-cases/CreateResourceUseCase";
 
 export interface LinkQuestionNotebookInput {
   topicId: string;
-  questionNotebook: QuestionNotebook;
+  subjectId: string;
+  title: string;
+  questionCount?: number;
+  access?: ResourceAccess;
 }
 
-/**
- * Use case for linking a question notebook to a topic.
- */
 export class LinkQuestionNotebookUseCase {
-  private readonly topicRepository: EntityRepositoryPort<Topic>;
+  private readonly createResource: CreateResourceUseCase;
 
-  constructor(
-    private readonly dataStore: PluginDataStore,
-    repositoryFactory: RepositoryFactory
-  ) {
-    this.topicRepository = repositoryFactory.for("topics");
+  constructor(dataStore: PluginDataStore, repositoryFactory?: RepositoryFactory) {
+    this.createResource = new CreateResourceUseCase(dataStore, repositoryFactory);
   }
 
-  async execute(input: LinkQuestionNotebookInput): Promise<Topic> {
-    const validation = new LinkQuestionNotebookValidator().validate(input);
-    if (!validation.valid) {
-      throw new ValidationError(validation.errors.join(", "));
-    }
-
-    return await this.topicRepository.update(input.topicId, (topic) => ({
-      ...topic,
-      questionNotebook: input.questionNotebook
-    }));
+  async execute(input: LinkQuestionNotebookInput) {
+    const createInput: CreateResourceInput = {
+      subjectId: input.subjectId,
+      title: input.title,
+      format: ResourceFormat.QUESTOES,
+      goal: input.questionCount
+        ? new ResourceGoal(input.questionCount, GoalUnit.QUESTOES)
+        : undefined,
+      topicIds: [input.topicId],
+      accesses: input.access ? [input.access] : []
+    };
+    return this.createResource.execute(createInput);
   }
 }

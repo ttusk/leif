@@ -1,8 +1,9 @@
-import type { PluginDataStore } from "@/application/ports/PluginDataStore";
-import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
 import { Contest } from "@/domain/entities/Contest";
-import { ContestState } from "@/domain/entities/ContestState";
+import { CycleState } from "@/domain/entities/CycleState";
+import { AlreadyExistsError } from "@/domain/errors/DomainErrors";
 import { ValidationError } from "@/domain/errors/DomainErrors";
+import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import type { RepositoryFactory } from "@/application/ports/EntityRepository";
 import { CreateContestValidator } from "@/application/validation/InputValidators";
 
 export interface CreateContestInput {
@@ -10,18 +11,11 @@ export interface CreateContestInput {
   name: string;
 }
 
-/**
- * Use case for creating a new contest.
- */
 export class CreateContestUseCase {
-  private readonly contestRepository: EntityRepositoryPort<Contest>;
-
   constructor(
     private readonly dataStore: PluginDataStore,
-    repositoryFactory: RepositoryFactory
-  ) {
-    this.contestRepository = repositoryFactory.for("contests");
-  }
+    private readonly repositoryFactory: RepositoryFactory
+  ) {}
 
   async execute(input: CreateContestInput): Promise<Contest> {
     const validation = new CreateContestValidator().validate(input);
@@ -29,23 +23,18 @@ export class CreateContestUseCase {
       throw new ValidationError(validation.errors.join(", "));
     }
 
-    const contest = new Contest(input.id, input.name, [], {
-      noticeLinks: [],
-      examLinks: [],
-      subjectSnapshots: []
+    return this.dataStore.mutate((draft) => {
+      if (draft.contests.some((contest) => contest.id === input.id)) {
+        throw new AlreadyExistsError("contests", input.id);
+      }
+
+      const contest = new Contest(input.id, input.name);
+      draft.contests.push(contest);
+      draft.cycleStates.push(new CycleState(contest.id));
+      if (draft.activeContestId === null) {
+        draft.activeContestId = contest.id;
+      }
+      return contest;
     });
-
-    await this.contestRepository.create(contest);
-
-    const contestState = new ContestState(input.id);
-
-    const data = await this.dataStore.load();
-    await this.dataStore.save({
-      ...data,
-      activeContestId: data.activeContestId ?? contest.id,
-      contestStates: [...data.contestStates, contestState]
-    });
-
-    return contest;
   }
 }

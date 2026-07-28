@@ -38,7 +38,7 @@ export class CreateTopicUseCase {
       if (data.topics.some((topic) => topic.id === input.id)) {
         throw new AlreadyExistsError("topics", input.id);
       }
-      const topic = new Topic(input.id, input.subjectId, input.name, []);
+      const topic = new Topic(input.id, input.subjectId, input.name);
       data.topics.push(topic);
       const subjectIndex = data.subjects.indexOf(subject);
       data.subjects[subjectIndex] = {

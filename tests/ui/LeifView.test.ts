@@ -3,40 +3,39 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import type { PluginDataDiagnostic, PluginDataStore } from "@/application/ports/PluginDataStore";
-import { AddStudyItemResourceReferenceUseCase } from "@/application/use-cases/AddStudyItemResourceReferenceUseCase";
 import { CreateContestUseCase } from "@/application/use-cases/CreateContestUseCase";
-import { CreateStudyItemUseCase } from "@/application/use-cases/CreateStudyItemUseCase";
+import { UpdateContestMuralUseCase } from "@/application/use-cases/UpdateContestMuralUseCase";
+import { CreateResourceUseCase } from "@/application/use-cases/CreateResourceUseCase";
 import { CreateSubjectUseCase } from "@/application/use-cases/CreateSubjectUseCase";
 import { CreateTopicUseCase } from "@/application/use-cases/CreateTopicUseCase";
-import { LinkQuestionNotebookUseCase } from "@/application/use-cases/LinkQuestionNotebookUseCase";
-import { RegisterStudySessionUseCase } from "@/application/use-cases/RegisterStudySessionUseCase";
-import { UpdateContestWallUseCase } from "@/application/use-cases/UpdateContestWallUseCase";
-import { UpdateStudyItemUseCase } from "@/application/use-cases/UpdateStudyItemUseCase";
-import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
-import { App, getRecordedNotices, Plugin, resetRecordedNotices } from "../mocks/obsidian";
-import { LEIF_VIEW_TYPE, registerLeifView } from "@/ui/view/registerLeifView";
+import { CycleState } from "@/domain/entities/CycleState";
+import { Resource } from "@/domain/entities/Resource";
+import { StudyRecord } from "@/domain/entities/StudyRecord";
+import { StudySession } from "@/domain/entities/StudySession";
+import { Topic } from "@/domain/entities/Topic";
+import { GoalUnit } from "@/domain/types/GoalUnit";
+import type { LeifPluginData } from "@/domain/types/LeifPluginData";
+import { createDefaultLeifPluginData } from "@/domain/types/LeifPluginData";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
-import { seedMinimalContest } from "../fixtures/seedMinimalContest";
+import { LEIF_VIEW_TYPE, registerLeifView } from "@/ui/view/registerLeifView";
+import { App, getShownMenus, Plugin, resetShownMenus } from "../mocks/obsidian";
+import { MarkdownRenderer } from "obsidian";
 
 class InMemoryPluginDataStore implements PluginDataStore {
-  private nextMutationGate: Promise<void> | null = null;
-  private releaseNextMutation: (() => void) | null = null;
-  private currentDiagnostics: readonly PluginDataDiagnostic[] = [];
-
-  constructor(private data: LeifPluginData = createDefaultLeifPluginData()) {}
+  constructor(
+    private data: LeifPluginData = createDefaultLeifPluginData(),
+    private readonly currentDiagnostics: readonly PluginDataDiagnostic[] = []
+  ) {}
 
   async load(): Promise<LeifPluginData> {
-    return this.data;
+    return structuredClone(this.data);
   }
 
   async save(data: LeifPluginData): Promise<void> {
-    this.data = data;
+    this.data = structuredClone(data);
   }
 
   async mutate<T>(mutation: (draft: LeifPluginData) => T | Promise<T>): Promise<T> {
-    const gate = this.nextMutationGate;
-    this.nextMutationGate = null;
-    if (gate) await gate;
     const draft = structuredClone(this.data);
     const result = await mutation(draft);
     this.data = draft;
@@ -46,2402 +45,672 @@ class InMemoryPluginDataStore implements PluginDataStore {
   diagnostics(): readonly PluginDataDiagnostic[] {
     return this.currentDiagnostics;
   }
-
-  setDiagnostics(diagnostics: readonly PluginDataDiagnostic[]): void {
-    this.currentDiagnostics = diagnostics;
-  }
-
-  pauseNextMutation(): () => void {
-    this.nextMutationGate = new Promise((resolve) => {
-      this.releaseNextMutation = resolve;
-    });
-    return () => {
-      this.releaseNextMutation?.();
-      this.releaseNextMutation = null;
-    };
-  }
 }
 
-async function seedUiData(dataStore: PluginDataStore): Promise<EntityRepositoryFactory> {
+async function seedUiData(dataStore: PluginDataStore): Promise<void> {
   const factory = new EntityRepositoryFactory(dataStore);
-  const createContest = new CreateContestUseCase(dataStore, factory);
-  const createSubject = new CreateSubjectUseCase(dataStore, factory);
-  const createStudyItem = new CreateStudyItemUseCase(dataStore, factory);
-  const updateContestWall = new UpdateContestWallUseCase(dataStore, factory);
-  const registerStudySession = new RegisterStudySessionUseCase(dataStore, factory);
+  const contest = await new CreateContestUseCase(dataStore, factory).execute({
+    id: "contest-1",
+    name: "TRT"
+  });
+  const subject = await new CreateSubjectUseCase(dataStore, factory).execute({
+    id: "subject-1",
+    contestId: contest.id,
+    name: "Português",
+    plannedStudyMinutes: 60
+  });
+  await new CreateResourceUseCase(dataStore, factory).execute({
+    id: "resource-1",
+    subjectId: subject.id,
+    title: "PDF 01"
+  });
+}
 
-  await createContest.execute({ id: "contest-2", name: "SEFAZ" });
-  const { contestId, subjectId } = await seedMinimalContest(dataStore);
-  await createSubject.execute({
+async function seedUiCycleData(dataStore: PluginDataStore): Promise<void> {
+  const factory = new EntityRepositoryFactory(dataStore);
+  const contest = await new CreateContestUseCase(dataStore, factory).execute({
+    id: "contest-1",
+    name: "TRT"
+  });
+  const portuguese = await new CreateSubjectUseCase(dataStore, factory).execute({
+    id: "subject-1",
+    contestId: contest.id,
+    name: "Português",
+    plannedStudyMinutes: 60
+  });
+  const law = await new CreateSubjectUseCase(dataStore, factory).execute({
     id: "subject-2",
-    contestId,
-    name: "Constitutional Law",
+    contestId: contest.id,
+    name: "Direito Constitucional",
     plannedStudyMinutes: 45
   });
-  const item1 = await createStudyItem.execute({ subjectId, title: "Sintaxe" });
-  await updateContestWall.execute({
-    contestId,
-    wall: {
-      noticeLinks: [{ id: "notice-1", label: "Edital", url: "https://example.com/edital" }],
-      examLinks: [],
-      subjectSnapshots: [],
-      notes: "Foco em portugues."
-    }
+  const administration = await new CreateSubjectUseCase(dataStore, factory).execute({
+    id: "subject-3",
+    contestId: contest.id,
+    name: "Administração",
+    plannedStudyMinutes: 40
   });
-  await registerStudySession.execute({
-    id: "session-1",
-    contestId,
-    subjectId,
-    studyItemId: item1.id,
-    type: "pdf",
-    studiedAt: "2026-06-11T20:00:00.000Z",
-    pagesOrCount: 20,
-    completed: true
+  await new CreateResourceUseCase(dataStore, factory).execute({
+    id: "resource-1",
+    subjectId: portuguese.id,
+    title: "PDF 01"
   });
-
-  return factory;
+  await new CreateResourceUseCase(dataStore, factory).execute({
+    id: "resource-2",
+    subjectId: law.id,
+    title: "Controle de constitucionalidade"
+  });
+  await new CreateResourceUseCase(dataStore, factory).execute({
+    id: "resource-3",
+    subjectId: administration.id,
+    title: "Gestão pública"
+  });
+  await new CreateTopicUseCase(dataStore, factory).execute({
+    id: "topic-2",
+    subjectId: law.id,
+    name: "Controle concentrado"
+  });
+  await dataStore.mutate((draft) => {
+    draft.cycleStates = [new CycleState(contest.id, portuguese.id, "resource-1")];
+  });
 }
 
-async function openLeifView(dataStore: PluginDataStore): Promise<{
-  plugin: Plugin;
-  app: App;
-  leaf: App["workspace"]["leaves"][number];
-  view: NonNullable<App["workspace"]["leaves"][number]["view"]>;
-}> {
+async function seedUiSessionHistory(dataStore: PluginDataStore): Promise<void> {
+  await seedUiCycleData(dataStore);
+  await dataStore.mutate((draft) => {
+    draft.studySessions.push(
+      new StudySession(
+        "session-1",
+        "contest-1",
+        "2026-07-27",
+        [
+          new StudyRecord(
+            "record-1",
+            "subject-1",
+            "leitura",
+            "resource-1",
+            undefined,
+            12,
+            GoalUnit.PAGINAS,
+            undefined,
+            true
+          ),
+          new StudyRecord(
+            "record-2",
+            "subject-2",
+            "questoes",
+            "resource-2",
+            "topic-2",
+            20,
+            GoalUnit.QUESTOES,
+            16,
+            true
+          )
+        ],
+        "19:00",
+        "20:30",
+        "Bloco noturno"
+      ),
+      new StudySession(
+        "session-2",
+        "contest-1",
+        "2026-07-20",
+        [
+          new StudyRecord(
+            "record-3",
+            "subject-1",
+            "revisao",
+            "resource-1",
+            undefined,
+            30,
+            GoalUnit.MINUTOS,
+            undefined,
+            true
+          )
+        ],
+        "08:00",
+        "08:30",
+        "Revisão curta"
+      )
+    );
+  });
+}
+
+async function openLeifView(dataStore: PluginDataStore) {
   const app = new App();
   const plugin = new Plugin(app);
   registerLeifView(plugin as never, dataStore);
 
   const openCommand = plugin.commands.find((command) => command.id === "open-view");
-
-  if (!openCommand) {
-    throw new Error("Open view command was not registered.");
-  }
-
+  if (!openCommand) throw new Error("Open view command was not registered.");
   await openCommand.callback();
 
   const leaf = app.workspace.getLeavesOfType(LEIF_VIEW_TYPE)[0];
-
-  if (!leaf?.view) {
-    throw new Error("Leif view was not opened.");
-  }
-
+  if (!leaf?.view) throw new Error("Leif view was not opened.");
   return { plugin, app, leaf, view: leaf.view };
 }
 
 describe("LeifView", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
-    resetRecordedNotices();
-    vi.unstubAllGlobals();
+    resetShownMenus();
+  });
+
+  it("opens the dashboard for schema-3 study data", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiData(dataStore);
+
+    const { leaf } = await openLeifView(dataStore);
+
+    expect(leaf.view?.getViewType()).toBe(LEIF_VIEW_TYPE);
+    expect(leaf.view?.contentEl.textContent).toContain("Hoje");
+    expect(leaf.view?.contentEl.textContent).toContain("TRT");
+    expect(leaf.view?.contentEl.textContent).toContain("Português");
+    expect(leaf.view?.contentEl.textContent).toContain("PDF 01");
   });
 
   it("surfaces protected Markdown diagnostics without hiding the active concurso", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    await seedMinimalContest(dataStore);
-    dataStore.setDiagnostics([
+    const dataStore = new InMemoryPluginDataStore(createDefaultLeifPluginData(), [
       {
         path: "Leif/concursos/trt/concurso.md",
         code: "merge-conflict",
         message: "Resolva os marcadores de conflito antes de salvar."
       }
     ]);
+    await seedUiData(dataStore);
 
     const { leaf } = await openLeifView(dataStore);
-    const diagnostic = leaf.view!.contentEl.querySelector(".leif-diagnostics");
+    const diagnostic = leaf.view?.contentEl.querySelector(".leif-diagnostics");
 
     expect(diagnostic?.getAttribute("role")).toBe("alert");
     expect(diagnostic?.textContent).toContain("Leif protegeu seus dados");
     expect(diagnostic?.textContent).toContain("Leif/concursos/trt/concurso.md");
-    expect(diagnostic?.textContent).toContain("Resolva os marcadores de conflito");
-    expect(leaf.view!.contentEl.textContent).toContain("Hoje");
+    expect(leaf.view?.contentEl.textContent).toContain("TRT");
   });
 
-  it("adapts navigation to the actual Obsidian pane width", async () => {
-    let resizeCallback: ResizeObserverCallback | undefined;
-    const disconnect = vi.fn();
-
-    class ResizeObserverStub {
-      constructor(callback: ResizeObserverCallback) {
-        resizeCallback = callback;
-      }
-
-      observe(): void {}
-
-      disconnect(): void {
-        disconnect();
-      }
-    }
-
-    vi.stubGlobal("ResizeObserver", ResizeObserverStub);
-
-    const { leaf, view } = await openLeifView(new InMemoryPluginDataStore());
-    const root = leaf.containerEl.querySelector<HTMLElement>(".leif-view");
-
-    resizeCallback?.(
-      [{ contentRect: { width: 700 } } as ResizeObserverEntry],
-      {} as ResizeObserver
-    );
-    expect(root?.classList.contains("is-narrow")).toBe(true);
-    expect(root?.classList.contains("is-compact")).toBe(false);
-
-    resizeCallback?.(
-      [{ contentRect: { width: 480 } } as ResizeObserverEntry],
-      {} as ResizeObserver
-    );
-    expect(root?.classList.contains("is-compact")).toBe(true);
-
-    resizeCallback?.(
-      [{ contentRect: { width: 900 } } as ResizeObserverEntry],
-      {} as ResizeObserver
-    );
-    expect(root?.classList.contains("is-narrow")).toBe(false);
-    expect(root?.classList.contains("is-compact")).toBe(false);
-
-    await view.onClose();
-    expect(disconnect).toHaveBeenCalledOnce();
-  });
-
-  it("keeps the Obsidian view shell and exposes four text-only primary sections", async () => {
+  it("renders the same plain cycle recommendation in Hoje and Registros", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    const { plugin, leaf } = await openLeifView(dataStore);
+    await seedUiCycleData(dataStore);
 
-    expect(plugin.ribbonIcons).toHaveLength(1);
-    expect(plugin.ribbonIcons[0]?.title).toBe("Abrir Leif");
-    expect(plugin.commands.map((command) => command.id)).toContain("open-view");
-    expect(plugin.commands.find((command) => command.id === "open-view")?.name).toBe(
-      "Abrir painel"
-    );
-    expect(leaf.containerEl.querySelector(".view-content.leif-view")).not.toBeNull();
-    expect(leaf.containerEl.textContent).toContain("Comece por aqui");
+    const { view } = await openLeifView(dataStore);
+    const dashboardRecommendation = view.contentEl.querySelector(".leif-cycle-recommendation");
+    const dashboardSummary = view.contentEl.querySelector(".leif-cycle-recommendation-summary");
 
-    const primaryNavigation = leaf.containerEl.querySelector(".leif-primary-navigation");
-    const primaryTabs = Array.from(
-      primaryNavigation?.querySelectorAll<HTMLButtonElement>("[role='tab']") ?? []
+    expect(dashboardRecommendation?.getAttribute("aria-label")).toBe("Recomendação do ciclo");
+    expect(dashboardSummary?.textContent).toContain("Agora");
+    expect(dashboardSummary?.textContent).toContain("Português");
+    expect(dashboardSummary?.textContent).toContain("PDF 01");
+    expect(dashboardSummary?.textContent).toContain("Próxima: Direito Constitucional");
+    expect(dashboardSummary?.textContent).toContain("Motivo: próxima matéria ativa no ciclo.");
+    expect(view.contentEl.querySelector(".leif-cycle-thread")).toBeNull();
+
+    await (view as unknown as { openTab: (tabId: "sessions") => Promise<void> }).openTab(
+      "sessions"
     );
-    expect(primaryTabs.map((tab) => tab.textContent?.trim())).toEqual([
-      "Hoje",
-      "Registros",
-      "Plano",
-      "Mural"
+    const sessionsRecommendation = view.contentEl.querySelector(".leif-cycle-recommendation");
+    const sessionsSummary = view.contentEl.querySelector(".leif-cycle-recommendation-summary");
+
+    expect(sessionsRecommendation?.getAttribute("aria-label")).toBe("Recomendação do ciclo");
+    expect(sessionsSummary?.textContent).toBe(dashboardSummary?.textContent);
+    expect(view.contentEl.querySelector(".leif-cycle-thread")).toBeNull();
+  });
+
+  it("renders Registros as grouped sessions with readable child rows", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiSessionHistory(dataStore);
+
+    const { view } = await openLeifView(dataStore);
+    await (view as unknown as { openTab: (tabId: "sessions") => Promise<void> }).openTab(
+      "sessions"
+    );
+
+    const session = view.contentEl.querySelector("[data-session-id='session-1']");
+    const records = Array.from(session?.querySelectorAll(".leif-session-record") ?? []);
+
+    expect(session?.querySelector(".leif-session-header")?.textContent).toContain("27/07/2026");
+    expect(session?.querySelector(".leif-session-header")?.textContent).toContain("19:00-20:30");
+    expect(session?.textContent).toContain("Bloco noturno");
+    expect(records).toHaveLength(2);
+    expect(records[0]?.textContent).toContain("Português");
+    expect(records[0]?.textContent).toContain("PDF 01");
+    expect(records[0]?.textContent).toContain("leitura");
+    expect(records[0]?.textContent).toContain("12 paginas");
+    expect(records[1]?.textContent).toContain("Direito Constitucional");
+    expect(records[1]?.textContent).toContain("Controle de constitucionalidade");
+    expect(records[1]?.textContent).toContain("Controle concentrado");
+    expect(records[1]?.textContent).toContain("questoes");
+    expect(records[1]?.textContent).toContain("16/20 acertos");
+    expect(session?.querySelectorAll(".leif-session-record button")).toHaveLength(0);
+  });
+
+  it("opens a native session menu with session-level actions", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiSessionHistory(dataStore);
+
+    const { view } = await openLeifView(dataStore);
+    await (view as unknown as { openTab: (tabId: "sessions") => Promise<void> }).openTab(
+      "sessions"
+    );
+    const menuTrigger = view.contentEl.querySelector(
+      "[data-session-id='session-1'] .leif-menu-trigger"
+    );
+    menuTrigger?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    const [menu] = getShownMenus();
+    expect(menu?.useNativeMenu).toBe(true);
+    expect(menu?.items.map((item) => item.title)).toEqual([
+      "Editar sessão",
+      "Adicionar registro",
+      "Excluir sessão"
     ]);
-    expect(primaryTabs.every((tab) => tab.type === "button")).toBe(true);
-    expect(primaryTabs.every((tab) => tab.querySelector("[data-icon]") === null)).toBe(true);
-
-    const contestSelector = leaf.containerEl.querySelector<HTMLButtonElement>(
-      "button.leif-contest-selector"
-    );
-    expect(contestSelector?.getAttribute("aria-haspopup")).toBe("menu");
-    expect(contestSelector?.textContent).toContain("Escolha um concurso");
-
-    expect(leaf.containerEl.querySelector(".leif-workspace")).not.toBeNull();
-    expect(leaf.containerEl.querySelector(".leif-title")).toBeNull();
   });
 
-  it("guides first use with a real ordered setup sequence", async () => {
-    const { leaf } = await openLeifView(new InMemoryPluginDataStore());
-
-    const setup = leaf.containerEl.querySelector<HTMLOListElement>("ol.leif-setup-steps");
-    const steps = Array.from(setup?.querySelectorAll("li") ?? []).map((step) =>
-      step.textContent?.trim()
-    );
-
-    expect(leaf.containerEl.textContent).toContain("Comece por aqui");
-    expect(steps).toHaveLength(3);
-    expect(steps[0]).toContain("Criar ou escolher um concurso");
-    expect(steps[1]).toContain("Informar a data da prova");
-    expect(steps[2]).toContain("Adicionar e ordenar as matérias");
-    expect(leaf.containerEl.textContent).not.toContain("Nada escolhido ainda");
-  });
-
-  it("keeps setup sections under Plano and contest management in the global selector", async () => {
+  it("edits a grouped session and saves all records together", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
+    await seedUiSessionHistory(dataStore);
 
-    const { leaf } = await openLeifView(dataStore);
-    const planTab = leaf.containerEl.querySelector<HTMLButtonElement>(
-      ".leif-primary-navigation [data-tab='plan']"
+    const { view } = await openLeifView(dataStore);
+    await (view as unknown as { openTab: (tabId: "sessions") => Promise<void> }).openTab(
+      "sessions"
     );
+    view.contentEl
+      .querySelector("[data-session-id='session-1'] .leif-menu-trigger")
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await (getShownMenus()[0]?.items[0]?.callback?.(new MouseEvent("click")) as Promise<void>);
 
-    expect(planTab).not.toBeNull();
-    planTab?.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const planTabs = Array.from(
-      leaf.containerEl.querySelectorAll<HTMLButtonElement>(".leif-plan-navigation [role='tab']")
-    );
-    expect(planTabs.map((tab) => tab.textContent?.trim())).toEqual([
-      "Matérias",
-      "Edital",
-      "Recursos"
-    ]);
-
-    const contestSelector = leaf.containerEl.querySelector<HTMLButtonElement>(
-      "button.leif-contest-selector"
-    );
-    contestSelector?.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const contestMenu = leaf.containerEl.querySelector<HTMLElement>(
-      ".leif-contest-menu[role='menu']"
-    );
-    expect(contestMenu?.textContent).toContain("TRT");
-    expect(contestMenu?.textContent).toContain("SEFAZ");
-    expect(contestMenu?.textContent).toContain("Gerenciar concursos");
-  });
-
-  it("supports Home and End in primary navigation", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
-    const { leaf } = await openLeifView(dataStore);
-    const today = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='dashboard']");
-
-    today?.dispatchEvent(new KeyboardEvent("keydown", { key: "End", bubbles: true }));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(leaf.containerEl.querySelector("[data-tab='wall']")?.getAttribute("aria-selected")).toBe(
-      "true"
-    );
-
-    leaf.containerEl
-      .querySelector<HTMLButtonElement>("[data-tab='wall']")
-      ?.dispatchEvent(new KeyboardEvent("keydown", { key: "Home", bubbles: true }));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(today?.getAttribute("aria-selected")).toBe("true");
-  });
-
-  it("uses native Obsidian classes for buttons and form controls", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
-
-    const { leaf } = await openLeifView(dataStore);
-    const sessionsTabButton =
-      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='sessions']");
-
-    if (!sessionsTabButton) {
-      throw new Error("Sessions tab button was not rendered.");
-    }
-
-    sessionsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const newSessionButton = leaf.containerEl.querySelector<HTMLButtonElement>(
-      "button.clickable-icon[aria-label='Nova sessão']"
-    );
-    const finishCycleButton = Array.from(leaf.containerEl.querySelectorAll("button")).find(
-      (button) => button.textContent?.includes("Marcar como estudado")
-    );
-
-    expect(newSessionButton).not.toBeNull();
-    expect(finishCycleButton?.classList.contains("mod-cta")).toBe(true);
-
-    newSessionButton?.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const form = leaf.containerEl.querySelector<HTMLFormElement>("form.leif-card");
-    const input = form?.querySelector<HTMLInputElement>("input");
-    const select = form?.querySelector<HTMLSelectElement>("select");
-
-    expect(document.body.querySelector(".modal")).toBeNull();
-    expect(form).not.toBeNull();
-    expect(input?.classList.contains("leif-input")).toBe(false);
-    expect(select?.classList.contains("leif-select")).toBe(false);
-  });
-
-  it("renders dashboard data from the active contest", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
-
-    const { leaf } = await openLeifView(dataStore);
-
-    expect(leaf.containerEl.textContent).toContain("TRT");
-    expect(leaf.containerEl.textContent).toContain("Portuguese");
-    expect(leaf.containerEl.textContent).toContain("Constitutional Law");
-    expect(leaf.containerEl.textContent).toContain("20");
-    expect(leaf.containerEl.textContent).not.toContain("O que estudar agora e como o dia");
-  });
-
-  it("shows the exam context and an accessible ordered study route on Hoje", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-07-21T12:00:00.000Z"));
-
-    try {
-      const dataStore = new InMemoryPluginDataStore();
-      await seedUiData(dataStore);
-      const data = await dataStore.load();
-      data.contests = data.contests.map((contest) =>
-        contest.id === data.activeContestId
-          ? { ...contest, examPlan: { ...contest.examPlan, examDate: "2026-11-22" } }
-          : contest
+    await vi.waitFor(() => {
+      expect(view.contentEl.querySelector(".leif-session-editor")?.textContent).toContain(
+        "Editar sessão"
       );
-      await dataStore.save(data);
-
-      const { leaf } = await openLeifView(dataStore);
-      const today = leaf.containerEl.querySelector<HTMLElement>("#leif-tabpanel");
-
-      expect(today?.textContent).toContain("Prova em 124 dias");
-      expect(today?.textContent).toMatch(/22\/11\/2026|22 nov 2026/i);
-
-      const route = today?.querySelector<HTMLOListElement>("ol.leif-cycle-thread");
-      const current = route?.querySelector<HTMLElement>("[data-cycle-state='current']");
-      const next = route?.querySelector<HTMLElement>("[data-cycle-state='next']");
-
-      expect(route).not.toBeNull();
-      expect(current?.getAttribute("aria-current")).toBe("step");
-      expect(current?.textContent).toContain("Agora");
-      expect(current?.textContent).toContain("Portuguese");
-      expect(next?.textContent).toContain("Próxima");
-      expect(next?.textContent).toContain("Constitutional Law");
-
-      const reason = today?.querySelector<HTMLElement>(".leif-recommendation-reason");
-      expect(reason?.textContent).toMatch(/Próxima no ciclo/i);
-      expect(reason?.textContent).not.toMatch(/Leif (acha|pensa|recomenda)/i);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it.each([
-    { examDate: undefined, expected: "Data da prova não definida" },
-    { examDate: "2026-07-21", expected: "Prova hoje" },
-    { examDate: "2026-07-20", expected: "Prova realizada em 20/07/2026" },
-    { examDate: "data-inválida", expected: "Data da prova inválida" }
-  ])("renders the exam date state as $expected", async ({ examDate, expected }) => {
-    vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-07-21T12:00:00.000Z"));
-
-    try {
-      const dataStore = new InMemoryPluginDataStore();
-      await seedUiData(dataStore);
-      const data = await dataStore.load();
-      data.contests = data.contests.map((contest) =>
-        contest.id === data.activeContestId
-          ? { ...contest, examPlan: examDate ? { examDate } : undefined }
-          : contest
-      );
-      await dataStore.save(data);
-
-      const { leaf } = await openLeifView(dataStore);
-      expect(leaf.containerEl.textContent).toContain(expected);
-      expect(leaf.containerEl.textContent).not.toMatch(/Prova em -\d|Prova em data/);
-    } finally {
-      vi.useRealTimers();
-    }
-  });
-
-  it("surfaces the next study activity as a focused dashboard panel", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
-
-    const { leaf } = await openLeifView(dataStore);
-    const nextActivity = leaf.containerEl.querySelector<HTMLElement>(".leif-next-activity");
-
-    expect(nextActivity?.textContent).toContain("Estudar agora");
-    expect(nextActivity?.textContent).toContain("Portuguese");
-    expect(nextActivity?.textContent).toContain("Sintaxe");
-    expect(nextActivity?.textContent).toContain("60 min");
-    expect(nextActivity?.textContent).toContain("sem etapa");
-    expect(nextActivity?.textContent).toContain("Próxima matéria: Constitutional Law");
-    expect(
-      nextActivity?.querySelector(".leif-next-activity-meta .leif-next-activity-next")
-    ).toBeNull();
-    const nextSubject = nextActivity?.querySelector(":scope > .leif-next-activity-next");
-    expect(nextSubject).not.toBeNull();
-    expect(nextSubject?.previousElementSibling).toBe(
-      nextActivity?.querySelector(".leif-next-activity-meta")
-    );
-  });
-
-  it("opens Registros from the dashboard study panel", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
-
-    const { leaf } = await openLeifView(dataStore);
-    const nextActivity = leaf.containerEl.querySelector<HTMLElement>(".leif-next-activity");
-    const registerButton = Array.from(nextActivity?.querySelectorAll("button") ?? []).find(
-      (button) => button.textContent?.includes("Registrar estudo")
-    );
-
-    expect(nextActivity?.textContent).not.toContain("Registre o estudo na aba Registros");
-    expect(registerButton).not.toBeUndefined();
-
-    registerButton?.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const sessionsTab = leaf.containerEl.querySelector<HTMLElement>("[data-tab='sessions']");
-    expect(sessionsTab?.getAttribute("aria-selected")).toBe("true");
-    expect(leaf.containerEl.querySelector("#leif-tabpanel")?.textContent).toContain("Registros");
-  });
-
-  it("prefills the recommendation, advances after save, and offers a safe undo", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
-    const before = await dataStore.load();
-    const initialState = structuredClone(
-      before.contestStates.find((state) => state.contestId === before.activeContestId)
-    );
-
-    const { leaf } = await openLeifView(dataStore);
-    const registerButton = Array.from(leaf.containerEl.querySelectorAll("button")).find((button) =>
-      button.textContent?.includes("Registrar estudo")
-    );
-    expect(registerButton).not.toBeUndefined();
-
-    registerButton?.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const form = leaf.containerEl.querySelector<HTMLFormElement>("form.leif-registration-form");
-    const subject = form?.querySelector<HTMLSelectElement>("[data-field='subject']");
-    const item = form?.querySelector<HTMLSelectElement>("[data-field='item']");
-    expect(subject?.value).toBe("subject-1");
-    expect(item?.value).toBe(before.studyItems[0]?.id);
-
-    form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const afterSave = await dataStore.load();
-    const advancedState = afterSave.contestStates.find(
-      (state) => state.contestId === afterSave.activeContestId
-    );
-    expect(advancedState?.currentSubjectId).toBe("subject-2");
-    expect(leaf.containerEl.textContent).toContain("Agora vem Constitutional Law");
-
-    const undo = Array.from(leaf.containerEl.querySelectorAll("button")).find(
-      (button) => button.textContent?.trim() === "Desfazer"
-    );
-    expect(undo).not.toBeUndefined();
-    undo?.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const afterUndo = await dataStore.load();
-    const restored = afterUndo.contestStates.find(
-      (state) => state.contestId === afterUndo.activeContestId
-    );
-    expect(restored).toEqual(initialState);
-    expect(afterUndo.studySessions).toHaveLength(afterSave.studySessions.length);
-  });
-
-  it("blocks duplicate registration while persistence is pending", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
-    const release = dataStore.pauseNextMutation();
-
-    const { leaf } = await openLeifView(dataStore);
-    const registerButton = Array.from(leaf.containerEl.querySelectorAll("button")).find((button) =>
-      button.textContent?.includes("Registrar estudo")
-    );
-    registerButton?.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const form = leaf.containerEl.querySelector<HTMLFormElement>("form.leif-registration-form");
-    const submit = form?.querySelector<HTMLButtonElement>("button[type='submit']");
-    const beforeCount = (await dataStore.load()).studySessions.length;
-    form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-    form?.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-
-    expect(form?.getAttribute("aria-busy")).toBe("true");
-    expect(submit?.disabled).toBe(true);
-    expect(submit?.textContent).toBe("Registrando…");
-
-    release();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect((await dataStore.load()).studySessions).toHaveLength(beforeCount + 1);
-  });
-
-  it("guides the user when today's page has no active subject yet", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    const factory = new EntityRepositoryFactory(dataStore);
-    const createContest = new CreateContestUseCase(dataStore, factory);
-
-    await createContest.execute({ id: "contest-empty", name: "TJ" });
-
-    const { leaf } = await openLeifView(dataStore);
-    const nextActivity = leaf.containerEl.querySelector<HTMLElement>(".leif-next-activity");
-    const registerButton = Array.from(leaf.containerEl.querySelectorAll("button")).find((button) =>
-      button.textContent?.includes("Registrar agora")
-    );
-
-    expect(nextActivity?.textContent).toContain("Sem matéria ativa");
-    expect(nextActivity?.textContent).toContain("Crie ou ative uma matéria em Matérias");
-    expect(registerButton).toBeUndefined();
-  });
-
-  it("keeps today's tab read-only for study registration", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
-
-    const { leaf } = await openLeifView(dataStore);
-    const before = await dataStore.load();
-    const registerButton = Array.from(leaf.containerEl.querySelectorAll("button")).find((button) =>
-      button.textContent?.includes("Registrar agora")
-    );
-    const nextActivity = leaf.containerEl.querySelector<HTMLElement>(".leif-next-activity");
-    const form = nextActivity?.querySelector("form");
-
-    expect(nextActivity?.textContent).toContain("Estudar agora");
-    expect(nextActivity?.textContent).toContain("Portuguese");
-    expect(registerButton).toBeUndefined();
-    expect(form).toBeNull();
-
-    const after = await dataStore.load();
-    expect(after.studySessions).toHaveLength(before.studySessions.length);
-  });
-
-  it("switches the active contest from the contests tab and rerenders the dashboard", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
-
-    const { leaf } = await openLeifView(dataStore);
-    const contestsTabButton =
-      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='contests']");
-
-    if (!contestsTabButton) {
-      throw new Error("Contests tab button was not rendered.");
-    }
-
-    contestsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const activateButton = leaf.containerEl.querySelector<HTMLButtonElement>(
-      "[data-contest-id='contest-2']"
-    );
-
-    if (!activateButton) {
-      throw new Error("Activate contest button was not rendered.");
-    }
-
-    activateButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const dashboardTabButton =
-      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='dashboard']");
-
-    if (!dashboardTabButton) {
-      throw new Error("Hoje tab button was not rendered.");
-    }
-
-    dashboardTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(leaf.containerEl.textContent).toContain("SEFAZ");
-  });
-
-  it("shows cycle subjects in a compact table with status and reorder controls", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    const factory = await seedUiData(dataStore);
-    const registerSession = new RegisterStudySessionUseCase(dataStore, factory);
-    await registerSession.execute({
-      id: "session-cycle-accuracy",
-      contestId: "contest-1",
-      subjectId: "subject-1",
-      type: "questions",
-      studiedAt: "2026-06-12T20:00:00.000Z",
-      pagesOrCount: 20,
-      correctAnswers: 15,
-      completed: true
     });
-    const seededData = await dataStore.load();
-    seededData.subjects = seededData.subjects.map((subject) =>
-      subject.id === "subject-2" ? { ...subject, isActive: false } : subject
+    const editor = view.contentEl.querySelector(".leif-session-editor");
+    expect(editor?.textContent).toContain("Editar sessão");
+    const date = editor?.querySelector("[data-session-editor-date]") as HTMLInputElement;
+    const start = editor?.querySelector("[data-session-editor-start]") as HTMLInputElement;
+    const end = editor?.querySelector("[data-session-editor-end]") as HTMLInputElement;
+    const notes = editor?.querySelector("[data-session-editor-notes]") as HTMLTextAreaElement;
+    date.value = "2026-07-28";
+    start.value = "20:00";
+    end.value = "21:15";
+    notes.value = "Bloco ajustado";
+
+    const firstRecord = editor?.querySelector("[data-record-editor-index='0']");
+    const firstActivity = firstRecord?.querySelector(
+      "[data-record-editor-activity]"
+    ) as HTMLInputElement;
+    const firstQuantity = firstRecord?.querySelector(
+      "[data-record-editor-quantity]"
+    ) as HTMLInputElement;
+    firstActivity.value = "revisao";
+    firstQuantity.value = "18";
+
+    (
+      editor?.querySelector("[data-record-editor-index='1'] [data-record-editor-remove]") as
+        HTMLButtonElement | undefined
+    )?.click();
+    (view.contentEl.querySelector("[data-session-editor-add-record]") as HTMLButtonElement).click();
+    const addedRecord = view.contentEl.querySelector("[data-record-editor-index='1']");
+    const addedSubject = addedRecord?.querySelector(
+      "[data-record-editor-subject]"
+    ) as HTMLSelectElement;
+    const addedResource = addedRecord?.querySelector(
+      "[data-record-editor-resource]"
+    ) as HTMLSelectElement;
+    const addedActivity = addedRecord?.querySelector(
+      "[data-record-editor-activity]"
+    ) as HTMLInputElement;
+    const addedQuantity = addedRecord?.querySelector(
+      "[data-record-editor-quantity]"
+    ) as HTMLInputElement;
+    const addedCorrect = addedRecord?.querySelector(
+      "[data-record-editor-correct]"
+    ) as HTMLInputElement;
+    addedSubject.value = "subject-2";
+    addedSubject.dispatchEvent(new Event("change", { bubbles: true }));
+    addedResource.value = "resource-2";
+    addedActivity.value = "questoes";
+    addedQuantity.value = "30";
+    addedCorrect.value = "24";
+
+    (view.contentEl.querySelector("[data-session-editor-save]") as HTMLButtonElement).click();
+
+    await vi.waitFor(async () => {
+      const data = await dataStore.load();
+      expect(data.studySessions[0].date).toBe("2026-07-28");
+      expect(data.studySessions[0].startTime).toBe("20:00");
+      expect(data.studySessions[0].endTime).toBe("21:15");
+      expect(data.studySessions[0].notes).toBe("Bloco ajustado");
+      expect(data.studySessions[0].records).toHaveLength(2);
+      expect(data.studySessions[0].records[0].id).toBe("record-1");
+      expect(data.studySessions[0].records[0].activity).toBe("revisao");
+      expect(data.studySessions[0].records[0].quantity).toBe(18);
+      expect(data.studySessions[0].records[1].subjectId).toBe("subject-2");
+      expect(data.studySessions[0].records[1].resourceId).toBe("resource-2");
+      expect(data.studySessions[0].records[1].correctAnswers).toBe(24);
+    });
+    expect(view.contentEl.querySelector(".leif-session-editor")).toBeNull();
+    expect(view.contentEl.textContent).toContain("Bloco ajustado");
+  });
+
+  it("keeps the session editor open and unchanged when save validation fails", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiSessionHistory(dataStore);
+
+    const { view } = await openLeifView(dataStore);
+    await (view as unknown as { openTab: (tabId: "sessions") => Promise<void> }).openTab(
+      "sessions"
     );
-    await dataStore.save(seededData);
+    view.contentEl
+      .querySelector("[data-session-id='session-1'] .leif-menu-trigger")
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await (getShownMenus()[0]?.items[0]?.callback?.(new MouseEvent("click")) as Promise<void>);
+    await vi.waitFor(() => {
+      expect(view.contentEl.querySelector(".leif-session-editor")).not.toBeNull();
+    });
 
-    const { leaf } = await openLeifView(dataStore);
-    const planTabButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='cycle']");
+    const editor = view.contentEl.querySelector(".leif-session-editor");
+    const firstRecord = editor?.querySelector("[data-record-editor-index='0']");
+    const quantity = firstRecord?.querySelector(
+      "[data-record-editor-quantity]"
+    ) as HTMLInputElement;
+    const unit = firstRecord?.querySelector("[data-record-editor-unit]") as HTMLSelectElement;
+    quantity.value = "12";
+    unit.value = "";
 
-    if (!planTabButton) {
-      throw new Error("Plan tab button was not rendered.");
-    }
+    (view.contentEl.querySelector("[data-session-editor-save]") as HTMLButtonElement).click();
 
-    planTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await vi.waitFor(() => {
+      const error = view.contentEl.querySelector(".leif-session-editor-error");
+      expect(error?.getAttribute("role")).toBe("alert");
+      expect(error?.textContent).toContain("Não foi possível salvar a sessão");
+    });
+    expect(view.contentEl.querySelector(".leif-session-editor")).not.toBeNull();
+    const data = await dataStore.load();
+    expect(data.studySessions[0].records[0].unit).toBe(GoalUnit.PAGINAS);
+    expect(data.studySessions[0].date).toBe("2026-07-27");
+  });
 
-    const table = leaf.containerEl.querySelector("table.leif-table");
-    const headerTexts = Array.from(
-      leaf.containerEl.querySelectorAll("table.leif-table thead th")
-    ).map((header) => header.textContent?.trim());
-    const subjectRows = Array.from(
-      leaf.containerEl.querySelectorAll<HTMLElement>("tr[data-subject-id]")
+  it("filters grouped Registros by matéria, activity, and date range", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiSessionHistory(dataStore);
+
+    const { view } = await openLeifView(dataStore);
+    await (view as unknown as { openTab: (tabId: "sessions") => Promise<void> }).openTab(
+      "sessions"
     );
-    const upButton = leaf.containerEl.querySelector<HTMLButtonElement>(
-      "tr[data-subject-id] button[aria-label='Subir']"
-    );
-    const downButton = leaf.containerEl.querySelector<HTMLButtonElement>(
-      "tr[data-subject-id] button[aria-label='Descer']"
-    );
 
-    expect(table).not.toBeNull();
-    expect(headerTexts).toEqual([
-      "Ordem",
-      "Matéria",
-      "Status",
-      "Tempo",
-      "Etapa",
-      "Questões",
+    const subject = view.contentEl.querySelector(
+      "[data-session-filter-subject]"
+    ) as HTMLSelectElement;
+    const activity = view.contentEl.querySelector(
+      "[data-session-filter-activity]"
+    ) as HTMLSelectElement;
+    const from = view.contentEl.querySelector("[data-session-filter-from]") as HTMLInputElement;
+    const to = view.contentEl.querySelector("[data-session-filter-to]") as HTMLInputElement;
+
+    expect(view.contentEl.querySelector("[data-session-id='session-1']")).not.toBeNull();
+    expect(view.contentEl.querySelector("[data-session-id='session-2']")).not.toBeNull();
+
+    subject.value = "subject-2";
+    subject.dispatchEvent(new Event("change", { bubbles: true }));
+    await vi.waitFor(() => {
+      const session = view.contentEl.querySelector("[data-session-id='session-1']");
+      expect(session?.textContent).toContain("Direito Constitucional");
+      expect(session?.textContent).not.toContain("Português");
+      expect(view.contentEl.querySelector("[data-session-id='session-2']")).toBeNull();
+    });
+
+    activity.value = "questoes";
+    activity.dispatchEvent(new Event("change", { bubbles: true }));
+    await vi.waitFor(() => {
+      expect(view.contentEl.querySelector("[data-session-id='session-1']")?.textContent).toContain(
+        "questoes"
+      );
+      expect(
+        view.contentEl.querySelector("[data-session-id='session-1']")?.textContent
+      ).not.toContain("leitura");
+    });
+
+    from.value = "2026-07-28";
+    from.dispatchEvent(new Event("change", { bubbles: true }));
+    await vi.waitFor(() => {
+      expect(view.contentEl.querySelector("[data-session-id='session-1']")).toBeNull();
+      expect(view.contentEl.textContent).toContain("Nenhum registro encontrado");
+    });
+
+    from.value = "2026-07-01";
+    from.dispatchEvent(new Event("change", { bubbles: true }));
+    to.value = "2026-07-27";
+    to.dispatchEvent(new Event("change", { bubbles: true }));
+    await vi.waitFor(() => {
+      expect(view.contentEl.querySelector("[data-session-id='session-1']")).not.toBeNull();
+    });
+  });
+
+  it("undoes the cycle advancement produced by a multi-record session", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiCycleData(dataStore);
+
+    const { view } = await openLeifView(dataStore);
+    await (view as unknown as { openTab: (tabId: "sessions") => Promise<void> }).openTab(
+      "sessions"
+    );
+    const firstRecord = view.contentEl.querySelector("[data-record-editor-index='0']");
+    const firstResource = firstRecord?.querySelector(
+      "[data-record-editor-resource]"
+    ) as HTMLSelectElement;
+    firstResource.value = "resource-1";
+    (view.contentEl.querySelector("[data-session-create-add-record]") as HTMLButtonElement).click();
+    const secondRecord = view.contentEl.querySelector("[data-record-editor-index='1']");
+    const subject = secondRecord?.querySelector(
+      "[data-record-editor-subject]"
+    ) as HTMLSelectElement;
+    const resource = secondRecord?.querySelector(
+      "[data-record-editor-resource]"
+    ) as HTMLSelectElement;
+    subject.value = "subject-2";
+    subject.dispatchEvent(new Event("change", { bubbles: true }));
+    resource.value = "resource-2";
+
+    (view.contentEl.querySelector("[data-session-create-save]") as HTMLButtonElement).click();
+
+    await vi.waitFor(async () => {
+      const data = await dataStore.load();
+      expect(data.cycleStates[0].currentSubjectId).toBe("subject-3");
+      expect(data.studySessions).toHaveLength(1);
+      expect(data.studySessions[0].records).toHaveLength(2);
+    });
+    expect(view.contentEl.textContent).toContain("Ciclo avançado");
+
+    (view.contentEl.querySelector("[data-session-cycle-undo]") as HTMLButtonElement).click();
+
+    await vi.waitFor(async () => {
+      const data = await dataStore.load();
+      expect(data.cycleStates[0].currentSubjectId).toBe("subject-1");
+      expect(data.cycleStates[0].currentResourceId).toBe("resource-1");
+    });
+    expect(view.contentEl.querySelector("[data-session-cycle-undo]")).toBeNull();
+  });
+
+  it("renders the Recursos view as a readable table with a sticky Actions column", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiCycleData(dataStore);
+
+    const { view } = await openLeifView(dataStore);
+    await (view as unknown as { openTab: (tabId: "items") => Promise<void> }).openTab("items");
+
+    const table = view.contentEl.querySelector(".leif-table");
+    expect(table?.querySelectorAll("th")?.[0]?.textContent).toBe("Recurso");
+    expect(Array.from(table?.querySelectorAll("th") ?? []).map((th) => th.textContent)).toEqual([
+      "Recurso",
+      "Formato",
+      "Meta",
       "Ações"
     ]);
-    expect(subjectRows.length).toBeGreaterThanOrEqual(2);
-    expect(subjectRows[0]?.querySelector(".leif-order-number")?.textContent).toContain("1");
-    expect(subjectRows[0]?.querySelector(".leif-cycle-table-title")?.textContent).toBeTruthy();
-    expect(subjectRows[0]?.querySelector(".leif-cycle-status.leif-status-active")).not.toBeNull();
-    expect(subjectRows[1]?.querySelector(".leif-cycle-status.leif-status-inactive")).not.toBeNull();
-    expect(subjectRows[0]?.textContent).toContain("No ciclo");
-    expect(subjectRows[1]?.textContent).toContain("Pausada");
-    expect(subjectRows[0]?.textContent).toContain("1h");
-    expect(subjectRows[0]?.textContent).toContain("75% (15/20)");
-    expect(subjectRows[0]?.querySelector(".leif-key-value")).toBeNull();
-    expect(
-      subjectRows[0]?.querySelector("button[data-subject-cycle-toggle-id]")?.textContent
-    ).toMatch(/Pausar|Ativar/);
-    expect(upButton).not.toBeNull();
-    expect(downButton).not.toBeNull();
+
+    const row = table?.querySelector("[data-resource-id='resource-1']") as HTMLTableRowElement;
+    expect(row).toBeInstanceOf(HTMLTableRowElement);
+    const nameCell = row.querySelector(".leif-table-cell-name");
+    expect(nameCell?.textContent).toBe("PDF 01");
+    const actionsCell = row.querySelector(".leif-table-actions");
+    expect(actionsCell?.classList.contains("leif-table-actions")).toBe(true);
+    expect(actionsCell?.querySelector(".leif-menu-trigger")).not.toBeNull();
+    expect(row.querySelectorAll("button")).toHaveLength(1);
   });
 
-  it("formats cycle summary duration as hours and minutes with separated chips", async () => {
+  it("renders long Recurso names in full without truncation inside table cells", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
+    await seedUiCycleData(dataStore);
+    await dataStore.mutate((draft) => {
+      draft.resources.push(
+        new Resource(
+          "resource-long",
+          "subject-1",
+          "Direito Constitucional - Teoria Geral e Controle de Constitucionalidade",
+          99
+        )
+      );
+    });
 
-    const { leaf } = await openLeifView(dataStore);
-    const planTabButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='cycle']");
+    const { view } = await openLeifView(dataStore);
+    await (view as unknown as { openTab: (tabId: "items") => Promise<void> }).openTab("items");
 
-    if (!planTabButton) {
-      throw new Error("Plan tab button was not rendered.");
-    }
-
-    planTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const summary = leaf.containerEl.querySelector<HTMLElement>(".leif-cycle-summary");
-    const chips = Array.from(
-      leaf.containerEl.querySelectorAll<HTMLElement>(".leif-cycle-summary-chip")
+    const longRow = view.contentEl.querySelector("[data-resource-id='resource-long']");
+    const nameCell = longRow?.querySelector(".leif-table-cell-name") as HTMLElement;
+    expect(nameCell.textContent).toBe(
+      "Direito Constitucional - Teoria Geral e Controle de Constitucionalidade"
     );
+    expect(nameCell.style.textOverflow).toBe("");
+    expect(nameCell.style.overflow).toBe("");
+  });
 
-    expect(summary).not.toBeNull();
-    expect(chips).toHaveLength(3);
-    expect(chips.map((chip) => chip.textContent)).toEqual([
-      "Matérias:2",
-      "No ciclo:2",
-      "Tempo total:1h 45min"
+  it("opens the Recursos row actions menu and edits a recurso inline", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiCycleData(dataStore);
+
+    const { view } = await openLeifView(dataStore);
+    await (view as unknown as { openTab: (tabId: "items") => Promise<void> }).openTab("items");
+    view.contentEl
+      .querySelector("[data-resource-id='resource-1'] .leif-menu-trigger")
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await (getShownMenus()[0]?.items[0]?.callback?.(new MouseEvent("click")) as Promise<void>);
+
+    await vi.waitFor(() => {
+      const editor = view.contentEl.querySelector(
+        "[data-resource-id='resource-1'].leif-editing-row"
+      );
+      expect(editor).not.toBeNull();
+    });
+    const editor = view.contentEl.querySelector("[data-resource-id='resource-1'].leif-editing-row");
+    expect(
+      (editor?.querySelector("[data-resource-editor-title]") as HTMLInputElement | null)?.value
+    ).toBe("PDF 01");
+  });
+
+  it("renders the Assuntos view as a readable table with the sticky actions column", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiCycleData(dataStore);
+    await dataStore.mutate((draft) => {
+      draft.topics.push(new Topic("topic-1", "subject-1", "Concordância nominal"));
+    });
+
+    const { view } = await openLeifView(dataStore);
+    await (view as unknown as { openTab: (tabId: "topics") => Promise<void> }).openTab("topics");
+
+    const table = view.contentEl.querySelector(".leif-table");
+    expect(Array.from(table?.querySelectorAll("th") ?? []).map((th) => th.textContent)).toEqual([
+      "Assunto",
+      "Ações"
     ]);
+    const row = table?.querySelector("[data-topic-id='topic-1']") as HTMLTableRowElement;
+    expect(row.querySelector(".leif-table-cell-name")?.textContent).toBe("Concordância nominal");
+    expect(row.querySelector(".leif-table-actions .leif-menu-trigger")).not.toBeNull();
+    expect(row.querySelectorAll("button")).toHaveLength(1);
   });
 
-  it("makes subject cycle activation explicit and notifies the user", async () => {
+  it("renders the Matérias table with a sticky Actions column and one-line No ciclo", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
+    await seedUiCycleData(dataStore);
 
-    const { leaf } = await openLeifView(dataStore);
-    const planTabButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='cycle']");
+    const { view } = await openLeifView(dataStore);
+    await (view as unknown as { openTab: (tabId: "cycle") => Promise<void> }).openTab("cycle");
 
-    if (!planTabButton) {
-      throw new Error("Plan tab button was not rendered.");
-    }
-
-    planTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const toggleButton = leaf.containerEl.querySelector<HTMLButtonElement>(
-      "tr[data-subject-id='subject-1'] button[data-subject-cycle-toggle-id='subject-1']"
-    );
-
-    if (!toggleButton) {
-      throw new Error("Subject cycle toggle was not rendered.");
-    }
-
-    expect(toggleButton.textContent).toContain("Pausar");
-    toggleButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(getRecordedNotices()).toContain("Portuguese saiu do ciclo.");
-    expect(leaf.containerEl.textContent).toContain("Ativar");
+    const row = view.contentEl.querySelector(
+      "[data-subject-id='subject-1']"
+    ) as HTMLTableRowElement;
+    expect(row.querySelector(".leif-table-cell-name")?.textContent).toBe("Português");
+    expect(row.querySelector(".leif-table-cell-status")?.textContent).toBe("No ciclo");
+    expect(row.querySelector(".leif-table-actions .leif-menu-trigger")).not.toBeNull();
+    view.contentEl
+      .querySelector("[data-subject-id='subject-1'] .leif-menu-trigger")
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    const menu = getShownMenus()[0];
+    expect(menu?.items.map((item) => item.title)).toEqual(["Pausar no ciclo", "Editar"]);
   });
 
-  it("uses a compact table layout for resources", async () => {
+  it("renders the Mural in read mode and toggles into edit mode", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    const factory = await seedUiData(dataStore);
-    const createItem = new CreateStudyItemUseCase(dataStore, factory);
-    const item = await createItem.execute({ subjectId: "subject-1", title: "Sintaxe" });
-
-    const { leaf } = await openLeifView(dataStore);
-    const itemsTabButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='items']");
-
-    if (!itemsTabButton) {
-      throw new Error("Items tab button was not rendered.");
-    }
-
-    itemsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const headerTexts = Array.from(
-      leaf.containerEl.querySelectorAll("table.leif-table thead th")
-    ).map((header) => header.textContent?.trim() ?? "");
-    const itemRow = leaf.containerEl.querySelector<HTMLTableRowElement>(
-      `tr[data-item-id='${item.id}']`
-    );
-
-    expect(headerTexts).toEqual(["Ordem", "Recurso", "Peso", "Questões", "Páginas", "Ações"]);
-    expect(leaf.containerEl.querySelector("table.leif-table")).not.toBeNull();
-    expect(leaf.containerEl.querySelector(".leif-resource-card")).toBeNull();
-    expect(itemRow?.textContent).toContain("Sintaxe");
-    expect(itemRow?.querySelector("button[title='Editar']")).not.toBeNull();
-  });
-
-  it("keeps session actions and question results inline in the history table", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    const factory = await seedUiData(dataStore);
-    const registerStudySession = new RegisterStudySessionUseCase(dataStore, factory);
-
-    await registerStudySession.execute({
-      id: "session-questions-inline",
+    await seedUiCycleData(dataStore);
+    await new UpdateContestMuralUseCase(dataStore, new EntityRepositoryFactory(dataStore)).execute({
       contestId: "contest-1",
-      subjectId: "subject-1",
-      type: "questions",
-      studiedAt: "2026-06-12T20:00:00.000Z",
-      pagesOrCount: 20,
-      correctAnswers: 15,
-      completed: true
+      notes: "## Lembrete\n\n- Fração de concursos da FCC"
     });
+    const renderSpy = vi
+      .spyOn(MarkdownRenderer, "render")
+      .mockImplementation(async (_app, markdown, element) => {
+        element.textContent = markdown;
+      });
 
-    const { leaf } = await openLeifView(dataStore);
-    const sessionsTabButton =
-      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='sessions']");
+    const { view } = await openLeifView(dataStore);
+    await (view as unknown as { openTab: (tabId: "wall") => Promise<void> }).openTab("wall");
 
-    if (!sessionsTabButton) {
-      throw new Error("Sessions tab button was not rendered.");
-    }
+    const readView = view.contentEl.querySelector(".leif-wall-read-view");
+    expect(readView).not.toBeNull();
+    expect(readView?.querySelector('button[data-wall-edit="true"]')).not.toBeNull();
+    expect(renderSpy).toHaveBeenCalled();
+    expect(readView?.textContent).toContain("Fração de concursos da FCC");
 
-    sessionsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const headerTexts = Array.from(
-      leaf.containerEl.querySelectorAll("table.leif-table thead th")
-    ).map((header) => header.textContent?.trim() ?? "");
-    const questionsRow = leaf.containerEl.querySelector<HTMLTableRowElement>(
-      "tr[data-session-id='session-questions-inline']"
-    );
-
-    expect(headerTexts).toEqual(["Data", "Estudo", "Tipo", "Resultado", "Ações"]);
-    expect(questionsRow?.textContent).toContain("15/20 acertos");
-    expect(
-      questionsRow?.querySelector("td.leif-actions-cell button[title='Excluir']")
-    ).not.toBeNull();
-    const overflow = questionsRow?.querySelector<HTMLDetailsElement>(
-      "td.leif-actions-cell details.leif-overflow-menu"
-    );
-    expect(overflow).not.toBeNull();
-    expect(overflow).not.toBeUndefined();
-    expect(overflow?.querySelector("summary[aria-label='Mais opções']")).not.toBeNull();
-    expect(overflow?.querySelector("button[title='Editar']")).not.toBeNull();
-    expect(overflow?.querySelector("button[title='Excluir']")).not.toBeNull();
-    expect(
-      questionsRow?.querySelector("td.leif-session-date-cell button[title='Excluir']")
-    ).toBeNull();
+    (view.contentEl.querySelector('button[data-wall-edit="true"]') as HTMLButtonElement).click();
+    await vi.waitFor(() => {
+      expect(view.contentEl.querySelector(".leif-wall-editor")).not.toBeNull();
+    });
+    const editor = view.contentEl.querySelector(".leif-wall-editor") as HTMLElement;
+    const notes = editor.querySelector("textarea[data-wall-notes='true']") as HTMLTextAreaElement;
+    expect(notes.value).toContain("Fração de concursos da FCC");
+    renderSpy.mockRestore();
   });
 
-  it("filters session history by subject, type and period", async () => {
+  it("saves Mural notes from edit mode and returns to read mode", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    const factory = await seedUiData(dataStore);
-    const registerStudySession = new RegisterStudySessionUseCase(dataStore, factory);
-
-    await registerStudySession.execute({
-      id: "session-video-constitutional",
+    await seedUiCycleData(dataStore);
+    await new UpdateContestMuralUseCase(dataStore, new EntityRepositoryFactory(dataStore)).execute({
       contestId: "contest-1",
-      subjectId: "subject-2",
-      type: "video",
-      studiedAt: "2026-06-13T20:00:00.000Z",
-      pagesOrCount: 1,
-      completed: true
-    });
-    await registerStudySession.execute({
-      id: "session-questions-portuguese",
-      contestId: "contest-1",
-      subjectId: "subject-1",
-      type: "questions",
-      studiedAt: "2026-06-20T20:00:00.000Z",
-      pagesOrCount: 20,
-      correctAnswers: 15,
-      completed: true
+      notes: "Texto antigo"
     });
 
-    const { leaf } = await openLeifView(dataStore);
-    const sessionsTabButton =
-      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='sessions']");
+    const renderSpy = vi
+      .spyOn(MarkdownRenderer, "render")
+      .mockImplementation(async (_app, markdown, element) => {
+        element.textContent = markdown;
+      });
 
-    if (!sessionsTabButton) {
-      throw new Error("Sessions tab button was not rendered.");
-    }
-
-    sessionsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const setFilter = async (name: string, value: string): Promise<void> => {
-      const control = leaf.containerEl.querySelector<HTMLInputElement | HTMLSelectElement>(
-        `[data-session-filter='${name}']`
-      );
-
-      if (!control) {
-        throw new Error(`${name} filter was not rendered.`);
-      }
-
-      control.value = value;
-      control.dispatchEvent(new Event("change"));
-      await new Promise((resolve) => setTimeout(resolve, 0));
-    };
-
-    expect(leaf.containerEl.querySelector(".leif-session-filters")).not.toBeNull();
-
-    await setFilter("subject", "subject-2");
-    expect(
-      leaf.containerEl.querySelector("tr[data-session-id='session-video-constitutional']")
-    ).not.toBeNull();
-    expect(leaf.containerEl.querySelector("tr[data-session-id='session-1']")).toBeNull();
-
-    await setFilter("subject", "");
-    await setFilter("type", "questions");
-    expect(
-      leaf.containerEl.querySelector("tr[data-session-id='session-questions-portuguese']")
-    ).not.toBeNull();
-    expect(
-      leaf.containerEl.querySelector("tr[data-session-id='session-video-constitutional']")
-    ).toBeNull();
-
-    await setFilter("type", "");
-    await setFilter("from", "2026-06-14");
-    await setFilter("to", "2026-06-30");
-    expect(
-      leaf.containerEl.querySelector("tr[data-session-id='session-questions-portuguese']")
-    ).not.toBeNull();
-    expect(
-      leaf.containerEl.querySelector("tr[data-session-id='session-video-constitutional']")
-    ).toBeNull();
-  });
-
-  it("keeps contest actions next to the contest name", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
-
-    const { leaf } = await openLeifView(dataStore);
-    const contestsTabButton =
-      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='contests']");
-
-    if (!contestsTabButton) {
-      throw new Error("Contests tab button was not rendered.");
-    }
-
-    contestsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const contestCard = leaf.containerEl.querySelector<HTMLElement>(".leif-contest-card");
-
-    expect(leaf.containerEl.querySelector("table.leif-table")).toBeNull();
-    expect(contestCard?.querySelector(".leif-contest-card-title")?.textContent).toBeTruthy();
-    expect(
-      contestCard?.querySelector(
-        ".leif-contest-card-header .leif-inline-actions button[title='Editar']"
-      )
-    ).not.toBeNull();
-    expect(contestCard?.querySelector(":scope > .leif-contest-meta")).not.toBeNull();
-    expect(contestCard?.querySelector(":scope > .leif-contest-notes")).not.toBeNull();
-    expect(contestCard?.querySelector(".leif-contest-meta")?.textContent).not.toContain("ID");
-  });
-
-  it("starts Mural as vertical read-only sections and reveals one editor on demand", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
-
-    const { leaf } = await openLeifView(dataStore);
-    const wallTabButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='wall']");
-
-    if (!wallTabButton) {
-      throw new Error("Wall tab button was not rendered.");
-    }
-
-    wallTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const readView = leaf.containerEl.querySelector<HTMLElement>(".leif-wall-read-view");
-    const sections = Array.from(
-      readView?.querySelectorAll<HTMLElement>(":scope > .leif-wall-section") ?? []
-    );
-    expect(sections.map((section) => section.querySelector("h3")?.textContent?.trim())).toEqual([
-      "Edital",
-      "Prova",
-      "Notas"
-    ]);
-    expect(readView?.textContent).toContain("https://example.com/edital");
-    expect(leaf.containerEl.querySelector("form.leif-wall-editor")).toBeNull();
-
-    const editButton = Array.from(readView?.querySelectorAll("button") ?? []).find(
-      (button) => button.textContent?.trim() === "Editar"
-    );
-    expect(editButton).not.toBeUndefined();
-    editButton?.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const editor = leaf.containerEl.querySelector<HTMLFormElement>("form.leif-wall-editor");
-    expect(editor).not.toBeNull();
-    expect(editor?.querySelector("input[placeholder='Rótulo do edital']")).not.toBeNull();
-    expect(editor?.querySelector("input[placeholder='URL da prova']")).not.toBeNull();
-    expect(editor?.querySelector("textarea[placeholder='Notas do concurso']")).not.toBeNull();
-    expect(editor?.textContent).toContain("Salvar alterações");
-    expect(editor?.textContent).toContain("Cancelar");
-  });
-
-  it("opens creation forms inline instead of using modals", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
-
-    const { leaf } = await openLeifView(dataStore);
-    const cases: Array<{ tab: string; addLabel: string; formTitle: string }> = [
-      { tab: "cycle", addLabel: "Nova matéria", formTitle: "Nova matéria" },
-      { tab: "items", addLabel: "Novo item", formTitle: "Novo recurso" },
-      { tab: "topics", addLabel: "Novo assunto", formTitle: "Novo assunto" },
-      { tab: "sessions", addLabel: "Nova sessão", formTitle: "Novo registro" },
-      { tab: "contests", addLabel: "Novo concurso", formTitle: "Novo concurso" }
-    ];
-
-    for (const testCase of cases) {
-      const tabButton = leaf.containerEl.querySelector<HTMLButtonElement>(
-        `[data-tab='${testCase.tab}']`
-      );
-      if (!tabButton) {
-        throw new Error(`${testCase.tab} tab button was not rendered.`);
-      }
-
-      tabButton.click();
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      const addButton = leaf.containerEl.querySelector<HTMLButtonElement>(
-        `button[aria-label='${testCase.addLabel}']`
-      );
-      if (!addButton) {
-        throw new Error(`${testCase.addLabel} button was not rendered.`);
-      }
-
-      addButton.click();
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      const form = leaf.containerEl.querySelector<HTMLFormElement>("form.leif-card");
-      expect(document.body.querySelector(".modal")).toBeNull();
-      expect(form?.textContent).toContain(testCase.formTitle);
-    }
-  });
-
-  it("uses clear form controls when editing contest name and notes", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
-
-    const { leaf } = await openLeifView(dataStore);
-    const contestsTabButton =
-      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='contests']");
-
-    if (!contestsTabButton) {
-      throw new Error("Contests tab button was not rendered.");
-    }
-
-    contestsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const editButton = leaf.containerEl.querySelector<HTMLButtonElement>("button[title='Editar']");
-
-    if (!editButton) {
-      throw new Error("Edit contest button was not rendered.");
-    }
-
-    editButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const editingCard = leaf.containerEl.querySelector<HTMLElement>(
-      ".leif-contest-card.is-editing"
-    );
-    const nameInput = editingCard?.querySelector<HTMLInputElement>(
-      "input[placeholder='Nome do concurso']"
-    );
-    const notesTextarea = editingCard?.querySelector<HTMLTextAreaElement>(
-      "textarea[placeholder='Notas do concurso']"
-    );
-
-    expect(editingCard?.querySelector(".leif-contest-edit-form")).not.toBeNull();
-    expect(nameInput).not.toBeNull();
-    expect(notesTextarea).not.toBeNull();
-    expect(notesTextarea?.rows).toBeGreaterThanOrEqual(4);
-    expect(nameInput?.closest(".setting-item")).toBeNull();
-    expect(notesTextarea?.closest(".setting-item")).toBeNull();
-    expect(editingCard?.textContent).toMatch(/(Estudando agora|Guardado)/);
-  });
-
-  it("edits exam planning metadata and surfaces it on the dashboard", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
-    const data = await dataStore.load();
-    const activeContestId = data.activeContestId;
-
-    const { leaf } = await openLeifView(dataStore);
-    const contestsTabButton =
-      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='contests']");
-
-    if (!contestsTabButton || !activeContestId) {
-      throw new Error("Contests tab button or active contest was not rendered.");
-    }
-
-    contestsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const activeContestCard = leaf.containerEl.querySelector<HTMLElement>(
-      `[data-contest-card-id='${activeContestId}']`
-    );
-    const editButton =
-      activeContestCard?.querySelector<HTMLButtonElement>("button[title='Editar']");
-
-    if (!editButton) {
-      throw new Error("Active contest edit button was not rendered.");
-    }
-
-    editButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const editingCard = leaf.containerEl.querySelector<HTMLElement>(
-      `[data-contest-card-id='${activeContestId}'].is-editing`
-    );
-    const examDateInput = editingCard?.querySelector<HTMLInputElement>(
-      "input[placeholder='Data da prova']"
-    );
-    const boardInput = editingCard?.querySelector<HTMLInputElement>("input[placeholder='Banca']");
-    const weeklyHoursInput = editingCard?.querySelector<HTMLInputElement>(
-      "input[placeholder='Horas por semana']"
-    );
-    const questionGoalInput = editingCard?.querySelector<HTMLInputElement>(
-      "input[placeholder='Questões por semana']"
-    );
-    const saveButton = editingCard?.querySelector<HTMLButtonElement>("button[title='Salvar']");
-
-    if (!examDateInput || !boardInput || !weeklyHoursInput || !questionGoalInput || !saveButton) {
-      throw new Error("Exam planning controls were not rendered.");
-    }
-
-    examDateInput.value = "2027-03-21";
-    boardInput.value = "FGV";
-    weeklyHoursInput.value = "20";
-    questionGoalInput.value = "300";
-    saveButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const updatedData = await dataStore.load();
-    expect(
-      updatedData.contests.find((contest) => contest.id === activeContestId)?.examPlan
-    ).toMatchObject({
-      examDate: "2027-03-21",
-      board: "FGV",
-      weeklyStudyHours: 20,
-      weeklyQuestionGoal: 300
+    const { view } = await openLeifView(dataStore);
+    await (view as unknown as { openTab: (tabId: "wall") => Promise<void> }).openTab("wall");
+    (view.contentEl.querySelector('button[data-wall-edit="true"]') as HTMLButtonElement).click();
+    await vi.waitFor(() => {
+      expect(view.contentEl.querySelector(".leif-wall-editor")).not.toBeNull();
     });
+    const editor = view.contentEl.querySelector(".leif-wall-editor") as HTMLElement;
+    const notes = editor.querySelector("textarea[data-wall-notes='true']") as HTMLTextAreaElement;
+    notes.value = "## Material novo\n\n- PDF atualizado";
+    (editor.querySelector('button[data-wall-save="true"]') as HTMLButtonElement).click();
+    renderSpy.mockRestore();
 
-    const todayTabButton =
-      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='dashboard']");
-
-    if (!todayTabButton) {
-      throw new Error("Dashboard tab button was not rendered.");
-    }
-
-    todayTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const examPanel = leaf.containerEl.querySelector<HTMLElement>(".leif-exam-plan");
-    expect(examPanel?.textContent).toContain("Prova");
-    expect(examPanel?.textContent).toContain("FGV");
-    expect(examPanel?.textContent).toContain("20 h/semana");
-    expect(examPanel?.textContent).toContain("300 questões/semana");
-    expect(examPanel?.textContent).toContain("dias");
-  });
-
-  it("formats session history dates with day, month and year", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
-
-    const { leaf } = await openLeifView(dataStore);
-    const sessionsTabButton =
-      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='sessions']");
-
-    if (!sessionsTabButton) {
-      throw new Error("Sessions tab button was not rendered.");
-    }
-
-    sessionsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(leaf.containerEl.textContent).toContain("11/06/2026");
-    expect(leaf.containerEl.textContent).not.toMatch(/\b\d{2}:\d{2}\b/);
-    expect(leaf.containerEl.textContent).toContain("PDF");
-  });
-
-  it("shows cycle advance button in sessions tab", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
-
-    const { leaf } = await openLeifView(dataStore);
-    const sessionsTabButton =
-      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='sessions']");
-
-    if (!sessionsTabButton) {
-      throw new Error("Sessions tab button was not rendered.");
-    }
-
-    sessionsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const cycleContext = leaf.containerEl.querySelector(".leif-cycle-context");
-    const finishButton = Array.from(cycleContext?.querySelectorAll("button") ?? []).find((button) =>
-      button.textContent?.includes("Marcar como estudado")
-    );
-
-    expect(finishButton).toBeDefined();
-    expect(leaf.containerEl.querySelector(".leif-cycle-action")).toBeNull();
-  });
-
-  it("shows the current item as a subtitle of Agora and never labels the next subject Depois vem", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
-    const seeded = await dataStore.load();
-    seeded.subjects = seeded.subjects.map((subject) => ({ ...subject, isActive: true }));
-    const state = seeded.contestStates.find((s) => s.contestId === seeded.activeContestId);
-    if (state) seeded.contestStates = [{ ...state, currentSubjectId: "subject-1" }];
-    await dataStore.save(seeded);
-
-    const { leaf } = await openLeifView(dataStore);
-    const sessionsTabButton =
-      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='sessions']");
-
-    if (!sessionsTabButton) {
-      throw new Error("Sessions tab button was not rendered.");
-    }
-
-    sessionsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const cycleContext = leaf.containerEl.querySelector<HTMLElement>(".leif-cycle-context");
-    const nowGroup = cycleContext?.querySelector<HTMLElement>(".leif-cycle-context-now");
-
-    expect(nowGroup).not.toBeNull();
-    expect(nowGroup?.querySelector(".leif-cycle-context-label")?.textContent).toContain("Agora:");
-    expect(nowGroup?.querySelector(".leif-cycle-context-sublabel")?.textContent).toContain("Item:");
-    expect(nowGroup?.querySelector(".leif-cycle-context-next")?.textContent).toContain("Depois:");
-    expect(cycleContext?.textContent).not.toContain("Depois vem");
-  });
-
-  it("shows the recommended subject name in the cycle-advance notice", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
-
-    const { leaf } = await openLeifView(dataStore);
-    const sessionsTabButton =
-      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='sessions']");
-
-    if (!sessionsTabButton) {
-      throw new Error("Sessions tab button was not rendered.");
-    }
-
-    sessionsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const finishButton = Array.from(leaf.containerEl.querySelectorAll("button")).find((button) =>
-      button.textContent?.includes("Marcar como estudado")
-    ) as HTMLButtonElement | undefined;
-
-    if (!finishButton) {
-      throw new Error("Cycle advance button was not rendered.");
-    }
-
-    finishButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const notices = getRecordedNotices();
-    const advanceNotice = notices.find((notice) => notice.startsWith("Pronto."));
-
-    expect(advanceNotice).toBeDefined();
-    expect(advanceNotice).not.toContain("—");
-    expect(advanceNotice).toContain("Portuguese");
-  });
-
-  it("deletes a session from recent history", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
-
-    const { leaf } = await openLeifView(dataStore);
-    const sessionsTabButton =
-      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='sessions']");
-
-    if (!sessionsTabButton) {
-      throw new Error("Sessions tab button was not rendered.");
-    }
-
-    sessionsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const deleteButton = leaf.containerEl.querySelector<HTMLButtonElement>(
-      "[data-session-delete-id='session-1']"
-    );
-
-    if (!deleteButton) {
-      throw new Error("Delete session button was not rendered.");
-    }
-
-    deleteButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const confirmButton = leaf.containerEl.querySelector<HTMLButtonElement>(
-      "[data-session-confirm-delete-id='session-1']"
-    );
-    if (!confirmButton) {
-      throw new Error("Confirm button was not rendered.");
-    }
-    confirmButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(leaf.containerEl.textContent).not.toContain("11/06/2026");
-    expect(leaf.containerEl.querySelector("[data-session-delete-id='session-1']")).toBeNull();
-  });
-
-  it("creates a questions session from the sessions tab form", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    const factory = await seedUiData(dataStore);
-
-    const createTopic = new CreateTopicUseCase(dataStore, factory);
-    const linkNotebook = new LinkQuestionNotebookUseCase(dataStore, factory);
-    await createTopic.execute({
-      id: "topic-1",
-      subjectId: "subject-1",
-      name: "Orações subordinadas"
+    await vi.waitFor(async () => {
+      const data = await dataStore.load();
+      expect(data.contests[0].mural.notes).toBe("## Material novo\n\n- PDF atualizado");
     });
-    await linkNotebook.execute({
-      topicId: "topic-1",
-      questionNotebook: {
-        id: "notebook-1",
-        name: "Caderno",
-        url: "https://example.com",
-        solvedQuestions: 0,
-        correctAnswers: 0
-      }
-    });
-
-    const { leaf } = await openLeifView(dataStore);
-    const sessionsTabButton =
-      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='sessions']");
-
-    if (!sessionsTabButton) {
-      throw new Error("Sessions tab button was not rendered.");
-    }
-
-    sessionsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const newButton = leaf.containerEl.querySelector<HTMLButtonElement>(
-      "button[aria-label='Nova sessão']"
-    );
-
-    if (!newButton) {
-      throw new Error("New session button was not rendered.");
-    }
-
-    newButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const form = leaf.containerEl.querySelector<HTMLFormElement>("form.leif-card");
-
-    if (!form) {
-      throw new Error("Session form was not rendered.");
-    }
-
-    expect(form.textContent).toContain("Tipo de registro");
-    expect(form.textContent).toContain("Páginas lidas");
-
-    const selects = form.querySelectorAll<HTMLSelectElement>("select");
-    const inputs = form.querySelectorAll<HTMLInputElement>("input");
-
-    const subjectSelect = selects[0];
-    const typeSelect = selects[1];
-    const topicSelect = selects[3];
-    const countInput = inputs[0];
-    const correctInput = inputs[1];
-    const dateInput = inputs[2];
-
-    if (
-      !subjectSelect ||
-      !typeSelect ||
-      !topicSelect ||
-      !countInput ||
-      !correctInput ||
-      !dateInput
-    ) {
-      throw new Error("Form controls were not found.");
-    }
-
-    subjectSelect.value = "subject-1";
-    subjectSelect.dispatchEvent(new Event("change"));
-    topicSelect.value = "topic-1";
-    typeSelect.value = "questions";
-    typeSelect.dispatchEvent(new Event("change"));
-    expect(form.textContent).toContain("Questões resolvidas");
-    expect(form.textContent).toContain("Acertos nas questões");
-    countInput.value = "20";
-    correctInput.value = "15";
-    dateInput.value = "2026-06-11";
-
-    form.dispatchEvent(new Event("submit", { cancelable: true }));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const data = await dataStore.load();
-    const questionsSessions = data.studySessions.filter(
-      (session) => session.type === "questions" && session.contestId === "contest-1"
-    );
-
-    expect(questionsSessions).toHaveLength(1);
-    expect(questionsSessions[0]).toMatchObject({
-      type: "questions",
-      subjectId: "subject-1",
-      topicId: "topic-1",
-      pagesOrCount: 20,
-      correctAnswers: 15
-    });
-
-    const topic = data.topics.find((t) => t.id === "topic-1");
-    expect(topic?.questionNotebook).toMatchObject({
-      solvedQuestions: 20,
-      correctAnswers: 15
-    });
-  });
-
-  it("shows assunto progress from sessions even without a linked question notebook", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    const factory = await seedUiData(dataStore);
-
-    const createTopic = new CreateTopicUseCase(dataStore, factory);
-    const registerSession = new RegisterStudySessionUseCase(dataStore, factory);
-    await createTopic.execute({
-      id: "topic-progress-sessions",
-      subjectId: "subject-1",
-      name: "Regência"
-    });
-    await registerSession.execute({
-      id: "session-topic-questions",
-      contestId: "contest-1",
-      subjectId: "subject-1",
-      topicId: "topic-progress-sessions",
-      type: "questions",
-      studiedAt: "2026-06-11T20:00:00.000Z",
-      pagesOrCount: 20,
-      correctAnswers: 16,
-      completed: true
-    });
-    await registerSession.execute({
-      id: "session-topic-pdf",
-      contestId: "contest-1",
-      subjectId: "subject-1",
-      topicId: "topic-progress-sessions",
-      type: "pdf",
-      studiedAt: "2026-06-12T20:00:00.000Z",
-      pagesOrCount: 12,
-      completed: true
-    });
-
-    const { leaf } = await openLeifView(dataStore);
-    const topicsTabButton =
-      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='topics']");
-
-    if (!topicsTabButton) {
-      throw new Error("Topics tab button was not rendered.");
-    }
-
-    topicsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const topicRow = leaf.containerEl.querySelector<HTMLTableRowElement>(
-      "tr[data-topic-id='topic-progress-sessions']"
-    );
-    const progressCell = topicRow?.querySelector("td.leif-topic-progress-cell");
-
-    expect(topicRow?.textContent).toContain("16/20 acertos");
-    expect(topicRow?.textContent).toContain("12 pág. PDF");
-    expect(topicRow?.textContent).not.toContain("0 resolvidas");
-    expect(progressCell?.textContent).toContain("16/20 acertos");
-  });
-
-  it("creates a questions session when the count is greater than zero", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    const factory = await seedUiData(dataStore);
-
-    const createTopic = new CreateTopicUseCase(dataStore, factory);
-    const linkNotebook = new LinkQuestionNotebookUseCase(dataStore, factory);
-    await createTopic.execute({
-      id: "topic-1",
-      subjectId: "subject-1",
-      name: "Orações subordinadas"
-    });
-    await linkNotebook.execute({
-      topicId: "topic-1",
-      questionNotebook: {
-        id: "notebook-1",
-        name: "Caderno",
-        url: "https://example.com",
-        solvedQuestions: 0,
-        correctAnswers: 0
-      }
-    });
-
-    const { leaf } = await openLeifView(dataStore);
-    const sessionsTabButton =
-      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='sessions']");
-
-    if (!sessionsTabButton) {
-      throw new Error("Sessions tab button was not rendered.");
-    }
-
-    sessionsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const newButton = leaf.containerEl.querySelector<HTMLButtonElement>(
-      "button[aria-label='Nova sessão']"
-    );
-
-    if (!newButton) {
-      throw new Error("New session button was not rendered.");
-    }
-
-    newButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const form = leaf.containerEl.querySelector<HTMLFormElement>("form.leif-card");
-
-    if (!form) {
-      throw new Error("Session form was not rendered.");
-    }
-
-    const selects = form.querySelectorAll<HTMLSelectElement>("select");
-    const inputs = form.querySelectorAll<HTMLInputElement>("input");
-
-    const typeSelect = selects[1];
-    const countInput = inputs[0];
-    const correctInput = inputs[1];
-    const dateInput = inputs[2];
-
-    if (!typeSelect || !countInput || !correctInput || !dateInput) {
-      throw new Error("Form controls were not found.");
-    }
-
-    typeSelect.value = "questions";
-    typeSelect.dispatchEvent(new Event("change"));
-    countInput.value = "20";
-    correctInput.value = "15";
-    dateInput.value = "2026-06-11";
-
-    form.dispatchEvent(new Event("submit", { cancelable: true }));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const data = await dataStore.load();
-    const questionsSessions = data.studySessions.filter(
-      (session) => session.type === "questions" && session.contestId === "contest-1"
-    );
-
-    expect(questionsSessions).toHaveLength(1);
-    expect(questionsSessions[0]).toMatchObject({
-      type: "questions",
-      subjectId: "subject-1",
-      pagesOrCount: 20,
-      correctAnswers: 15
-    });
-    expect(leaf.containerEl.querySelector(".leif-session-feedback")?.textContent).toContain(
-      "Registro salvo"
-    );
-  });
-
-  it("places the new session action with the history and keeps visual feedback after saving", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
-
-    const { leaf } = await openLeifView(dataStore);
-    const sessionsTabButton =
-      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='sessions']");
-
-    if (!sessionsTabButton) {
-      throw new Error("Sessions tab button was not rendered.");
-    }
-
-    sessionsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const topHeader = leaf.containerEl.querySelector<HTMLElement>(":scope .leif-section-header");
-    const historyCard = Array.from(
-      leaf.containerEl.querySelectorAll<HTMLElement>(".leif-card")
-    ).find((card) => card.textContent?.includes("Histórico de sessões"));
-    const newButton = historyCard?.querySelector<HTMLButtonElement>(
-      "button[aria-label='Nova sessão']"
-    );
-
-    expect(topHeader?.querySelector("button[aria-label='Nova sessão']")).toBeNull();
-    expect(newButton).not.toBeNull();
-
-    newButton?.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const form = leaf.containerEl.querySelector<HTMLFormElement>("form.leif-card");
-    const countInput = form?.querySelector<HTMLInputElement>("input[type='number']");
-    const dateInput = Array.from(form?.querySelectorAll<HTMLInputElement>("input") ?? []).find(
-      (input) => input.type === "date"
-    );
-
-    if (!form || !countInput || !dateInput) {
-      throw new Error("Session form controls were not rendered.");
-    }
-
-    countInput.value = "7";
-    dateInput.value = "2026-06-12";
-    form.dispatchEvent(new Event("submit", { cancelable: true }));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(leaf.containerEl.querySelector("form.leif-card")).toBeNull();
-    expect(leaf.containerEl.querySelector(".leif-session-feedback")?.textContent).toContain(
-      "Registro salvo"
-    );
-    expect(leaf.containerEl.querySelector(".leif-session-feedback")?.textContent).toContain("PDF");
-    expect(leaf.containerEl.querySelector(".leif-session-feedback")?.textContent).toContain(
-      "Portuguese"
-    );
-  });
-
-  it("rejects a questions session form submission when count is 0", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    const factory = await seedUiData(dataStore);
-
-    const createTopic = new CreateTopicUseCase(dataStore, factory);
-    const linkNotebook = new LinkQuestionNotebookUseCase(dataStore, factory);
-    await createTopic.execute({
-      id: "topic-1",
-      subjectId: "subject-1",
-      name: "Orações subordinadas"
-    });
-    await linkNotebook.execute({
-      topicId: "topic-1",
-      questionNotebook: {
-        id: "notebook-1",
-        name: "Caderno",
-        url: "https://example.com",
-        solvedQuestions: 0,
-        correctAnswers: 0
-      }
-    });
-
-    const { leaf } = await openLeifView(dataStore);
-    const sessionsTabButton =
-      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='sessions']");
-
-    if (!sessionsTabButton) {
-      throw new Error("Sessions tab button was not rendered.");
-    }
-
-    sessionsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const newButton = leaf.containerEl.querySelector<HTMLButtonElement>(
-      "button[aria-label='Nova sessão']"
-    );
-
-    if (!newButton) {
-      throw new Error("New session button was not rendered.");
-    }
-
-    newButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const form = leaf.containerEl.querySelector<HTMLFormElement>("form.leif-card");
-
-    if (!form) {
-      throw new Error("Session form was not rendered.");
-    }
-
-    const selects = form.querySelectorAll<HTMLSelectElement>("select");
-    const inputs = form.querySelectorAll<HTMLInputElement>("input");
-
-    const typeSelect = selects[1];
-    const countInput = inputs[0];
-    const correctInput = inputs[1];
-    const dateInput = inputs[2];
-
-    if (!typeSelect || !countInput || !correctInput || !dateInput) {
-      throw new Error("Form controls were not found.");
-    }
-
-    typeSelect.value = "questions";
-    typeSelect.dispatchEvent(new Event("change"));
-    countInput.value = "0";
-    correctInput.value = "0";
-    dateInput.value = "2026-06-11";
-
-    form.dispatchEvent(new Event("submit", { cancelable: true }));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const data = await dataStore.load();
-    const questionsSessions = data.studySessions.filter(
-      (session) => session.type === "questions" && session.contestId === "contest-1"
-    );
-
-    expect(questionsSessions).toHaveLength(0);
-  });
-
-  it("shows question accuracy inline in the session result column", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    const factory = await seedUiData(dataStore);
-
-    const registerStudySession = new RegisterStudySessionUseCase(dataStore, factory);
-    const createTopic = new CreateTopicUseCase(dataStore, factory);
-    const linkNotebook = new LinkQuestionNotebookUseCase(dataStore, factory);
-    await createTopic.execute({
-      id: "topic-1",
-      subjectId: "subject-1",
-      name: "Orações subordinadas"
-    });
-    await linkNotebook.execute({
-      topicId: "topic-1",
-      questionNotebook: {
-        id: "notebook-1",
-        name: "Caderno",
-        url: "https://example.com",
-        solvedQuestions: 0,
-        correctAnswers: 0
-      }
-    });
-    await registerStudySession.execute({
-      id: "session-questions-1",
-      contestId: "contest-1",
-      subjectId: "subject-1",
-      topicId: "topic-1",
-      type: "questions",
-      studiedAt: "2026-06-12T20:00:00.000Z",
-      pagesOrCount: 20,
-      correctAnswers: 15,
-      completed: true
-    });
-
-    const { leaf } = await openLeifView(dataStore);
-    const sessionsTabButton =
-      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='sessions']");
-
-    if (!sessionsTabButton) {
-      throw new Error("Sessions tab button was not rendered.");
-    }
-
-    sessionsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const tableRows = leaf.containerEl.querySelectorAll("table.leif-table tbody tr");
-    expect(tableRows.length).toBeGreaterThanOrEqual(2);
-
-    const findRow = (sessionId: string): HTMLTableRowElement => {
-      const row = leaf.containerEl.querySelector<HTMLTableRowElement>(
-        `tr[data-session-id='${sessionId}']`
-      );
-      if (!row) {
-        throw new Error(`Row for session ${sessionId} was not rendered.`);
-      }
-      return row;
-    };
-
-    const questionsRow = findRow("session-questions-1");
-    const pdfRow = findRow("session-1");
-
-    const questionsCells = questionsRow.querySelectorAll("td");
-    const pdfCells = pdfRow.querySelectorAll("td");
-
-    const headerCells = leaf.containerEl.querySelectorAll("table.leif-table thead th");
-    const headerTexts = Array.from(headerCells).map((cell) => cell.textContent?.trim() ?? "");
-    const resultColumnIndex = headerTexts.indexOf("Resultado");
-    expect(headerTexts).toEqual(["Data", "Estudo", "Tipo", "Resultado", "Ações"]);
-    expect(questionsCells.length).toBe(pdfCells.length);
-    expect(questionsCells[resultColumnIndex]?.textContent).toContain("15/20 acertos (75%)");
-  });
-
-  it("uses user-facing labels for the session form type select", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
-
-    const { leaf } = await openLeifView(dataStore);
-    const sessionsTabButton =
-      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='sessions']");
-
-    if (!sessionsTabButton) {
-      throw new Error("Sessions tab button was not rendered.");
-    }
-
-    sessionsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const newButton = leaf.containerEl.querySelector<HTMLButtonElement>(
-      "button[aria-label='Nova sessão']"
-    );
-
-    if (!newButton) {
-      throw new Error("New session button was not rendered.");
-    }
-
-    newButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const form = leaf.containerEl.querySelector<HTMLFormElement>("form.leif-card");
-
-    if (!form) {
-      throw new Error("Session form was not rendered.");
-    }
-
-    const selects = form.querySelectorAll<HTMLSelectElement>("select");
-    const typeSelect = selects[1];
-
-    if (!typeSelect) {
-      throw new Error("Type select was not found.");
-    }
-
-    const labels = Array.from(typeSelect.options).map((option) => option.textContent ?? "");
-    const values = Array.from(typeSelect.options).map((option) => option.value);
-
-    expect(labels).toEqual(["PDF", "Vídeo", "Questões"]);
-    expect(values).toEqual(["pdf", "video", "questions"]);
-  });
-
-  it("shows pages readed vs total and a completion check for items in the items tab", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    const factory = await seedUiData(dataStore);
-
-    const createItem = new CreateStudyItemUseCase(dataStore, factory);
-    const updateItem = new UpdateStudyItemUseCase(dataStore, factory);
-    const registerSession = new RegisterStudySessionUseCase(dataStore, factory);
-
-    const itemA = await createItem.execute({ subjectId: "subject-1", title: "Sintaxe" });
-    await updateItem.execute({ itemId: itemA.id, totalPages: 100 });
-    const itemB = await createItem.execute({ subjectId: "subject-1", title: "Pontuação" });
-    await updateItem.execute({ itemId: itemB.id, totalPages: 50 });
-
-    await registerSession.execute({
-      id: "session-pdf-1",
-      contestId: "contest-1",
-      subjectId: "subject-1",
-      studyItemId: itemA.id,
-      type: "pdf",
-      studiedAt: "2026-06-11T20:00:00.000Z",
-      pagesOrCount: 100,
-      completed: true
-    });
-
-    const { leaf } = await openLeifView(dataStore);
-    const itemsTabButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='items']");
-
-    if (!itemsTabButton) {
-      throw new Error("Items tab button was not rendered.");
-    }
-
-    itemsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const completedRow = leaf.containerEl.querySelector<HTMLElement>(
-      `tr[data-item-id='${itemA.id}']`
-    );
-    const partialRow = leaf.containerEl.querySelector<HTMLElement>(
-      `tr[data-item-id='${itemB.id}']`
-    );
-
-    if (!completedRow || !partialRow) {
-      throw new Error("Item rows were not rendered.");
-    }
-
-    expect(completedRow.textContent).toContain("100/100 (100%)");
-    expect(completedRow.textContent).toContain("Concluído");
-    expect(partialRow.textContent).toContain("0/50 (0%)");
-    expect(partialRow.textContent).not.toContain("Concluído");
-
-    const completedProgressBar = completedRow.querySelector(".leif-progress-bar");
-    const partialProgressBar = partialRow.querySelector(".leif-progress-bar");
-    const completeStatus = completedRow.querySelector(".leif-progress-complete");
-    expect(completedProgressBar).toBeNull();
-    expect(partialProgressBar).not.toBeNull();
-    expect(completeStatus?.textContent).toContain("Concluído");
-    expect(completeStatus?.querySelector(".leif-icon")).not.toBeNull();
-    expect(partialProgressBar?.querySelector<HTMLElement>(".leif-progress-fill")?.style.width).toBe(
-      "0%"
-    );
-  });
-
-  it("edits an item title from the items tab", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    const factory = await seedUiData(dataStore);
-
-    const createItem = new CreateStudyItemUseCase(dataStore, factory);
-    const item = await createItem.execute({ subjectId: "subject-1", title: "Sintaxe" });
-
-    const { leaf } = await openLeifView(dataStore);
-    const itemsTabButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='items']");
-
-    if (!itemsTabButton) {
-      throw new Error("Items tab button was not rendered.");
-    }
-
-    itemsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const itemRow = leaf.containerEl.querySelector<HTMLElement>(`tr[data-item-id='${item.id}']`);
-    const editButton = itemRow?.querySelector<HTMLButtonElement>("button[title='Editar']");
-
-    if (!editButton) {
-      throw new Error("Edit button was not rendered.");
-    }
-
-    editButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const editingRow = leaf.containerEl.querySelector<HTMLElement>("tr.leif-editing-row");
-    const titleInput = editingRow?.querySelector<HTMLInputElement>("input[placeholder='Título']");
-    const saveButton = editingRow?.querySelector<HTMLButtonElement>("button[title='Salvar']");
-
-    if (!titleInput || !saveButton) {
-      throw new Error("Title edit controls were not rendered.");
-    }
-
-    titleInput.value = "Concordância";
-    saveButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const updatedData = await dataStore.load();
-    expect(updatedData.studyItems.find((candidate) => candidate.id === item.id)?.title).toBe(
-      "Concordância"
-    );
-    expect(leaf.containerEl.textContent).toContain("Concordância");
-  });
-
-  it("shows a progress bar for pdf sessions in the sessions history table", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    const factory = await seedUiData(dataStore);
-
-    const createItem = new CreateStudyItemUseCase(dataStore, factory);
-    const updateItem = new UpdateStudyItemUseCase(dataStore, factory);
-    const registerSession = new RegisterStudySessionUseCase(dataStore, factory);
-
-    const itemPdf = await createItem.execute({ subjectId: "subject-1", title: "Constituição" });
-    await updateItem.execute({ itemId: itemPdf.id, totalPages: 200 });
-
-    await registerSession.execute({
-      id: "session-pdf-2",
-      contestId: "contest-1",
-      subjectId: "subject-1",
-      studyItemId: itemPdf.id,
-      type: "pdf",
-      studiedAt: "2026-06-12T20:00:00.000Z",
-      pagesOrCount: 50,
-      completed: true
-    });
-
-    const { leaf } = await openLeifView(dataStore);
-    const sessionsTabButton =
-      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='sessions']");
-
-    if (!sessionsTabButton) {
-      throw new Error("Sessions tab button was not rendered.");
-    }
-
-    sessionsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const pdfRow = leaf.containerEl.querySelector<HTMLTableRowElement>(
-      "tr[data-session-id='session-pdf-2']"
-    );
-
-    if (!pdfRow) {
-      throw new Error("PDF session row was not rendered.");
-    }
-
-    expect(pdfRow.textContent).toContain("50/200 (25%)");
-    const progressBar = pdfRow.querySelector(".leif-progress-bar");
-    expect(progressBar).not.toBeNull();
-    expect(progressBar?.querySelector<HTMLElement>(".leif-progress-fill")?.style.width).toBe("25%");
-  });
-
-  it("labels editable session result inputs clearly", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    const factory = await seedUiData(dataStore);
-    const registerSession = new RegisterStudySessionUseCase(dataStore, factory);
-
-    await registerSession.execute({
-      id: "session-edit-labels",
-      contestId: "contest-1",
-      subjectId: "subject-1",
-      type: "questions",
-      studiedAt: "2026-06-12T20:00:00.000Z",
-      pagesOrCount: 20,
-      correctAnswers: 15,
-      completed: true
-    });
-
-    const { leaf } = await openLeifView(dataStore);
-    const sessionsTabButton =
-      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='sessions']");
-
-    if (!sessionsTabButton) {
-      throw new Error("Sessions tab button was not rendered.");
-    }
-
-    sessionsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const row = leaf.containerEl.querySelector<HTMLTableRowElement>(
-      "tr[data-session-id='session-edit-labels']"
-    );
-    const editButton = row?.querySelector<HTMLButtonElement>("button[title='Editar']");
-
-    if (!editButton) {
-      throw new Error("Edit session button was not rendered.");
-    }
-
-    editButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const editingRow = leaf.containerEl.querySelector<HTMLTableRowElement>(
-      "tr[data-session-id='session-edit-labels'].leif-editing-row"
-    );
-    const resultEditor = editingRow?.querySelector<HTMLElement>(".leif-session-result-editor");
-
-    expect(resultEditor?.textContent).toContain("Questões resolvidas");
-    expect(resultEditor?.textContent).toContain("Acertos");
-    expect(resultEditor?.querySelector("input[placeholder='Questões resolvidas']")).not.toBeNull();
-    expect(resultEditor?.querySelector("input[placeholder='Acertos']")).not.toBeNull();
-  });
-
-  it("keeps resource expansion read-only and moves add-material form to edit mode", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    const factory = await seedUiData(dataStore);
-
-    const createItem = new CreateStudyItemUseCase(dataStore, factory);
-    const addResource = new AddStudyItemResourceReferenceUseCase(dataStore, factory);
-
-    const itemRes = await createItem.execute({ subjectId: "subject-1", title: "Gramática" });
-    await addResource.execute({
-      studyItemId: itemRes.id,
-      resourceReference: {
-        id: "res-1",
-        title: "Apostila A",
-        type: "pdf",
-        url: "https://example.com"
-      }
-    });
-
-    const { leaf } = await openLeifView(dataStore);
-    const itemsTabButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='items']");
-
-    if (!itemsTabButton) {
-      throw new Error("Items tab button was not rendered.");
-    }
-
-    itemsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const expandButton = leaf.containerEl.querySelector<HTMLButtonElement>(
-      `tr[data-item-id='${itemRes.id}'] button[title='Expandir']`
-    );
-
-    if (!expandButton) {
-      throw new Error("Expand button was not rendered.");
-    }
-
-    expandButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const detailRow = leaf.containerEl.querySelector(".leif-resource-detail");
-    const materialInfo = detailRow?.querySelector(".leif-material-info");
-    expect(detailRow?.textContent).toContain("Materiais deste recurso");
-    expect(materialInfo?.querySelector(".leif-material-type")?.textContent).toBe("PDF");
-    expect(materialInfo?.querySelector(".leif-material-title")?.textContent).toBe("Apostila A");
-    expect(detailRow?.querySelector("form.leif-resource-material-form")).toBeNull();
-    expect(detailRow?.querySelector("button[data-resource-add-material-id]")).toBeNull();
-
-    const materialLink = detailRow?.querySelector<HTMLAnchorElement>("a.leif-material-title");
-    expect(materialLink?.textContent).toBe("Apostila A");
-    expect(materialLink?.href).toBe("https://example.com/");
-    expect(detailRow?.querySelector("a.leif-material-open-link")).toBeNull();
-
-    const editButton = leaf.containerEl.querySelector<HTMLButtonElement>(
-      `tr[data-item-id='${itemRes.id}'] button[title='Editar']`
-    );
-
-    if (!editButton) {
-      throw new Error("Edit button was not rendered.");
-    }
-
-    editButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const editMaterialsRow = leaf.containerEl.querySelector(".leif-resource-edit-materials");
-    expect(editMaterialsRow?.textContent).toContain("Materiais do recurso");
-    expect(editMaterialsRow?.textContent).toContain("Adicionar novo material");
-    expect(editMaterialsRow?.textContent).toContain(
-      "Use esta área para anexar PDF, vídeo ou link ao recurso em edição."
-    );
-    expect(editMaterialsRow?.querySelector(".setting-item")).toBeNull();
-
-    const materialEditor = editMaterialsRow?.querySelector<HTMLElement>(
-      "[data-resource-material-editor-id='res-1']"
-    );
-    const materialTitleInput = materialEditor?.querySelector<HTMLInputElement>(
-      "input[placeholder='Título']"
-    );
-    const materialUrlInput = materialEditor?.querySelector<HTMLInputElement>(
-      "input[placeholder='URL']"
-    );
-    const saveMaterialButton = materialEditor?.querySelector<HTMLButtonElement>(
-      "button[data-resource-save-material-id='res-1']"
-    );
-
-    if (!materialTitleInput || !materialUrlInput || !saveMaterialButton) {
-      throw new Error("Existing material editor was not rendered.");
-    }
-
-    materialTitleInput.value = "Apostila revisada";
-    materialUrlInput.value = "https://example.com/revisada";
-    saveMaterialButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    let updatedData = await dataStore.load();
-    let updatedItem = updatedData.studyItems.find((candidate) => candidate.id === itemRes.id);
-    expect(updatedItem?.resourceReferences?.[0]).toMatchObject({
-      id: "res-1",
-      title: "Apostila revisada",
-      type: "pdf",
-      url: "https://example.com/revisada"
-    });
-
-    const deleteButton = leaf.containerEl.querySelector<HTMLButtonElement>(
-      "button[data-resource-delete-material-id='res-1']"
-    );
-
-    if (!deleteButton) {
-      throw new Error("Delete material button was not rendered.");
-    }
-
-    deleteButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    updatedData = await dataStore.load();
-    updatedItem = updatedData.studyItems.find((candidate) => candidate.id === itemRes.id);
-    expect(updatedItem?.resourceReferences).toHaveLength(0);
-
-    const form = editMaterialsRow?.querySelector("form.leif-resource-material-form");
-    const typeSelect = form?.querySelector("select");
-    const labels = Array.from(typeSelect?.querySelectorAll("option") ?? []).map(
-      (option) => option.textContent?.trim() ?? ""
-    );
-
-    expect(labels).toEqual(["PDF", "Vídeo", "Link"]);
-  });
-
-  it("explains the resources tab and keeps linked materials visually lightweight", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    const factory = await seedUiData(dataStore);
-
-    const createItem = new CreateStudyItemUseCase(dataStore, factory);
-    const addResource = new AddStudyItemResourceReferenceUseCase(dataStore, factory);
-
-    const itemRes = await createItem.execute({ subjectId: "subject-1", title: "Gramática" });
-    await addResource.execute({
-      studyItemId: itemRes.id,
-      resourceReference: {
-        id: "res-1",
-        title: "Apostila A",
-        type: "pdf",
-        url: "https://example.com"
-      }
-    });
-
-    const { leaf } = await openLeifView(dataStore);
-    const itemsTabButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='items']");
-
-    if (!itemsTabButton) {
-      throw new Error("Items tab button was not rendered.");
-    }
-
-    itemsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(leaf.containerEl.textContent).not.toContain("Guarde materiais de estudo por matéria");
-
-    const expandButton = leaf.containerEl.querySelector<HTMLButtonElement>(
-      `tr[data-item-id='${itemRes.id}'] button[title='Expandir']`
-    );
-
-    if (!expandButton) {
-      throw new Error("Expand button was not rendered.");
-    }
-
-    expandButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const detail = leaf.containerEl.querySelector<HTMLElement>(".leif-resource-detail");
-    const materialRow = detail?.querySelector<HTMLElement>(".leif-detail-list-item");
-
-    expect(detail?.textContent).toContain("Materiais deste recurso");
-    expect(materialRow?.querySelector(".leif-material-type")?.textContent).toBe("PDF");
-    const materialLink = materialRow?.querySelector<HTMLAnchorElement>("a.leif-material-title");
-    expect(materialLink?.textContent).toBe("Apostila A");
-    expect(materialLink?.href).toBe("https://example.com/");
-    expect(materialRow?.textContent).not.toContain("Abrir");
-    expect(materialRow?.classList.contains("leif-material-row")).toBe(true);
-  });
-
-  it("notifies when a contest becomes active", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
-
-    const { leaf } = await openLeifView(dataStore);
-    const contestsTabButton =
-      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='contests']");
-
-    if (!contestsTabButton) {
-      throw new Error("Contests tab button was not rendered.");
-    }
-
-    contestsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const activateButton = leaf.containerEl.querySelector<HTMLButtonElement>(
-      "[data-contest-id='contest-2']"
-    );
-
-    if (!activateButton) {
-      throw new Error("Activate contest button was not rendered.");
-    }
-
-    activateButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(getRecordedNotices()).toContain("SEFAZ agora é o concurso ativo.");
-    const selector = leaf.containerEl.querySelector<HTMLButtonElement>(
-      "button.leif-contest-selector"
-    );
-    expect(selector?.textContent).toBe("SEFAZ");
-    expect(selector?.getAttribute("aria-haspopup")).toBe("menu");
-  });
-
-  it("gives the contest wall notes field enough room to write", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
-
-    const { leaf } = await openLeifView(dataStore);
-    const wallTabButton = leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='wall']");
-
-    if (!wallTabButton) {
-      throw new Error("Wall tab button was not rendered.");
-    }
-
-    wallTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const editButton = Array.from(leaf.containerEl.querySelectorAll("button")).find(
-      (button) => button.textContent?.trim() === "Editar"
-    );
-    editButton?.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const notes = leaf.containerEl.querySelector<HTMLTextAreaElement>(
-      "textarea[placeholder='Notas do concurso']"
-    );
-
-    expect(notes?.rows).toBeGreaterThanOrEqual(8);
-    expect(notes?.classList.contains("leif-wall-notes")).toBe(true);
-    expect(notes?.closest(".setting-item")).toBeNull();
-    expect(notes?.closest(".leif-field-stack")).not.toBeNull();
-    expect(leaf.containerEl.textContent).not.toContain("anotações úteis do concurso ativo");
-  });
-
-  it("shows the subject picker as a simple label and select in edital and resources", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    await seedUiData(dataStore);
-
-    const { leaf } = await openLeifView(dataStore);
-    const tabs = ["topics", "items"];
-
-    for (const tab of tabs) {
-      const tabButton = leaf.containerEl.querySelector<HTMLButtonElement>(`[data-tab='${tab}']`);
-
-      if (!tabButton) {
-        throw new Error(`${tab} tab button was not rendered.`);
-      }
-
-      tabButton.click();
-      await new Promise((resolve) => setTimeout(resolve, 0));
-
-      const picker = leaf.containerEl.querySelector<HTMLElement>(".leif-subject-picker");
-      const label = picker?.querySelector<HTMLElement>(".leif-subject-picker-label");
-      const select = picker?.querySelector<HTMLSelectElement>("select");
-
-      expect(picker).not.toBeNull();
-      expect(label?.textContent).toBe("Matéria");
-      expect(select?.value).toBeTruthy();
-      expect(picker?.classList.contains("leif-toolbar")).toBe(false);
-      expect(picker?.querySelector(".setting-item")).toBeNull();
-    }
-  });
-
-  it("assigns a question notebook to a topic from the topics tab", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    const factory = await seedUiData(dataStore);
-    const originalOpen = window.open;
-    const openSpy = vi.fn();
-    window.open = openSpy;
-
-    const createTopic = new CreateTopicUseCase(dataStore, factory);
-    await createTopic.execute({
-      id: "topic-caderno",
-      subjectId: "subject-1",
-      name: "Orações coordenadas"
-    });
-
-    const { leaf } = await openLeifView(dataStore);
-    const topicsTabButton =
-      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='topics']");
-
-    if (!topicsTabButton) {
-      throw new Error("Topics tab button was not rendered.");
-    }
-
-    topicsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const topicRow = leaf.containerEl.querySelector<HTMLTableRowElement>(
-      "tr[data-topic-id='topic-caderno']"
-    );
-    expect(topicRow?.querySelector("button[title='Expandir']")).toBeNull();
-    expect(topicRow?.querySelector("button[title='Recolher']")).toBeNull();
-    expect(leaf.containerEl.querySelector(".leif-topic-detail")).toBeNull();
-
-    const editButton = topicRow?.querySelector<HTMLButtonElement>("button[title='Editar']");
-
-    if (!editButton) {
-      throw new Error("Topic edit button was not rendered.");
-    }
-
-    editButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const editingRow = leaf.containerEl.querySelector<HTMLTableRowElement>(
-      "tr[data-topic-id='topic-caderno'].leif-editing-row"
-    );
-    const notebookEditor = editingRow?.querySelector<HTMLElement>(".leif-topic-notebook-editor");
-    const nameInput = editingRow?.querySelector<HTMLInputElement>(
-      "input[placeholder='Nome do assunto']"
-    );
-    const notebookName = editingRow?.querySelector<HTMLInputElement>(
-      "input[placeholder='Nome do caderno']"
-    );
-    const notebookUrl = editingRow?.querySelector<HTMLInputElement>(
-      "input[placeholder='URL do caderno']"
-    );
-    const saveButton = editingRow?.querySelector<HTMLButtonElement>("button[title='Salvar']");
-
-    if (!nameInput || !notebookName || !notebookUrl || !saveButton) {
-      throw new Error("Topic editing controls were not rendered.");
-    }
-    expect(nameInput.classList.contains("leif-topic-name-input")).toBe(true);
-    expect(notebookEditor?.textContent).toContain("Caderno de questões");
-    expect(notebookEditor?.classList.contains("leif-topic-notebook-editor-stacked")).toBe(true);
-    expect(notebookUrl.closest(".leif-url-field")).not.toBeNull();
-
-    nameInput.value = "Orações coordenadas";
-    notebookName.value = "Tec Concursos - Coordenadas";
-    notebookUrl.value = "https://tec.example.com/coordenadas";
-    saveButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const data = await dataStore.load();
-    expect(
-      data.topics.find((topic) => topic.id === "topic-caderno")?.questionNotebook
-    ).toMatchObject({
-      name: "Tec Concursos - Coordenadas",
-      url: "https://tec.example.com/coordenadas",
-      solvedQuestions: 0,
-      correctAnswers: 0
-    });
-    expect(leaf.containerEl.textContent).toContain("Tec Concursos - Coordenadas");
-
-    const notebookLink = leaf.containerEl.querySelector<HTMLAnchorElement>(
-      "a[data-topic-notebook-url='topic-caderno']"
-    );
-
-    if (!notebookLink) {
-      throw new Error("Notebook link was not rendered.");
-    }
-
-    notebookLink.click();
-    expect(openSpy).toHaveBeenCalledWith(
-      "https://tec.example.com/coordenadas",
-      "_blank",
-      "noopener"
-    );
-    window.open = originalOpen;
-  });
-
-  it("does not expose ordering controls for topics", async () => {
-    const dataStore = new InMemoryPluginDataStore();
-    const factory = await seedUiData(dataStore);
-
-    const createTopic = new CreateTopicUseCase(dataStore, factory);
-    await createTopic.execute({
-      id: "topic-sem-ordem",
-      subjectId: "subject-1",
-      name: "Orações sem ordem própria"
-    });
-
-    const { leaf } = await openLeifView(dataStore);
-    const topicsTabButton =
-      leaf.containerEl.querySelector<HTMLButtonElement>("[data-tab='topics']");
-
-    if (!topicsTabButton) {
-      throw new Error("Topics tab button was not rendered.");
-    }
-
-    topicsTabButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const headerTexts = Array.from(
-      leaf.containerEl.querySelectorAll("table.leif-table thead th")
-    ).map((header) => header.textContent?.trim() ?? "");
-
-    expect(headerTexts).toEqual(["Assunto", "Progresso", "Caderno", "Ações"]);
-    expect(
-      leaf.containerEl.querySelector("td.leif-topic-title-cell button[aria-label='Subir']")
-    ).toBeNull();
-    expect(
-      leaf.containerEl.querySelector("td.leif-topic-title-cell button[aria-label='Descer']")
-    ).toBeNull();
-
-    const newTopicButton = leaf.containerEl.querySelector<HTMLButtonElement>(
-      "button[aria-label='Novo assunto']"
-    );
-
-    if (!newTopicButton) {
-      throw new Error("New topic button was not rendered.");
-    }
-
-    newTopicButton.click();
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    const form = leaf.containerEl.querySelector<HTMLFormElement>("form.leif-card");
-    expect(document.body.querySelector(".modal")).toBeNull();
-    expect(form?.textContent).toContain("Novo assunto");
-    expect(form?.textContent).not.toContain("Ordem");
-    expect(form?.querySelector<HTMLInputElement>("input[placeholder='Ordem']")).toBeNull();
+    expect(view.contentEl.querySelector(".leif-wall-editor")).toBeNull();
+    expect(view.contentEl.textContent).toContain("PDF atualizado");
   });
 });

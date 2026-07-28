@@ -53,6 +53,12 @@ export class ObsidianMarkdownFileStore implements MarkdownFileStore {
     await this.vault.adapter.rename(normalizedSource, normalizedDestination);
   }
 
+  async remove(path: string): Promise<void> {
+    const normalized = normalizePath(path);
+    if (!(await this.vault.adapter.exists(normalized))) return;
+    await this.vault.adapter.remove(normalized);
+  }
+
   private async ensureParentFolder(path: string): Promise<void> {
     const segments = path.split("/").slice(0, -1);
     let current = "";

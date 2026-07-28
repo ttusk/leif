@@ -1,208 +1,287 @@
-import { describe, expect, it } from "vitest";
-
-import type { PersistentStorageAdapter } from "@/application/ports/PersistentStorageAdapter";
-import { RegisterStudySessionUseCase } from "@/application/use-cases/RegisterStudySessionUseCase";
-import { CreateContestUseCase } from "@/application/use-cases/CreateContestUseCase";
-import { CreateSubjectUseCase } from "@/application/use-cases/CreateSubjectUseCase";
-import { CreateTopicUseCase } from "@/application/use-cases/CreateTopicUseCase";
-import { LinkQuestionNotebookUseCase } from "@/application/use-cases/LinkQuestionNotebookUseCase";
-import { UpdateStudySessionUseCase } from "@/application/use-cases/UpdateStudySessionUseCase";
-import { ValidationError } from "@/domain/errors/DomainErrors";
-import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
+import { beforeEach, describe, expect, it } from "vitest";
 import { PluginDataStore } from "@/infrastructure/persistence/PluginDataStore";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
+import type { PersistentStorageAdapter } from "@/application/ports/PersistentStorageAdapter";
+import { CreateContestUseCase } from "@/application/use-cases/CreateContestUseCase";
+import { CreateResourceUseCase } from "@/application/use-cases/CreateResourceUseCase";
+import { CreateSubjectUseCase } from "@/application/use-cases/CreateSubjectUseCase";
+import { RegisterStudySessionUseCase } from "@/application/use-cases/RegisterStudySessionUseCase";
+import { ResourceGoal } from "@/domain/entities/ResourceGoal";
+import { GoalUnit } from "@/domain/types/GoalUnit";
+import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
+import { NotFoundError, ValidationError } from "@/domain/errors/DomainErrors";
 
 class InMemoryStorageAdapter implements PersistentStorageAdapter<LeifPluginData> {
   private data: LeifPluginData | null;
 
   constructor(initialData: LeifPluginData | null = null) {
-    this.data = initialData;
+    this.data = initialData ? structuredClone(initialData) : null;
   }
 
   async load(): Promise<LeifPluginData | null> {
-    return this.data;
+    return this.data ? structuredClone(this.data) : null;
   }
 
   async save(data: LeifPluginData): Promise<void> {
-    this.data = data;
+    this.data = structuredClone(data);
   }
 }
 
-function createStore(): PluginDataStore {
-  return new PluginDataStore(new InMemoryStorageAdapter(createDefaultLeifPluginData()));
-}
+class RecordingStorageAdapter extends InMemoryStorageAdapter {
+  saveCount = 0;
 
-async function seedContestSubjectTopic(store: PluginDataStore): Promise<void> {
-  const factory = new EntityRepositoryFactory(store);
-  const createContest = new CreateContestUseCase(store, factory);
-  const createSubject = new CreateSubjectUseCase(store, factory);
-  const createTopic = new CreateTopicUseCase(store, factory);
-  const linkNotebook = new LinkQuestionNotebookUseCase(store, factory);
+  override async save(data: LeifPluginData): Promise<void> {
+    this.saveCount += 1;
+    await super.save(data);
+  }
 
-  await createContest.execute({ id: "contest-1", name: "TRT" });
-  await createSubject.execute({
-    id: "subject-1",
-    contestId: "contest-1",
-    name: "Portuguese",
-    plannedStudyMinutes: 60
-  });
-  await createTopic.execute({
-    id: "topic-1",
-    subjectId: "subject-1",
-    name: "Orações subordinadas"
-  });
-  await linkNotebook.execute({
-    topicId: "topic-1",
-    questionNotebook: {
-      id: "notebook-1",
-      name: "Caderno",
-      url: "https://example.com",
-      solvedQuestions: 0,
-      correctAnswers: 0
-    }
-  });
+  resetSaveCount(): void {
+    this.saveCount = 0;
+  }
 }
 
 describe("RegisterStudySessionUseCase", () => {
-  it("creates a pdf session without question fields", async () => {
-    const store = createStore();
-    const factory = new EntityRepositoryFactory(store);
-    await seedContestSubjectTopic(store);
-    const useCase = new RegisterStudySessionUseCase(store, factory);
+  let adapter: RecordingStorageAdapter;
+  let store: PluginDataStore;
+  let factory: EntityRepositoryFactory;
+  let useCase: RegisterStudySessionUseCase;
 
-    const session = await useCase.execute({
-      id: "session-pdf-1",
+  const seedContestWithResources = async () => {
+    const contest = await new CreateContestUseCase(store, factory).execute({
+      id: "contest-1",
+      name: "TRT"
+    });
+    const subjectA = await new CreateSubjectUseCase(store, factory).execute({
+      id: "subject-a",
+      contestId: contest.id,
+      name: "Português",
+      plannedStudyMinutes: 60
+    });
+    const subjectB = await new CreateSubjectUseCase(store, factory).execute({
+      id: "subject-b",
+      contestId: contest.id,
+      name: "Direito",
+      plannedStudyMinutes: 45
+    });
+    const resourceA1 = await new CreateResourceUseCase(store, factory).execute({
+      id: "resource-a1",
+      subjectId: subjectA.id,
+      title: "Aula 01"
+    });
+    const resourceB1 = await new CreateResourceUseCase(store, factory).execute({
+      id: "resource-b1",
+      subjectId: subjectB.id,
+      title: "PDF 01"
+    });
+    return { contest, subjectA, subjectB, resourceA1, resourceB1 };
+  };
+
+  beforeEach(async () => {
+    adapter = new RecordingStorageAdapter(createDefaultLeifPluginData());
+    store = new PluginDataStore(adapter);
+    factory = new EntityRepositoryFactory(store);
+    useCase = new RegisterStudySessionUseCase(store, factory);
+    await seedContestWithResources();
+    adapter.resetSaveCount();
+  });
+
+  it("persists a multi-record session atomically in one save", async () => {
+    const result = await useCase.execute({
       contestId: "contest-1",
-      subjectId: "subject-1",
-      topicId: "topic-1",
-      type: "pdf",
-      studiedAt: "2026-06-11T20:00:00.000Z",
-      pagesOrCount: 12,
-      completed: true
+      date: "2026-07-27",
+      startTime: "19:00",
+      endTime: "21:00",
+      records: [
+        { subjectId: "subject-a", activity: "leitura", quantity: 30, unit: GoalUnit.PAGINAS },
+        {
+          subjectId: "subject-b",
+          activity: "questoes",
+          quantity: 20,
+          unit: GoalUnit.QUESTOES,
+          correctAnswers: 15
+        }
+      ]
     });
 
-    expect(session).toMatchObject({
-      id: "session-pdf-1",
-      type: "pdf",
-      pagesOrCount: 12
-    });
+    expect(result.session.records).toHaveLength(2);
+    expect(result.session.records[0].subjectId).toBe("subject-a");
+    expect(result.session.records[1].correctAnswers).toBe(15);
+    expect(result.session.records.every((record) => record.id.trim().length > 0)).toBe(true);
+    expect(adapter.saveCount).toBe(1);
+
+    const persisted = await store.load();
+    expect(persisted.studySessions).toHaveLength(1);
+    expect(persisted.studySessions[0].startTime).toBe("19:00");
   });
 
-  it("rejects a session whose correctAnswers exceed pagesOrCount", async () => {
-    const store = createStore();
-    const factory = new EntityRepositoryFactory(store);
-    await seedContestSubjectTopic(store);
-    const useCase = new RegisterStudySessionUseCase(store, factory);
-
+  it("rejects a session without records so empty sessions never persist", async () => {
     await expect(
-      useCase.execute({
-        id: "session-bad-1",
-        contestId: "contest-1",
-        subjectId: "subject-1",
-        topicId: "topic-1",
-        type: "questions",
-        studiedAt: "2026-06-11T20:00:00.000Z",
-        pagesOrCount: 5,
-        correctAnswers: 9,
-        completed: true
-      })
-    ).rejects.toBeInstanceOf(ValidationError);
-  });
-
-  it("rejects a questions session with zero questions in the use case", async () => {
-    const store = createStore();
-    const factory = new EntityRepositoryFactory(store);
-    await seedContestSubjectTopic(store);
-    const useCase = new RegisterStudySessionUseCase(store, factory);
-
-    await expect(
-      useCase.execute({
-        id: "session-zero-questions",
-        contestId: "contest-1",
-        subjectId: "subject-1",
-        topicId: "topic-1",
-        type: "questions",
-        studiedAt: "2026-06-11T20:00:00.000Z",
-        pagesOrCount: 0,
-        correctAnswers: 0,
-        completed: true
-      })
-    ).rejects.toThrow("Questions count must be greater than zero");
-  });
-
-  it("creates a questions session and increments the topic's question-notebook stats", async () => {
-    const store = createStore();
-    const factory = new EntityRepositoryFactory(store);
-    await seedContestSubjectTopic(store);
-    const useCase = new RegisterStudySessionUseCase(store, factory);
-
-    await useCase.execute({
-      id: "session-q-1",
-      contestId: "contest-1",
-      subjectId: "subject-1",
-      topicId: "topic-1",
-      type: "questions",
-      studiedAt: "2026-06-11T20:00:00.000Z",
-      pagesOrCount: 20,
-      correctAnswers: 15,
-      completed: true
-    });
-
-    const data = await store.load();
-    const topic = data.topics.find((t) => t.id === "topic-1");
-
-    expect(topic?.questionNotebook).toMatchObject({
-      solvedQuestions: 20,
-      correctAnswers: 15
-    });
-  });
-
-  it("rejects cross-contest and missing-item relationships without persisting the session", async () => {
-    const store = createStore();
-    const factory = new EntityRepositoryFactory(store);
-    await seedContestSubjectTopic(store);
-    const useCase = new RegisterStudySessionUseCase(store, factory);
-
-    await expect(
-      useCase.execute({
-        id: "bad-item",
-        contestId: "contest-1",
-        subjectId: "subject-1",
-        studyItemId: "missing-item",
-        type: "pdf",
-        studiedAt: "2026-06-11T20:00:00.000Z"
-      })
-    ).rejects.toThrow("studyItemId must belong");
+      useCase.execute({ contestId: "contest-1", date: "2026-07-27", records: [] })
+    ).rejects.toThrow(ValidationError);
 
     expect((await store.load()).studySessions).toHaveLength(0);
   });
 
-  it("updates question-notebook totals by the session delta in the same transaction", async () => {
-    const store = createStore();
-    const factory = new EntityRepositoryFactory(store);
-    await seedContestSubjectTopic(store);
-    const register = new RegisterStudySessionUseCase(store, factory);
-    const update = new UpdateStudySessionUseCase(store, factory);
-    await register.execute({
-      id: "session-q-update",
+  it("rejects records whose subject, resource or topic do not belong together", async () => {
+    await expect(
+      useCase.execute({
+        contestId: "contest-1",
+        date: "2026-07-27",
+        records: [{ subjectId: "subject-b", activity: "leitura", resourceId: "resource-a1" }]
+      })
+    ).rejects.toThrow(ValidationError);
+
+    await expect(
+      useCase.execute({
+        contestId: "contest-1",
+        date: "2026-07-27",
+        records: [{ subjectId: "subject-a", activity: "leitura", topicId: "missing" }]
+      })
+    ).rejects.toThrow(ValidationError);
+
+    await expect(
+      useCase.execute({
+        contestId: "contest-1",
+        date: "2026-07-27",
+        records: [{ subjectId: "subject-x", activity: "leitura" }]
+      })
+    ).rejects.toThrow(NotFoundError);
+
+    expect((await store.load()).studySessions).toHaveLength(0);
+  });
+
+  it("advances through consecutive completed records in one mutation", async () => {
+    const result = await useCase.execute({
       contestId: "contest-1",
-      subjectId: "subject-1",
-      topicId: "topic-1",
-      type: "questions",
-      studiedAt: "2026-06-11T20:00:00.000Z",
-      pagesOrCount: 20,
-      correctAnswers: 15
+      date: "2026-07-27",
+      records: [
+        { subjectId: "subject-a", activity: "leitura", resourceId: "resource-a1", completed: true },
+        { subjectId: "subject-b", activity: "leitura", resourceId: "resource-b1", completed: true }
+      ]
     });
 
-    await update.execute({
-      sessionId: "session-q-update",
-      pagesOrCount: 25,
-      correctAnswers: 18
+    expect(result.cycleAdvanced).toBe(true);
+    expect(result.previousPosition).toEqual({ subjectId: "subject-a", resourceId: "resource-a1" });
+    expect(result.newPosition).toEqual({ subjectId: "subject-a", resourceId: "resource-a1" });
+
+    const state = (await store.load()).cycleStates.find((entry) => entry.contestId === "contest-1");
+    // Two consecutive matches wrap the two-subject cycle back to subject-a.
+    expect(state?.currentSubjectId).toBe("subject-a");
+    expect(adapter.saveCount).toBe(1);
+  });
+
+  it("saves valid records but stops advancing at the first mismatch", async () => {
+    const result = await useCase.execute({
+      contestId: "contest-1",
+      date: "2026-07-27",
+      records: [
+        { subjectId: "subject-a", activity: "leitura", resourceId: "resource-a1", completed: true },
+        { subjectId: "subject-a", activity: "revisao", completed: true },
+        { subjectId: "subject-b", activity: "leitura", resourceId: "resource-b1", completed: true }
+      ]
     });
 
-    expect((await store.load()).topics[0].questionNotebook).toMatchObject({
-      solvedQuestions: 25,
-      correctAnswers: 18
+    expect(result.cycleAdvanced).toBe(true);
+    expect(result.newPosition).toEqual({ subjectId: "subject-b", resourceId: "resource-b1" });
+
+    const state = (await store.load()).cycleStates.find((entry) => entry.contestId === "contest-1");
+    expect(state?.currentSubjectId).toBe("subject-b");
+    expect((await store.load()).studySessions[0].records).toHaveLength(3);
+  });
+
+  it("does not advance when the record does not match the recommendation", async () => {
+    const result = await useCase.execute({
+      contestId: "contest-1",
+      date: "2026-07-27",
+      records: [
+        { subjectId: "subject-b", activity: "leitura", resourceId: "resource-b1", completed: true }
+      ]
     });
+
+    expect(result.cycleAdvanced).toBe(false);
+    expect(result.newPosition).toEqual(result.previousPosition);
+
+    const state = (await store.load()).cycleStates.find((entry) => entry.contestId === "contest-1");
+    expect(state?.currentSubjectId).toBe("subject-a");
+  });
+
+  it("does not advance the cycle of a contest that is not active", async () => {
+    await new CreateContestUseCase(store, factory).execute({ id: "contest-2", name: "SEFAZ" });
+    await new CreateSubjectUseCase(store, factory).execute({
+      id: "subject-c",
+      contestId: "contest-2",
+      name: "Raciocínio",
+      plannedStudyMinutes: 30
+    });
+
+    const result = await useCase.execute({
+      contestId: "contest-2",
+      date: "2026-07-27",
+      records: [{ subjectId: "subject-c", activity: "leitura", completed: true }]
+    });
+
+    expect(result.cycleAdvanced).toBe(false);
+    const state = (await store.load()).cycleStates.find((entry) => entry.contestId === "contest-2");
+    expect(state?.currentSubjectId).toBeNull();
+  });
+
+  it("rejects duplicate session ids and unknown contests", async () => {
+    await useCase.execute({
+      id: "session-1",
+      contestId: "contest-1",
+      date: "2026-07-27",
+      records: [{ subjectId: "subject-a", activity: "leitura" }]
+    });
+
+    await expect(
+      useCase.execute({
+        id: "session-1",
+        contestId: "contest-1",
+        date: "2026-07-28",
+        records: [{ subjectId: "subject-a", activity: "leitura" }]
+      })
+    ).rejects.toThrow();
+
+    await expect(
+      useCase.execute({
+        contestId: "missing",
+        date: "2026-07-28",
+        records: [{ subjectId: "subject-a", activity: "leitura" }]
+      })
+    ).rejects.toThrow(NotFoundError);
+  });
+
+  it("recommends the next incomplete resource after a goal is met mid-session", async () => {
+    const factoryStore = new EntityRepositoryFactory(store);
+    await new CreateResourceUseCase(store, factoryStore).execute({
+      id: "resource-a2",
+      subjectId: "subject-a",
+      title: "Aula 02",
+      goal: new ResourceGoal(30, GoalUnit.PAGINAS)
+    });
+    // Reorder so resource-a2 comes first and carries a goal met by this session.
+    await store.mutate((draft) => {
+      const subject = draft.subjects.find((entry) => entry.id === "subject-a");
+      if (!subject) throw new Error("missing subject");
+      subject.resourceIds.splice(0, subject.resourceIds.length, "resource-a2", "resource-a1");
+    });
+
+    const result = await useCase.execute({
+      contestId: "contest-1",
+      date: "2026-07-27",
+      records: [
+        {
+          subjectId: "subject-a",
+          activity: "leitura",
+          resourceId: "resource-a2",
+          quantity: 30,
+          unit: GoalUnit.PAGINAS,
+          completed: true
+        }
+      ]
+    });
+
+    expect(result.cycleAdvanced).toBe(true);
+    expect(result.newPosition).toEqual({ subjectId: "subject-b", resourceId: "resource-b1" });
   });
 });

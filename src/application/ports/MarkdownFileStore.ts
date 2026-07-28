@@ -4,4 +4,5 @@ export interface MarkdownFileStore {
   read(path: string): Promise<string>;
   list(prefix: string): Promise<string[]>;
   move(source: string, destination: string): Promise<void>;
+  remove(path: string): Promise<void>;
 }

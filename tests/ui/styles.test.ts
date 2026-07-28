@@ -81,16 +81,11 @@ describe("Leif Native visual system", () => {
     expect(styles).not.toMatch(/box-shadow:\s*var\(--shadow/);
   });
 
-  it("renders the Fio do ciclo as one semantic accent thread", () => {
+  it("does not ship the old Fio do ciclo timeline markers", () => {
     const styles = readStyles();
 
-    expect(styles).toMatch(/\.leif-cycle-thread\s*{[^}]*list-style:\s*none;/s);
-    expect(styles).toMatch(
-      /\.leif-cycle-thread-step::before\s*{[^}]*width:\s*2px;[^}]*background:\s*var\(--leif-accent\);/s
-    );
-    expect(styles).toMatch(
-      /\.leif-cycle-thread-step\[data-cycle-state="next"\][^}]*color:\s*var\(--leif-text-muted\);/s
-    );
+    expect(styles).not.toContain(".leif-cycle-thread");
+    expect(styles).not.toContain(".leif-cycle-thread-step");
     expect(styles).not.toMatch(/\.leif-next-activity\s*{[^}]*box-shadow:/s);
   });
 
@@ -143,5 +138,62 @@ describe("Leif Native visual system", () => {
 
     expect(styles).toMatch(/\.leif-cycle-summary\s*{[^}]*display:\s*flex;[^}]*gap:/s);
     expect(styles).toMatch(/\.leif-cycle-summary-chip\s*{[^}]*gap:/s);
+  });
+
+  it("keeps descriptive table names readable without truncation or mid-word breaks", () => {
+    const styles = readStyles();
+
+    const baseCell = styles.match(/\.leif-table\s+th,\s*\.leif-table\s+td\s*{([^}]*)}/s)?.[1] ?? "";
+    expect(baseCell).not.toMatch(/overflow-wrap:\s*anywhere/);
+    expect(baseCell).not.toMatch(/text-overflow:\s*ellipsis/);
+    expect(baseCell).not.toMatch(/white-space:\s*nowrap/);
+
+    expect(styles).toMatch(/\.leif-table-cell-name\s*{[^}]*overflow-wrap:\s*break-word;/s);
+    expect(styles).not.toMatch(/\.leif-table-cell-name\s*{[^}]*white-space:\s*nowrap/s);
+  });
+
+  it("pins the Actions column as a sticky opaque final column that shares row state", () => {
+    const styles = readStyles();
+
+    expect(styles).toMatch(
+      /\.leif-table-actions\s*{[^}]*position:\s*sticky;[^}]*right:\s*0;[^}]*background:/s
+    );
+    expect(styles).toMatch(/\.leif-table-actions\s*{[^}]*white-space:\s*nowrap;/s);
+    expect(styles).toMatch(
+      /\.leif-table\s+tbody\s+tr[\s\S]*?\.leif-table-actions\s*{[^}]*background:\s*var\(--background-modifier-hover\);/s
+    );
+    expect(styles).toMatch(
+      /\.leif-editing-row\s*>\s*\.leif-table-actions\s*{[^}]*background:\s*var\(--leif-bg-editing\);/s
+    );
+  });
+
+  it("keeps status and numeric table cells on one line", () => {
+    const styles = readStyles();
+
+    expect(styles).toMatch(/\.leif-table-cell-numeric\s*{[^}]*white-space:\s*nowrap;/s);
+    expect(styles).toMatch(/\.leif-status-(active|inactive)\s*{[^}]*white-space:\s*nowrap;/s);
+  });
+
+  it("preserves usable touch targets in compact panes for table action controls", () => {
+    const styles = readStyles();
+
+    expect(styles).toMatch(
+      /\.leif-view\.is-compact[\s\S]*?\.leif-table-actions[^}]*min-height:\s*40px;/s
+    );
+  });
+
+  it("lets the table wrapper own horizontal overflow while the table keeps sensible bounds", () => {
+    const styles = readStyles();
+
+    expect(styles).toMatch(/\.leif-table-wrapper\s*{[^}]*overflow-x:\s*auto;/s);
+    expect(styles).toMatch(/\.leif-table\s*{[^}]*min-width:/s);
+    expect(styles).toMatch(/\.leif-table-cell-name\s*{[^}]*min-width:/s);
+  });
+
+  it("keeps readable contest and long reference content from breaking mid-word", () => {
+    const styles = readStyles();
+
+    expect(styles).not.toMatch(/\.leif-contest-card-title\s*{[^}]*overflow-wrap:\s*anywhere;/s);
+    expect(styles).toMatch(/\.leif-contest-card-title\s*{[^}]*overflow-wrap:\s*break-word;/s);
   });
 });

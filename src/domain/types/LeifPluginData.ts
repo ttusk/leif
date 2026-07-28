@@ -1,53 +1,49 @@
 import type { Contest } from "@/domain/entities/Contest";
-import type { ContestState } from "@/domain/entities/ContestState";
-import type { StudyItem } from "@/domain/entities/StudyItem";
+import type { CycleState } from "@/domain/entities/CycleState";
+import type { Resource } from "@/domain/entities/Resource";
 import type { StudySession } from "@/domain/entities/StudySession";
 import type { Subject } from "@/domain/entities/Subject";
 import type { Topic } from "@/domain/entities/Topic";
-import type { LeifRuntimeState } from "@/domain/types/LeifRuntimeState";
-import { createDefaultLeifRuntimeState } from "@/domain/types/LeifRuntimeState";
-
-// ContestState is intentionally not in EntityCollections (no `id` field,
-// accessed directly from LeifPluginData). Import stays for the data shape.
+import { createDefaultLeifRuntimeState, type LeifRuntimeState } from "./LeifRuntimeState";
 
 /**
- * Maps each persisted entity collection key to the entity it stores.
- * Used to type the {@link EntityRepository} accessor so call sites
- * don't need `as unknown as T[]` casts. Only entities accessed via
- * the repository port belong here; `contestStates` is read directly
- * (no `id` field) and therefore excluded.
+ * In-memory shape of every study collection plus the operational state kept
+ * in plugin JSON. Markdown is the authority for study content; JSON keeps
+ * only operational state (see runtimeState).
  */
+export interface LeifPluginData {
+  schemaVersion?: number;
+  activeContestId: string | null;
+  contests: Contest[];
+  cycleStates: CycleState[];
+  subjects: Subject[];
+  topics: Topic[];
+  resources: Resource[];
+  studySessions: StudySession[];
+  runtimeState?: LeifRuntimeState;
+}
+
 export interface EntityCollections {
   contests: Contest;
   subjects: Subject;
   topics: Topic;
-  studyItems: StudyItem;
+  resources: Resource;
   studySessions: StudySession;
 }
 
 export type EntityCollectionKey = keyof EntityCollections;
 
-export interface LeifPluginData {
-  schemaVersion?: number;
-  activeContestId: string | null;
-  contests: Contest[];
-  contestStates: ContestState[];
-  subjects: Subject[];
-  topics: Topic[];
-  studyItems: StudyItem[];
-  studySessions: StudySession[];
-  runtimeState?: LeifRuntimeState;
-}
+export const LEIF_DATA_SCHEMA_VERSION = 3;
 
 export function createDefaultLeifPluginData(): LeifPluginData {
   return {
-    schemaVersion: 1,
+    schemaVersion: LEIF_DATA_SCHEMA_VERSION,
     activeContestId: null,
     contests: [],
-    contestStates: [],
+    cycleStates: [],
     subjects: [],
     topics: [],
-    studyItems: [],
+    resources: [],
     studySessions: [],
     runtimeState: createDefaultLeifRuntimeState()
   };

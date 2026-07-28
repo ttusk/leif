@@ -1,14 +1,17 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
-import { StudySessionType } from "@/domain/entities/StudySession";
 import { ActiveContestGuard } from "@/application/guards/ActiveContestGuard";
+import { GoalUnit } from "@/domain/types/GoalUnit";
 
 export interface SubjectSummary {
   subjectId: string;
   subjectName: string;
   totalSessions: number;
+  pagesRead: number;
+  questionsSolved: number;
+  minutesStudied: number;
+  questionAccuracy: number | null;
   pdfProgressCount: number;
   questionProgressCount: number;
-  questionAccuracy: number | null;
 }
 
 export interface ActiveContestSummary {
@@ -16,9 +19,6 @@ export interface ActiveContestSummary {
   subjectSummaries: SubjectSummary[];
 }
 
-/**
- * Use case for getting the active contest summary.
- */
 export class GetActiveContestSummaryUseCase {
   private readonly guard: ActiveContestGuard;
 
@@ -29,40 +29,42 @@ export class GetActiveContestSummaryUseCase {
   async execute(): Promise<ActiveContestSummary> {
     const activeContestId = await this.guard.requireActiveContest();
     const data = await this.dataStore.load();
-
     const contestSubjects = await this.guard.getActiveContestSubjects();
 
     const subjectSummaries = contestSubjects.map((subject) => {
       const subjectSessions = data.studySessions.filter(
-        (session) => session.contestId === activeContestId && session.subjectId === subject.id
+        (session) =>
+          session.contestId === activeContestId &&
+          session.records.some((record) => record.subjectId === subject.id)
       );
-
-      const pdfProgressCount = subjectSessions
-        .filter((session) => session.type === StudySessionType.PDF)
-        .reduce((total, session) => total + (session.pagesOrCount ?? 0), 0);
-
-      const questionSessions = subjectSessions.filter(
-        (session) => session.type === StudySessionType.QUESTIONS
+      const records = subjectSessions.flatMap((session) =>
+        session.records.filter((record) => record.subjectId === subject.id)
       );
-      const questionProgressCount = questionSessions.reduce(
-        (total, session) => total + (session.pagesOrCount ?? 0),
+      const pagesRead = records
+        .filter((record) => record.unit === GoalUnit.PAGINAS)
+        .reduce((total, record) => total + (record.quantity ?? 0), 0);
+      const questionsSolved = records
+        .filter((record) => record.unit === GoalUnit.QUESTOES)
+        .reduce((total, record) => total + (record.quantity ?? 0), 0);
+      const minutesStudied = records
+        .filter((record) => record.unit === GoalUnit.MINUTOS)
+        .reduce((total, record) => total + (record.quantity ?? 0), 0);
+      const correctAnswers = records.reduce(
+        (total, record) => total + (record.correctAnswers ?? 0),
         0
       );
-      const totalCorrectAnswers = questionSessions.reduce(
-        (total, session) => total + (session.correctAnswers ?? 0),
-        0
-      );
-
-      const rawAccuracy =
-        questionProgressCount > 0 ? totalCorrectAnswers / questionProgressCount : 0;
 
       return {
         subjectId: subject.id,
         subjectName: subject.name,
         totalSessions: subjectSessions.length,
-        pdfProgressCount,
-        questionProgressCount,
-        questionAccuracy: questionProgressCount > 0 ? Math.min(1, rawAccuracy) : null
+        pagesRead,
+        questionsSolved,
+        minutesStudied,
+        questionAccuracy:
+          questionsSolved > 0 ? Math.min(1, correctAnswers / questionsSolved) : null,
+        pdfProgressCount: pagesRead,
+        questionProgressCount: questionsSolved
       };
     });
 

@@ -1,47 +1,40 @@
-import type { PluginDataStore } from "@/application/ports/PluginDataStore";
-import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
-import type { Contest } from "@/domain/entities/Contest";
+import { Contest } from "@/domain/entities/Contest";
 import { NotFoundError } from "@/domain/errors/DomainErrors";
+import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 
 export interface DeleteContestInput {
   contestId: string;
 }
 
-/**
- * Use case for deleting a contest.
- */
 export class DeleteContestUseCase {
-  private readonly contestRepository: EntityRepositoryPort<Contest>;
-
-  constructor(
-    private readonly dataStore: PluginDataStore,
-    repositoryFactory: RepositoryFactory
-  ) {
-    this.contestRepository = repositoryFactory.for("contests");
-  }
+  constructor(private readonly dataStore: PluginDataStore) {}
 
   async execute(input: DeleteContestInput): Promise<Contest> {
-    return this.dataStore.mutate((data) => {
-      const contest = data.contests.find((candidate) => candidate.id === input.contestId);
-      if (!contest) throw new NotFoundError("contests", input.contestId);
+    return this.dataStore.mutate((draft) => {
+      const contest = draft.contests.find((entry) => entry.id === input.contestId);
+      if (!contest) {
+        throw new NotFoundError("contests", input.contestId);
+      }
+
       const subjectIds = new Set(
-        data.subjects
+        draft.subjects
           .filter((subject) => subject.contestId === input.contestId)
           .map((subject) => subject.id)
       );
 
-      data.contests = data.contests.filter((candidate) => candidate.id !== input.contestId);
-      data.contestStates = data.contestStates.filter(
-        (state) => state.contestId !== input.contestId
-      );
-      data.subjects = data.subjects.filter((subject) => subject.contestId !== input.contestId);
-      data.studyItems = data.studyItems.filter((item) => !subjectIds.has(item.subjectId));
-      data.topics = data.topics.filter((topic) => !subjectIds.has(topic.subjectId));
-      data.studySessions = data.studySessions.filter(
+      draft.contests = draft.contests.filter((entry) => entry.id !== input.contestId);
+      draft.cycleStates = draft.cycleStates.filter((entry) => entry.contestId !== input.contestId);
+      draft.subjects = draft.subjects.filter((subject) => !subjectIds.has(subject.id));
+      draft.resources = draft.resources.filter((resource) => !subjectIds.has(resource.subjectId));
+      draft.topics = draft.topics.filter((topic) => !subjectIds.has(topic.subjectId));
+      draft.studySessions = draft.studySessions.filter(
         (session) => session.contestId !== input.contestId
       );
 
-      if (data.activeContestId === input.contestId) data.activeContestId = null;
+      if (draft.activeContestId === input.contestId) {
+        draft.activeContestId = null;
+      }
+
       return contest;
     });
   }

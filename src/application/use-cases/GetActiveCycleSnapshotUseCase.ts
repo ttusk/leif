@@ -1,72 +1,53 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import type { Resource } from "@/domain/entities/Resource";
 import type { Subject } from "@/domain/entities/Subject";
-import { CycleService } from "@/domain/services/CycleService";
-import { ItemProgressService } from "@/domain/services/ItemProgressService";
-import { ActiveContestGuard } from "@/application/guards/ActiveContestGuard";
 import { NotFoundError } from "@/domain/errors/DomainErrors";
+import { CycleService } from "@/domain/services/CycleService";
 
 export interface ActiveCycleSnapshot {
   contestId: string;
   currentSubject: Subject | null;
   nextSubject: Subject | null;
-  currentItemId: string | null;
-  nextItemId: string | null;
+  currentResourceId: string | null;
+  nextResourceId: string | null;
+  currentResource?: Resource | null;
+  nextResource?: Resource | null;
 }
 
-/**
- * Use case for getting the active cycle snapshot.
- */
 export class GetActiveCycleSnapshotUseCase {
-  private readonly guard: ActiveContestGuard;
+  private readonly cycleService = new CycleService();
 
-  constructor(
-    private readonly dataStore: PluginDataStore,
-    private readonly cycleService: CycleService = new CycleService(),
-    private readonly progressService: ItemProgressService = new ItemProgressService()
-  ) {
-    this.guard = new ActiveContestGuard(dataStore);
-  }
+  constructor(private readonly dataStore: PluginDataStore) {}
 
-  async execute(): Promise<ActiveCycleSnapshot> {
-    const activeContestId = await this.guard.requireActiveContest();
+  async execute(): Promise<ActiveCycleSnapshot | null> {
     const data = await this.dataStore.load();
-
-    const currentState = data.contestStates.find((state) => state.contestId === activeContestId);
-
-    if (!currentState) {
-      throw new NotFoundError("contestStates", activeContestId);
+    const activeContestId = data.activeContestId;
+    if (!activeContestId) {
+      return null;
     }
-
-    const contestSubjects = await this.guard.getActiveContestSubjects();
-
-    const currentSubject =
-      contestSubjects.find((subject) => subject.id === currentState.currentSubjectId) ?? null;
-    const nextSubject = this.cycleService.getNextActiveSubject(
-      contestSubjects,
-      currentState.currentSubjectId ?? undefined
-    );
-
-    const subjectForNextItem = currentSubject ?? nextSubject;
-    const subjectItems = data.studyItems.filter(
-      (item) => item.subjectId === subjectForNextItem?.id
-    );
-    const isCompleted = this.progressService.buildCompletionPredicate(
-      subjectItems,
-      data.studySessions
-    );
-
+    if (!data.contests.some((contest) => contest.id === activeContestId)) {
+      throw new NotFoundError("contests", activeContestId);
+    }
+    const subjects = data.subjects.filter((subject) => subject.contestId === activeContestId);
+    const subjectIds = new Set(subjects.map((subject) => subject.id));
+    const resources = data.resources.filter((resource) => subjectIds.has(resource.subjectId));
+    const sessions = data.studySessions.filter((session) => session.contestId === activeContestId);
+    const state = data.cycleStates.find((entry) => entry.contestId === activeContestId);
+    const current = this.cycleService.getRecommendation(subjects, resources, sessions, state);
+    const next = this.cycleService.advance(subjects, resources, sessions, {
+      contestId: activeContestId,
+      currentSubjectId: current.subjectId,
+      currentResourceId: current.resourceId
+    });
+    const resourceById = new Map(resources.map((resource) => [resource.id, resource]));
     return {
       contestId: activeContestId,
-      currentSubject,
-      nextSubject,
-      currentItemId: currentState.currentItemId,
-      nextItemId: subjectForNextItem
-        ? this.cycleService.getNextItemId(
-            subjectForNextItem,
-            currentSubject ? (currentState.currentItemId ?? undefined) : undefined,
-            isCompleted
-          )
-        : null
+      currentSubject: subjects.find((subject) => subject.id === current.subjectId) ?? null,
+      nextSubject: subjects.find((subject) => subject.id === next?.subjectId) ?? null,
+      currentResourceId: current.resourceId,
+      nextResourceId: next?.resourceId ?? null,
+      currentResource: current.resourceId ? (resourceById.get(current.resourceId) ?? null) : null,
+      nextResource: next?.resourceId ? (resourceById.get(next.resourceId) ?? null) : null
     };
   }
 }

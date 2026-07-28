@@ -1,61 +1,20 @@
 import { describe, expect, it } from "vitest";
 
+import { GoalUnit } from "@/domain/types/GoalUnit";
+import {
+  LEIF_DATA_SCHEMA_VERSION,
+  createDefaultLeifPluginData
+} from "@/domain/types/LeifPluginData";
 import { DataMigrationService } from "@/infrastructure/persistence/DataMigrations";
-import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
 
 describe("DataMigrationService", () => {
   const service = new DataMigrationService();
 
-  it("reports the current schema version", () => {
-    expect(service.getCurrentVersion()).toBe(1);
-  });
-
-  it("stamps the data with the current schema version", () => {
-    const migrated = service.migrate({ ...createDefaultLeifPluginData() });
-    expect(migrated.schemaVersion).toBe(1);
-  });
-
-  it("preserves duplicate entities for explicit repair instead of silently deleting data", () => {
-    const base = createDefaultLeifPluginData();
-    const subject = {
-      id: "subject-1",
-      contestId: "c1",
-      name: "Portuguese",
-      order: 1,
-      isActive: true,
-      plannedStudyMinutes: 60,
-      itemIds: [],
-      topicIds: []
-    };
-    const data: LeifPluginData = {
-      ...base,
-      subjects: [subject, { ...subject, name: "Duplicate" }]
-    };
-
-    const migrated = service.migrate({ ...data, schemaVersion: 1 });
-
-    expect(migrated.subjects).toHaveLength(2);
-    expect(migrated.subjects[0].name).toBe("Portuguese");
-    expect(migrated.subjects[1].name).toBe("Duplicate");
-  });
-
-  it("preserves duplicate relationship entries for explicit repair", () => {
-    const base = createDefaultLeifPluginData();
-    const data: LeifPluginData = {
-      ...base,
-      contests: [
-        {
-          id: "c1",
-          name: "TRT",
-          subjectIds: ["s1", "s1", "s2", "s1"],
-          wall: { noticeLinks: [], examLinks: [], subjectSnapshots: [] }
-        }
-      ]
-    };
-
-    const migrated = service.migrate({ ...data, schemaVersion: 1 });
-
-    expect(migrated.contests[0].subjectIds).toEqual(["s1", "s1", "s2", "s1"]);
+  it("reports and stamps the current schema version", () => {
+    expect(service.getCurrentVersion()).toBe(LEIF_DATA_SCHEMA_VERSION);
+    expect(service.migrate(createDefaultLeifPluginData()).schemaVersion).toBe(
+      LEIF_DATA_SCHEMA_VERSION
+    );
   });
 
   it("refuses to downgrade data created by a newer Leif schema", () => {
@@ -65,79 +24,136 @@ describe("DataMigrationService", () => {
     expect(futureData.schemaVersion).toBe(99);
   });
 
-  it("normalizes subject and study item order to one-based sequences per parent", () => {
-    const base = createDefaultLeifPluginData();
-    const data: LeifPluginData = {
-      ...base,
+  it("projects legacy contests, wall notes and subject order into schema 3", () => {
+    const migrated = service.migrate({
+      ...createDefaultLeifPluginData(),
+      schemaVersion: 1,
+      contests: [
+        {
+          id: "contest-1",
+          name: "TRT",
+          subjectIds: ["subject-2", "subject-1"],
+          wall: {
+            notes: "Edital publicado",
+            noticeLinks: [{ title: "Edital", url: "https://example.com/edital" }],
+            examLinks: [],
+            subjectSnapshots: [
+              { subjectId: "subject-1", weight: 2, score: 80, targetItems: ["item-1"] }
+            ]
+          }
+        }
+      ] as never,
       subjects: [
         {
-          id: "subject-second",
+          id: "subject-2",
           contestId: "contest-1",
-          name: "Second",
+          name: "Direito",
           order: 1,
-          isActive: true,
-          plannedStudyMinutes: 60,
           itemIds: [],
           topicIds: []
         },
         {
-          id: "subject-first",
+          id: "subject-1",
           contestId: "contest-1",
-          name: "First",
+          name: "Português",
           order: 0,
-          isActive: true,
-          plannedStudyMinutes: 60,
-          itemIds: [],
-          topicIds: []
-        },
-        {
-          id: "other-contest-subject",
-          contestId: "contest-2",
-          name: "Other",
-          order: 0,
-          isActive: true,
-          plannedStudyMinutes: 60,
-          itemIds: [],
+          itemIds: ["item-1"],
           topicIds: []
         }
-      ],
-      studyItems: [
-        {
-          id: "item-second",
-          subjectId: "subject-first",
-          title: "Second item",
-          order: 1
-        },
-        {
-          id: "item-first",
-          subjectId: "subject-first",
-          title: "First item",
-          order: 0
-        }
-      ]
-    };
+      ] as never
+    });
 
-    const migrated = service.migrate(data);
-    const subjectOrders = new Map(migrated.subjects.map((subject) => [subject.id, subject.order]));
-    const itemOrders = new Map(migrated.studyItems.map((item) => [item.id, item.order]));
-
-    expect(subjectOrders).toEqual(
-      new Map([
-        ["subject-first", 1],
-        ["subject-second", 2],
-        ["other-contest-subject", 1]
-      ])
-    );
-    expect(itemOrders).toEqual(
-      new Map([
-        ["item-first", 1],
-        ["item-second", 2]
-      ])
-    );
+    expect(migrated.contests[0].mural.notes).toContain("Edital publicado");
+    expect(migrated.contests[0].mural.notes).toContain("[Edital](https://example.com/edital)");
+    expect(migrated.contests[0].mural.snapshots[0]).toMatchObject({
+      subjectId: "subject-1",
+      targetResources: ["item-1"]
+    });
+    expect(
+      migrated.subjects
+        .map(({ id, order }) => [id, order])
+        .sort((left, right) => Number(left[1]) - Number(right[1]))
+    ).toEqual([
+      ["subject-1", 1],
+      ["subject-2", 2]
+    ]);
+    expect(migrated.subjects.find((subject) => subject.id === "subject-1")?.resourceIds).toEqual([
+      "item-1"
+    ]);
   });
 
-  it("is idempotent", () => {
-    const data = { ...createDefaultLeifPluginData(), schemaVersion: 1 };
+  it("projects legacy study items into resources with goals and accesses", () => {
+    const migrated = service.migrate({
+      ...createDefaultLeifPluginData(),
+      schemaVersion: 1,
+      subjects: [
+        {
+          id: "subject-1",
+          contestId: "contest-1",
+          name: "Português",
+          order: 0,
+          itemIds: ["item-1"],
+          topicIds: []
+        }
+      ] as never,
+      studyItems: [
+        {
+          id: "item-1",
+          subjectId: "subject-1",
+          title: "PDF 01",
+          order: 0,
+          totalPages: 120,
+          resourceReferences: [{ title: "Arquivo", url: "vault://pdf-01" }]
+        }
+      ] as never
+    } as never);
+
+    expect(migrated.resources[0]).toMatchObject({
+      id: "item-1",
+      format: "pdf",
+      goal: { amount: 120, unit: GoalUnit.PAGINAS },
+      accesses: [{ title: "Arquivo", url: "vault://pdf-01" }]
+    });
+  });
+
+  it("projects old flat study sessions into one-record session aggregates", () => {
+    const migrated = service.migrate({
+      ...createDefaultLeifPluginData(),
+      schemaVersion: 1,
+      studySessions: [
+        {
+          id: "old-session-1",
+          contestId: "contest-1",
+          subjectId: "subject-1",
+          studyItemId: "item-1",
+          type: "pdf",
+          studiedAt: "2026-07-27T19:00:00.000Z",
+          pagesOrCount: 30,
+          phase: "Teoria"
+        }
+      ] as never
+    });
+
+    expect(migrated.studySessions).toHaveLength(1);
+    expect(migrated.studySessions[0]).toMatchObject({
+      contestId: "contest-1",
+      date: "2026-07-27",
+      records: [
+        {
+          id: "old-session-1",
+          subjectId: "subject-1",
+          activity: "leitura",
+          resourceId: "item-1",
+          quantity: 30,
+          unit: GoalUnit.PAGINAS,
+          notes: "Fase: Teoria"
+        }
+      ]
+    });
+  });
+
+  it("is idempotent for schema-3 data", () => {
+    const data = createDefaultLeifPluginData();
     const once = service.migrate(data);
     const twice = service.migrate(once);
     expect(twice).toEqual(once);

@@ -1,110 +1,80 @@
 import { describe, expect, it } from "vitest";
 
-import type { PersistentStorageAdapter } from "@/application/ports/PersistentStorageAdapter";
 import { CreateContestUseCase } from "@/application/use-cases/CreateContestUseCase";
-import { CreateSubjectUseCase } from "@/application/use-cases/CreateSubjectUseCase";
-import { ListSubjectsForActiveContestUseCase } from "@/application/use-cases/ListSubjectsForActiveContestUseCase";
+import { DeleteContestUseCase } from "@/application/use-cases/DeleteContestUseCase";
 import { SetActiveContestUseCase } from "@/application/use-cases/SetActiveContestUseCase";
 import { UpdateContestUseCase } from "@/application/use-cases/UpdateContestUseCase";
-import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
-import { PluginDataStore } from "@/infrastructure/persistence/PluginDataStore";
-import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
+import { Resource } from "@/domain/entities/Resource";
+import { StudyRecord } from "@/domain/entities/StudyRecord";
+import { StudySession } from "@/domain/entities/StudySession";
+import { NotFoundError } from "@/domain/errors/DomainErrors";
+import { createTestStore } from "../helpers/InMemoryStore";
 
-class InMemoryStorageAdapter implements PersistentStorageAdapter<LeifPluginData> {
-  private data: LeifPluginData | null;
+describe("contest management", () => {
+  it("creates the first contest with a cycle state and makes it active", async () => {
+    const { store, factory } = createTestStore();
 
-  constructor(initialData: LeifPluginData | null = null) {
-    this.data = initialData;
-  }
-
-  async load(): Promise<LeifPluginData | null> {
-    return this.data;
-  }
-
-  async save(data: LeifPluginData): Promise<void> {
-    this.data = data;
-  }
-}
-
-function createStore(): PluginDataStore {
-  return new PluginDataStore(new InMemoryStorageAdapter(createDefaultLeifPluginData()));
-}
-
-describe("Contest management", () => {
-  it("sets the first created contest as active and keeps it active when adding another contest", async () => {
-    const store = createStore();
-    const factory = new EntityRepositoryFactory(store);
-    const createContest = new CreateContestUseCase(store, factory);
-
-    await createContest.execute({ id: "contest-1", name: "TRT" });
-    await createContest.execute({ id: "contest-2", name: "SEFAZ" });
+    await new CreateContestUseCase(store, factory).execute({ id: "contest-1", name: "TRT" });
 
     const data = await store.load();
-
     expect(data.activeContestId).toBe("contest-1");
-    expect(data.contests.map((contest) => contest.id)).toEqual(["contest-1", "contest-2"]);
-    expect(data.contestStates).toEqual([
-      { contestId: "contest-1", currentSubjectId: null, currentItemId: null },
-      { contestId: "contest-2", currentSubjectId: null, currentItemId: null }
-    ]);
+    expect(data.cycleStates).toMatchObject([{ contestId: "contest-1" }]);
   });
 
-  it("switches the active contest without mixing subjects from other contests", async () => {
-    const store = createStore();
-    const factory = new EntityRepositoryFactory(store);
+  it("updates contest metadata and switches active contest", async () => {
+    const { store, factory } = createTestStore();
     const createContest = new CreateContestUseCase(store, factory);
-    const createSubject = new CreateSubjectUseCase(store, factory);
-    const setActiveContest = new SetActiveContestUseCase(store, factory);
-    const listSubjects = new ListSubjectsForActiveContestUseCase(store);
-
     await createContest.execute({ id: "contest-1", name: "TRT" });
     await createContest.execute({ id: "contest-2", name: "SEFAZ" });
 
-    await createSubject.execute({
-      id: "subject-1",
-      contestId: "contest-1",
-      name: "Portuguese",
-      plannedStudyMinutes: 60
-    });
-    await createSubject.execute({
-      id: "subject-2",
+    const updated = await new UpdateContestUseCase(store, factory).execute({
       contestId: "contest-2",
-      name: "Tax Law",
-      plannedStudyMinutes: 45
+      name: "SEFAZ Estadual",
+      examPlan: { board: "FCC", weeklyStudyHours: 20 }
     });
+    await new SetActiveContestUseCase(store, factory).execute({ contestId: "contest-2" });
 
-    await setActiveContest.execute({ contestId: "contest-2" });
-
-    await expect(listSubjects.execute()).resolves.toMatchObject([
-      { id: "subject-2", contestId: "contest-2" }
-    ]);
+    expect(updated).toMatchObject({
+      name: "SEFAZ Estadual",
+      examPlan: { board: "FCC", weeklyStudyHours: 20 }
+    });
+    expect((await store.load()).activeContestId).toBe("contest-2");
   });
 
-  it("stores optional exam planning metadata for a contest", async () => {
-    const store = createStore();
-    const factory = new EntityRepositoryFactory(store);
-    const createContest = new CreateContestUseCase(store, factory);
-    const updateContest = new UpdateContestUseCase(store, factory);
-
-    await createContest.execute({ id: "contest-1", name: "TRT" });
-
-    await updateContest.execute({
-      contestId: "contest-1",
-      examPlan: {
-        examDate: "2027-03-21",
-        board: "FGV",
-        weeklyStudyHours: 20,
-        weeklyQuestionGoal: 300
-      }
+  it("deletes a contest and cascades its study content", async () => {
+    const { store, factory } = createTestStore();
+    await new CreateContestUseCase(store, factory).execute({ id: "contest-1", name: "TRT" });
+    await store.mutate((data) => {
+      data.subjects.push({
+        id: "subject-1",
+        contestId: "contest-1",
+        name: "Português",
+        order: 1,
+        isActive: true,
+        plannedStudyMinutes: 60,
+        resourceIds: ["resource-1"],
+        topicIds: ["topic-1"]
+      });
+      data.resources.push(new Resource("resource-1", "subject-1", "Aula 01", 1));
+      data.topics.push({ id: "topic-1", subjectId: "subject-1", name: "Concordância" });
+      data.studySessions.push(
+        new StudySession("session-1", "contest-1", "2026-07-27", [
+          new StudyRecord("record-1", "subject-1", "leitura")
+        ])
+      );
     });
+
+    await new DeleteContestUseCase(store).execute({ contestId: "contest-1" });
 
     const data = await store.load();
-
-    expect(data.contests[0]?.examPlan).toEqual({
-      examDate: "2027-03-21",
-      board: "FGV",
-      weeklyStudyHours: 20,
-      weeklyQuestionGoal: 300
-    });
+    expect(data.activeContestId).toBeNull();
+    expect(data.contests).toHaveLength(0);
+    expect(data.subjects).toHaveLength(0);
+    expect(data.resources).toHaveLength(0);
+    expect(data.topics).toHaveLength(0);
+    expect(data.studySessions).toHaveLength(0);
+    await expect(new DeleteContestUseCase(store).execute({ contestId: "missing" })).rejects.toThrow(
+      NotFoundError
+    );
   });
 });

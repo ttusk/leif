@@ -9,3 +9,7 @@ main.js
 
 # Local Obsidian vault config
 .obsidian/
+
+# Internal 3.0 implementation working docs (not part of public release)
+docs/leif-3.0-agent-handoff.md
+docs/leif-3.0-implementation-plan.md

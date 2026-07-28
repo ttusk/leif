@@ -1,7 +1,8 @@
 import { ValidationError } from "@/domain/errors/DomainErrors";
 
 /**
- * Represents a subject within a contest.
+ * Matéria: a major area of knowledge in a Concurso and one step in its study
+ * cycle. Contains ordered Recursos and ordered Assuntos as sibling collections.
  */
 export class Subject {
   constructor(
@@ -12,14 +13,17 @@ export class Subject {
     public readonly isActive: boolean = true,
     public readonly plannedStudyMinutes: number = 0,
     public readonly currentStage?: string,
-    public readonly itemIds: string[] = [],
+    public readonly resourceIds: string[] = [],
     public readonly topicIds: string[] = []
   ) {
     if (!id?.trim()) throw new ValidationError("Subject ID is required");
     if (!contestId?.trim()) throw new ValidationError("Subject contestId is required");
     if (!name?.trim()) throw new ValidationError("Subject name is required");
-    if (order < 1) throw new ValidationError("Subject order must be at least 1");
-    if (plannedStudyMinutes < 0)
+    if (!Number.isInteger(order) || order < 1) {
+      throw new ValidationError("Subject order must be a positive integer");
+    }
+    if (plannedStudyMinutes < 0) {
       throw new ValidationError("Subject plannedStudyMinutes cannot be negative");
+    }
   }
 }

@@ -1,7 +1,14 @@
-import { Notice, setIcon, setTooltip } from "obsidian";
+import { Menu, Notice, setIcon, setTooltip } from "obsidian";
 import { ICON_NAMES } from "@/ui/constants";
 import { NoActiveContestError } from "@/domain/errors/DomainErrors";
 import { t } from "@/ui/i18n";
+
+export interface MenuButtonAction {
+  label: string;
+  icon?: string;
+  disabled?: boolean;
+  onClick: (event: MouseEvent | KeyboardEvent) => void | Promise<void>;
+}
 
 /**
  * DOM Helper utilities for creating consistent UI elements.
@@ -366,18 +373,27 @@ export class DomHelpers {
     return button;
   }
 
-  /** Groups infrequent row actions behind one keyboard-accessible disclosure. */
-  static createOverflowMenu(actions: HTMLElement[], label = "Mais opções"): HTMLDetailsElement {
-    const menu = this.createElement("details", "leif-overflow-menu");
-    const trigger = this.createElement("summary", "clickable-icon leif-overflow-trigger");
-    trigger.setAttribute("aria-label", label);
-    trigger.appendChild(this.createIcon("more-horizontal"));
-    const content = this.createElement("div", "leif-overflow-menu-content");
-    content.setAttribute("role", "group");
-    content.setAttribute("aria-label", label);
-    content.append(...actions);
-    menu.append(trigger, content);
-    return menu;
+  /** Opens infrequent row actions through Obsidian's native menu layer. */
+  static createMenuButton(actions: MenuButtonAction[], label = "Mais opções"): HTMLButtonElement {
+    return this.createIconButton("more-horizontal", label, {
+      className: "clickable-icon leif-menu-trigger",
+      onClick: (event) => {
+        const menu = new Menu().setUseNativeMenu(true);
+        actions.forEach((action) => {
+          menu.addItem((item) => {
+            item
+              .setTitle(action.label)
+              .setIcon(action.icon ?? null)
+              .setDisabled(action.disabled ?? false)
+              .onClick((menuEvent) => {
+                if (action.disabled) return;
+                void action.onClick(menuEvent);
+              });
+          });
+        });
+        menu.showAtMouseEvent(event);
+      }
+    });
   }
 
   /**
@@ -470,11 +486,42 @@ export class DomHelpers {
   /**
    * Creates a table cell with optional text or child element.
    */
-  static createCell(text: string | null, element?: HTMLElement): HTMLElement {
+  static createCell(text: string | null, element?: HTMLElement, className?: string): HTMLElement {
     const td = this.createElement("td");
+    if (className) td.className = className;
     if (text !== null) td.textContent = text;
     if (element) td.appendChild(element);
     return td;
+  }
+
+  /**
+   * Descriptive name cell. Wraps at normal word boundaries without truncation.
+   */
+  static createNameCell(text: string | null, element?: HTMLElement): HTMLElement {
+    return this.createCell(text, element, "leif-table-cell-name");
+  }
+
+  /**
+   * Numeric/date cell that stays on one line for scannable columns.
+   */
+  static createNumericCell(text: string): HTMLElement {
+    return this.createCell(text, undefined, "leif-table-cell-numeric");
+  }
+
+  /**
+   * Status cell (No ciclo / Pausada) that stays on one line.
+   */
+  static createStatusCell(element: HTMLElement): HTMLElement {
+    return this.createCell(null, element, "leif-table-cell-status");
+  }
+
+  /**
+   * Sticky final Actions column. Holds row action triggers and stays opaque
+   * through horizontal row scrolling so native menus always render outside the
+   * table wrapper clipping.
+   */
+  static createActionsCell(element: HTMLElement): HTMLElement {
+    return this.createCell(null, element, "leif-table-actions");
   }
 
   /**

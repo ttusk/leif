@@ -1,84 +1,62 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
-import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
-import type { StudySession } from "@/domain/entities/StudySession";
+import { createLeifId } from "@/application/Id";
+import { StudyRecord } from "@/domain/entities/StudyRecord";
+import { StudySession } from "@/domain/entities/StudySession";
 import { NotFoundError, ValidationError } from "@/domain/errors/DomainErrors";
-import { StudySessionType } from "@/domain/entities/StudySession";
+import type { RegisterStudyRecordInput } from "@/application/use-cases/RegisterStudySessionUseCase";
 
 export interface UpdateStudySessionInput {
   sessionId: string;
-  pagesOrCount?: number;
-  correctAnswers?: number;
+  date?: string;
+  records?: RegisterStudyRecordInput[];
+  startTime?: string | null;
+  endTime?: string | null;
+  notes?: string | null;
 }
 
-/**
- * Use case for updating a study session's progress.
- */
 export class UpdateStudySessionUseCase {
-  private readonly sessionRepository: EntityRepositoryPort<StudySession>;
-
-  constructor(
-    private readonly dataStore: PluginDataStore,
-    repositoryFactory: RepositoryFactory
-  ) {
-    this.sessionRepository = repositoryFactory.for("studySessions");
-  }
+  constructor(private readonly dataStore: PluginDataStore) {}
 
   async execute(input: UpdateStudySessionInput): Promise<StudySession> {
     if (!input.sessionId?.trim()) {
       throw new ValidationError("sessionId is required");
     }
-    if (input.pagesOrCount !== undefined && input.pagesOrCount < 0) {
-      throw new ValidationError("pagesOrCount cannot be negative");
-    }
-    if (input.correctAnswers !== undefined && input.correctAnswers < 0) {
-      throw new ValidationError("correctAnswers cannot be negative");
+    if (input.records !== undefined && input.records.length === 0) {
+      throw new ValidationError("StudySession requires at least one record");
     }
 
-    return this.dataStore.mutate((data) => {
-      const sessionIndex = data.studySessions.findIndex(
-        (session) => session.id === input.sessionId
+    return this.dataStore.mutate((draft) => {
+      const index = draft.studySessions.findIndex((session) => session.id === input.sessionId);
+      if (index === -1) {
+        throw new NotFoundError("studySessions", input.sessionId);
+      }
+      const current = draft.studySessions[index];
+      const records =
+        input.records?.map(
+          (record) =>
+            new StudyRecord(
+              record.id ?? createLeifId(),
+              record.subjectId,
+              record.activity,
+              record.resourceId,
+              record.topicId,
+              record.quantity,
+              record.unit,
+              record.correctAnswers,
+              record.completed ?? false,
+              record.notes
+            )
+        ) ?? current.records;
+      const updated = new StudySession(
+        current.id,
+        current.contestId,
+        input.date ?? current.date,
+        records,
+        input.startTime === null ? undefined : (input.startTime ?? current.startTime),
+        input.endTime === null ? undefined : (input.endTime ?? current.endTime),
+        input.notes === null ? undefined : (input.notes ?? current.notes)
       );
-      if (sessionIndex === -1) throw new NotFoundError("studySessions", input.sessionId);
-      const session = data.studySessions[sessionIndex];
-      const newCount = input.pagesOrCount !== undefined ? input.pagesOrCount : session.pagesOrCount;
-      const newCorrect =
-        input.correctAnswers !== undefined ? input.correctAnswers : session.correctAnswers;
-
-      if (newCorrect !== undefined && newCount !== undefined && newCorrect > newCount) {
-        throw new ValidationError("correctAnswers cannot exceed pagesOrCount");
-      }
-
-      const updated = {
-        ...session,
-        pagesOrCount: newCount,
-        correctAnswers: newCorrect
-      };
-      data.studySessions[sessionIndex] = updated;
-
-      if (session.type === StudySessionType.QUESTIONS && session.topicId) {
-        const topicIndex = data.topics.findIndex((topic) => topic.id === session.topicId);
-        const topic = data.topics[topicIndex];
-        if (topic?.questionNotebook) {
-          data.topics[topicIndex] = {
-            ...topic,
-            questionNotebook: {
-              ...topic.questionNotebook,
-              solvedQuestions: Math.max(
-                0,
-                topic.questionNotebook.solvedQuestions +
-                  (newCount ?? 0) -
-                  (session.pagesOrCount ?? 0)
-              ),
-              correctAnswers: Math.max(
-                0,
-                topic.questionNotebook.correctAnswers +
-                  (newCorrect ?? 0) -
-                  (session.correctAnswers ?? 0)
-              )
-            }
-          };
-        }
-      }
+      draft.studySessions[index] = updated;
       return updated;
     });
   }

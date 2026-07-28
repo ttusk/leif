@@ -1,286 +1,117 @@
 import { describe, expect, it } from "vitest";
 
-import type { PersistentStorageAdapter } from "@/application/ports/PersistentStorageAdapter";
-import { AdvanceCycleUseCase } from "@/application/use-cases/AdvanceCycleUseCase";
-import { AddStudyItemResourceReferenceUseCase } from "@/application/use-cases/AddStudyItemResourceReferenceUseCase";
+import { AddResourceAccessUseCase } from "@/application/use-cases/AddResourceAccessUseCase";
 import { CreateContestUseCase } from "@/application/use-cases/CreateContestUseCase";
-import { CreateStudyItemUseCase } from "@/application/use-cases/CreateStudyItemUseCase";
+import { CreateResourceUseCase } from "@/application/use-cases/CreateResourceUseCase";
 import { CreateSubjectUseCase } from "@/application/use-cases/CreateSubjectUseCase";
 import { CreateTopicUseCase } from "@/application/use-cases/CreateTopicUseCase";
-import { DeleteStudySessionUseCase } from "@/application/use-cases/DeleteStudySessionUseCase";
-import { GetActiveCycleSnapshotUseCase } from "@/application/use-cases/GetActiveCycleSnapshotUseCase";
-import { LinkQuestionNotebookUseCase } from "@/application/use-cases/LinkQuestionNotebookUseCase";
-import { RegisterStudySessionUseCase } from "@/application/use-cases/RegisterStudySessionUseCase";
-import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
-import { PluginDataStore } from "@/infrastructure/persistence/PluginDataStore";
-import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
+import { DeleteTopicUseCase } from "@/application/use-cases/DeleteTopicUseCase";
+import { UpdateResourceUseCase } from "@/application/use-cases/UpdateResourceUseCase";
+import { UpdateTopicUseCase } from "@/application/use-cases/UpdateTopicUseCase";
+import { ResourceAccess } from "@/domain/entities/ResourceAccess";
+import { ResourceGoal } from "@/domain/entities/ResourceGoal";
+import { GoalUnit } from "@/domain/types/GoalUnit";
+import { createTestStore } from "../helpers/InMemoryStore";
 
-class InMemoryStorageAdapter implements PersistentStorageAdapter<LeifPluginData> {
-  private data: LeifPluginData | null;
-
-  constructor(initialData: LeifPluginData | null = null) {
-    this.data = initialData;
-  }
-
-  async load(): Promise<LeifPluginData | null> {
-    return this.data;
-  }
-
-  async save(data: LeifPluginData): Promise<void> {
-    this.data = data;
-  }
-}
-
-function createStore(): PluginDataStore {
-  return new PluginDataStore(new InMemoryStorageAdapter(createDefaultLeifPluginData()));
-}
-
-describe("Study structure", () => {
-  it("creates items and topics in order and exposes the active cycle snapshot", async () => {
-    const store = createStore();
-    const factory = new EntityRepositoryFactory(store);
-    const createContest = new CreateContestUseCase(store, factory);
-    const createSubject = new CreateSubjectUseCase(store, factory);
-    const createStudyItem = new CreateStudyItemUseCase(store, factory);
-    const createTopic = new CreateTopicUseCase(store, factory);
-    const advanceCycle = new AdvanceCycleUseCase(store);
-    const getSnapshot = new GetActiveCycleSnapshotUseCase(store);
-
-    await createContest.execute({ id: "contest-1", name: "TRT" });
-    await createSubject.execute({
+describe("study structure", () => {
+  it("creates subjects, topics and resources in the new sibling hierarchy", async () => {
+    const { store, factory } = createTestStore();
+    await new CreateContestUseCase(store, factory).execute({ id: "contest-1", name: "TRT" });
+    await new CreateSubjectUseCase(store, factory).execute({
       id: "subject-1",
       contestId: "contest-1",
-      name: "Portuguese",
+      name: "Português",
       plannedStudyMinutes: 60
     });
-    const item1 = await createStudyItem.execute({ subjectId: "subject-1", title: "Sintaxe" });
-    const item2 = await createStudyItem.execute({ subjectId: "subject-1", title: "Pontuação" });
-    await createTopic.execute({
+    const topic = await new CreateTopicUseCase(store, factory).execute({
       id: "topic-1",
       subjectId: "subject-1",
-      name: "Orações subordinadas"
+      name: "Concordância"
     });
-
-    await advanceCycle.execute();
-
-    await expect(getSnapshot.execute()).resolves.toMatchObject({
-      currentSubject: { id: "subject-1" },
-      nextSubject: { id: "subject-1" },
-      currentItemId: item1.id,
-      nextItemId: item2.id
-    });
-  });
-
-  it("recommends the first pending item before the cycle has been started", async () => {
-    const store = createStore();
-    const factory = new EntityRepositoryFactory(store);
-    const createContest = new CreateContestUseCase(store, factory);
-    const createSubject = new CreateSubjectUseCase(store, factory);
-    const createStudyItem = new CreateStudyItemUseCase(store, factory);
-    const getSnapshot = new GetActiveCycleSnapshotUseCase(store);
-
-    await createContest.execute({ id: "contest-1", name: "TRT" });
-    await createSubject.execute({
-      id: "subject-1",
-      contestId: "contest-1",
-      name: "Portuguese",
-      plannedStudyMinutes: 60
-    });
-    const item1 = await createStudyItem.execute({ subjectId: "subject-1", title: "Sintaxe" });
-    await createStudyItem.execute({ subjectId: "subject-1", title: "Pontuação" });
-
-    await expect(getSnapshot.execute()).resolves.toMatchObject({
-      currentSubject: null,
-      nextSubject: { id: "subject-1" },
-      currentItemId: null,
-      nextItemId: item1.id
-    });
-  });
-
-  it("adds material resources to items, links a question notebook to topics, and registers study sessions", async () => {
-    const store = createStore();
-    const factory = new EntityRepositoryFactory(store);
-    const createContest = new CreateContestUseCase(store, factory);
-    const createSubject = new CreateSubjectUseCase(store, factory);
-    const createStudyItem = new CreateStudyItemUseCase(store, factory);
-    const addStudyItemResourceReference = new AddStudyItemResourceReferenceUseCase(store, factory);
-    const createTopic = new CreateTopicUseCase(store, factory);
-    const linkQuestionNotebook = new LinkQuestionNotebookUseCase(store, factory);
-    const registerStudySession = new RegisterStudySessionUseCase(store, factory);
-
-    await createContest.execute({ id: "contest-1", name: "TRT" });
-    await createSubject.execute({
-      id: "subject-1",
-      contestId: "contest-1",
-      name: "Portuguese",
-      plannedStudyMinutes: 60
-    });
-    const item1 = await createStudyItem.execute({ subjectId: "subject-1", title: "Sintaxe" });
-    await createTopic.execute({
-      id: "topic-1",
+    const resource = await new CreateResourceUseCase(store, factory).execute({
+      id: "resource-1",
       subjectId: "subject-1",
-      name: "Orações subordinadas"
-    });
-
-    await addStudyItemResourceReference.execute({
-      studyItemId: item1.id,
-      resourceReference: {
-        id: "resource-item-1",
-        title: "Vídeo Aula 01",
-        type: "video",
-        url: "https://example.com/video-aula-01"
-      }
-    });
-    await linkQuestionNotebook.execute({
-      topicId: "topic-1",
-      questionNotebook: {
-        id: "notebook-1",
-        name: "Tec Concursos - Orações",
-        url: "https://tec.example.com/notebook-1",
-        solvedQuestions: 0,
-        correctAnswers: 0
-      }
-    });
-    await registerStudySession.execute({
-      id: "session-1",
-      contestId: "contest-1",
-      subjectId: "subject-1",
-      topicId: "topic-1",
-      type: "questions",
-      studiedAt: "2026-06-11T20:00:00.000Z",
-      pagesOrCount: 20,
-      correctAnswers: 16,
-      completed: true
+      title: "PDF 01",
+      format: "pdf",
+      goal: new ResourceGoal(80, GoalUnit.PAGINAS),
+      topicIds: [topic.id],
+      accesses: [new ResourceAccess("Arquivo", "vault://pdf-01")]
     });
 
     const data = await store.load();
-
-    expect(data.topics).toMatchObject([
-      {
-        id: "topic-1",
-        resourceReferences: [],
-        questionNotebook: {
-          id: "notebook-1",
-          name: "Tec Concursos - Orações",
-          solvedQuestions: 20,
-          correctAnswers: 16
-        }
-      }
-    ]);
-    expect(data.studyItems).toMatchObject([
-      {
-        resourceReferences: [
-          {
-            id: "resource-item-1",
-            title: "Vídeo Aula 01",
-            type: "video",
-            url: "https://example.com/video-aula-01"
-          }
-        ]
-      }
-    ]);
-    expect(data.studySessions).toMatchObject([
-      {
-        id: "session-1",
-        type: "questions",
-        pagesOrCount: 20,
-        correctAnswers: 16
-      }
-    ]);
+    expect(resource.order).toBe(1);
+    expect(data.subjects[0].topicIds).toEqual(["topic-1"]);
+    expect(data.subjects[0].resourceIds).toEqual(["resource-1"]);
+    expect(data.resources[0]).toMatchObject({
+      id: "resource-1",
+      goal: { amount: 80, unit: GoalUnit.PAGINAS },
+      topicIds: ["topic-1"]
+    });
   });
 
-  it("removes a question session and reverts notebook stats", async () => {
-    const store = createStore();
-    const factory = new EntityRepositoryFactory(store);
-    const createContest = new CreateContestUseCase(store, factory);
-    const createSubject = new CreateSubjectUseCase(store, factory);
-    const createTopic = new CreateTopicUseCase(store, factory);
-    const linkQuestionNotebook = new LinkQuestionNotebookUseCase(store, factory);
-    const registerStudySession = new RegisterStudySessionUseCase(store, factory);
-    const deleteStudySession = new DeleteStudySessionUseCase(store, factory);
-
-    await createContest.execute({ id: "contest-1", name: "TRT" });
-    await createSubject.execute({
+  it("updates resource details and appends accesses", async () => {
+    const { store, factory } = createTestStore();
+    await new CreateContestUseCase(store, factory).execute({ id: "contest-1", name: "TRT" });
+    await new CreateSubjectUseCase(store, factory).execute({
       id: "subject-1",
       contestId: "contest-1",
-      name: "Portuguese",
+      name: "Português",
       plannedStudyMinutes: 60
     });
-    await createTopic.execute({
+    await new CreateResourceUseCase(store, factory).execute({
+      id: "resource-1",
+      subjectId: "subject-1",
+      title: "PDF 01"
+    });
+
+    await new UpdateResourceUseCase(store, factory).execute({
+      resourceId: "resource-1",
+      title: "PDF atualizado",
+      completed: true
+    });
+    await new AddResourceAccessUseCase(store, factory).execute({
+      resourceId: "resource-1",
+      title: "Link",
+      url: "https://example.com"
+    });
+
+    expect((await store.load()).resources[0]).toMatchObject({
+      title: "PDF atualizado",
+      completed: true,
+      accesses: [{ title: "Link", url: "https://example.com" }]
+    });
+  });
+
+  it("renames and deletes topics while stripping resource references", async () => {
+    const { store, factory } = createTestStore();
+    await new CreateContestUseCase(store, factory).execute({ id: "contest-1", name: "TRT" });
+    await new CreateSubjectUseCase(store, factory).execute({
+      id: "subject-1",
+      contestId: "contest-1",
+      name: "Português",
+      plannedStudyMinutes: 60
+    });
+    await new CreateTopicUseCase(store, factory).execute({
       id: "topic-1",
       subjectId: "subject-1",
-      name: "Orações subordinadas"
+      name: "Concordância"
     });
-    await linkQuestionNotebook.execute({
-      topicId: "topic-1",
-      questionNotebook: {
-        id: "notebook-1",
-        name: "Tec Concursos - Orações",
-        url: "https://tec.example.com/notebook-1",
-        solvedQuestions: 20,
-        correctAnswers: 16
-      }
-    });
-    await registerStudySession.execute({
-      id: "session-1",
-      contestId: "contest-1",
+    await new CreateResourceUseCase(store, factory).execute({
+      id: "resource-1",
       subjectId: "subject-1",
-      topicId: "topic-1",
-      type: "questions",
-      studiedAt: "2026-06-11",
-      pagesOrCount: 20,
-      correctAnswers: 16,
-      completed: true
+      title: "PDF 01",
+      topicIds: ["topic-1"]
     });
 
-    await deleteStudySession.execute({ sessionId: "session-1" });
+    await new UpdateTopicUseCase(store, factory).execute({
+      topicId: "topic-1",
+      name: "Concordância verbal"
+    });
+    await new DeleteTopicUseCase(store, factory).execute({ topicId: "topic-1" });
 
     const data = await store.load();
-    expect(data.studySessions).toHaveLength(0);
-    expect(data.topics.find((topic) => topic.id === "topic-1")?.questionNotebook).toMatchObject({
-      solvedQuestions: 20,
-      correctAnswers: 16
-    });
-  });
-
-  it("does not advance the current cycle when a question session is registered", async () => {
-    const store = createStore();
-    const factory = new EntityRepositoryFactory(store);
-    const createContest = new CreateContestUseCase(store, factory);
-    const createSubject = new CreateSubjectUseCase(store, factory);
-    const advanceCycle = new AdvanceCycleUseCase(store);
-    const registerStudySession = new RegisterStudySessionUseCase(store, factory);
-    const getSnapshot = new GetActiveCycleSnapshotUseCase(store);
-
-    await createContest.execute({ id: "contest-1", name: "TRT" });
-    await createSubject.execute({
-      id: "subject-1",
-      contestId: "contest-1",
-      name: "Portuguese",
-      plannedStudyMinutes: 60
-    });
-    await createSubject.execute({
-      id: "subject-2",
-      contestId: "contest-1",
-      name: "Constitutional Law",
-      plannedStudyMinutes: 45
-    });
-
-    await advanceCycle.execute();
-    await registerStudySession.execute({
-      id: "session-2",
-      contestId: "contest-1",
-      subjectId: "subject-1",
-      type: "questions",
-      studiedAt: "2026-06-11T21:00:00.000Z",
-      pagesOrCount: 10,
-      correctAnswers: 8,
-      completed: true
-    });
-
-    await expect(getSnapshot.execute()).resolves.toMatchObject({
-      currentSubject: { id: "subject-1" },
-      nextSubject: { id: "subject-2" }
-    });
+    expect(data.topics).toHaveLength(0);
+    expect(data.subjects[0].topicIds).toEqual([]);
+    expect(data.resources[0].topicIds).toEqual([]);
   });
 });

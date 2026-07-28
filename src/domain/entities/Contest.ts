@@ -1,5 +1,5 @@
 import { ValidationError } from "@/domain/errors/DomainErrors";
-import { Wall } from "@/domain/entities/Wall";
+import { Mural } from "@/domain/entities/Mural";
 
 export interface ContestExamPlan {
   examDate?: string;
@@ -9,14 +9,14 @@ export interface ContestExamPlan {
 }
 
 /**
- * Represents a public exam contest.
+ * Concurso: the exam or selection process whose study plan Leif organizes.
  */
 export class Contest {
   constructor(
     public readonly id: string,
     public readonly name: string,
     public readonly subjectIds: string[] = [],
-    public readonly wall: Wall = new Wall(),
+    public readonly mural: Mural = new Mural(),
     public readonly examPlan?: ContestExamPlan
   ) {
     if (!id?.trim()) throw new ValidationError("Contest ID is required");

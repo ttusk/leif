@@ -4,6 +4,53 @@ Todas as mudanças notáveis do Leif são documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [3.0.0] - 2026-07-27
+
+### Markdown schema 2 como única autoridade de estudo
+
+- O Markdown legível (schema 2) passa a ser a única autoridade gravável de conteúdo de estudo; o data.json mantém apenas estado operacional (seleção ativa, reconhecimento do changelog, recibos de migração e recuperação).
+- Novas instalações e novos concursos já nascem diretamente em Markdown.
+- Concursos em JSON legado e em Markdown schema 1 migrados automaticamente na inicialização, por concurso, com backup imutável, leitura semântica e recibos started/migrated/failed.
+- Falha de migração isola o concurso afetado como somente leitura com diagnósticos em português; os demais concursos seguem funcionando.
+
+### Domínio simplificado
+
+- Recurso é a unidade de progresso do estudo, com meta opcional em paginas, questoes, aulas ou minutos, e pode cobrir zero, um ou vários assuntos.
+- Acesso é um link leve (URL ou arquivo do vault) pertencente a um Recurso, sem identidade de progresso.
+- Sessão de estudo agrupa um ou mais registros de estudo ordenados; salvar a sessão persiste registros e avanço do ciclo atomicamente.
+- O ciclo rotaciona matérias ativas e recomenda o primeiro recurso incompleto; assuntos não adicionam outro nível de ciclo.
+
+### Interface com padrões nativos do Obsidian
+
+- Hoje e Registros compartilham o mesmo texto simples Agora / Próxima / Motivo, sem o Fio do ciclo nem marcadores de linha do tempo.
+- Registros é uma lista agrupada por sessão, com ações de sessão em menu nativo do Obsidian e editor agregado que salva a sessão inteira de uma vez.
+- Matérias, Recursos, Assuntos e Mural reformulados como tabelas e listas legíveis com coluna Ações fixa e opaca, nomes que quebram apenas entre palavras e células numéricas e de status em uma linha.
+- Mural renderizado com MarkdownRenderer em modo leitura, com modo de edição explícito que só atualiza as notas e preserva o Markdown do usuário.
+
+### Sincronização de edições externas
+
+- Observador de eventos do vault em Leif/, com debounce, ignorando .staging/, .backups/ e Leif/diagnosticos.md, e supressão de eventos de escrita própria para evitar laços de feedback.
+- Sincronização na inicialização para edições feitas enquanto o Obsidian estava fechado.
+- Documentos filho válidos sem leif-id recebem um novo ID e são vinculados à região wikilink do pai na próxima sincronização.
+- Leif/diagnosticos.md reescrito com carimbo, código estável, severidade, caminho, explicação em português e reparo concreto; um diagnóstico limpo reescreve o relatório como sucesso.
+
+### Comandos e recuperação
+
+- Paleta de comandos final: Abrir painel, Abrir Hoje, Nova sessão de estudo, Registrar estudo recomendado, Avançar ciclo sem registrar, Validar Markdown, Validar e sincronizar Markdown, Abrir relatório de diagnósticos, Criar backup agora, Recuperar backup.
+- Backup manual em Leif/.backups/manual-<timestamp>/manifest.json e seletor de recuperação que restaura backups compatíveis em staging e nunca reativa JSON como autoridade gravável.
+- Sem caminho de reversão para JSON: nenhuma superfície de comando restaura a autoridade legada.
+
+### Documentação pública
+
+- docs/leif-markdown.md como referência autoritativa do schema 2.
+- docs/manual-editing.md com fluxos de criação, cópia, renomeação, reparenteamento, reordenação, exclusão e diagnóstico.
+- docs/migration-and-recovery.md com migração automática, falhas somente leitura, backups e política sem reversão para JSON.
+
+### Internas
+
+- Observador de eventos do Vault, sincronizador, projetor de schema 1, serviço de recuperação de backups, seletor de recuperação e paleta final de comandos cobertos por testes.
+- Versão mínima suportada mantida em Obsidian 1.5.7; plugin permanece mobile-safe.
+
 ## [2.1.1] - 2026-07-22
 
 ### Corrigido
@@ -88,6 +135,7 @@ Consolida as mudanças das versões 2.0.0 a 2.0.3:
 - Bloqueios de segurança reportados em português no painel.
 - Prévia de migração compacta, abas de navegação sem interferência do tema, progresso de assuntos e posições de reordenação em uma única linha, e estados de data e pendências mais claros.
 
+[3.0.0]: https://github.com/ttusk/leif/compare/2.1.1...3.0.0
 [2.1.1]: https://github.com/ttusk/leif/compare/2.1.0...2.1.1
 [2.1.0]: https://github.com/ttusk/leif/compare/2.0.3...2.1.0
 [2.0.3]: https://github.com/ttusk/leif/compare/2.0.2...2.0.3

@@ -23,6 +23,9 @@ describe("ObsidianMarkdownFileStore", () => {
         },
         write: async (path: string, content: string) => {
           files.set(path, content);
+        },
+        remove: async (path: string) => {
+          files.delete(path);
         }
       }
     } as unknown as Vault;
@@ -60,6 +63,9 @@ describe("ObsidianMarkdownFileStore", () => {
           files.delete(path);
           files.set(`${destination}${path.slice(source.length)}`, content);
         }
+      },
+      remove: async (path: string) => {
+        files.delete(path);
       }
     };
     const vault = {

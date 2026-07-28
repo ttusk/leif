@@ -1,33 +1,45 @@
-export type ContestStorageMode = "legacy-json" | "vault-markdown";
+/**
+ * Operational state owned by plugin JSON. Study content (concursos, matérias,
+ * assuntos, recursos, sessões, registros, mural and cycle position) lives in
+ * Markdown and never appears here.
+ */
 
-export type MigrationStatus = "backed-up" | "verified" | "activated" | "rolled-back";
+export const STORAGE_SCHEMA_VERSION = 3;
 
+export type MigrationSource = "legacy-json" | "markdown-schema-1";
+export type MigrationStatus = "started" | "migrated" | "failed";
+
+export interface MigrationDiagnostic {
+  code: string;
+  message: string;
+}
+
+/**
+ * Receipt of an automatic per-concurso migration into Markdown schema 2.
+ * A failed concurso stays read-only; the receipt explains why.
+ */
 export interface MigrationReceipt {
   id: string;
   contestId: string;
+  source: MigrationSource;
   status: MigrationStatus;
-  backupPath: string;
-  backupChecksum: string;
-  sourceChecksum: string;
-  targetChecksum?: string;
+  backupPath?: string;
+  diagnostics: MigrationDiagnostic[];
   createdAt: string;
-  verifiedAt?: string;
-  activatedAt?: string;
+  completedAt?: string;
 }
 
 export interface LeifRuntimeState {
-  storageSchemaVersion: 2;
+  storageSchemaVersion: typeof STORAGE_SCHEMA_VERSION;
   markdownRoot: string;
-  contestStorage: Record<string, ContestStorageMode>;
   migrationReceipts: MigrationReceipt[];
   lastAcknowledgedVersion?: string;
 }
 
 export function createDefaultLeifRuntimeState(): LeifRuntimeState {
   return {
-    storageSchemaVersion: 2,
+    storageSchemaVersion: STORAGE_SCHEMA_VERSION,
     markdownRoot: "Leif",
-    contestStorage: {},
     migrationReceipts: []
   };
 }

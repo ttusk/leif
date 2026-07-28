@@ -1,58 +1,56 @@
+import { Contest, type ContestExamPlan } from "@/domain/entities/Contest";
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
-import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
-import type { Contest, ContestExamPlan } from "@/domain/entities/Contest";
+import type { RepositoryFactory } from "@/application/ports/EntityRepository";
 
 export interface UpdateContestInput {
   contestId: string;
   name?: string;
-  notes?: string;
   examPlan?: ContestExamPlan;
 }
 
-/**
- * Use case for updating a contest.
- */
-export class UpdateContestUseCase {
-  private readonly contestRepository: EntityRepositoryPort<Contest>;
+const normalizeExamPlan = (examPlan?: ContestExamPlan): ContestExamPlan | undefined => {
+  if (!examPlan) {
+    return undefined;
+  }
 
+  const normalized: ContestExamPlan = {};
+  if (typeof examPlan.examDate === "string" && examPlan.examDate.trim()) {
+    normalized.examDate = examPlan.examDate.trim();
+  }
+  if (typeof examPlan.board === "string" && examPlan.board.trim()) {
+    normalized.board = examPlan.board.trim();
+  }
+  if (typeof examPlan.weeklyStudyHours === "number" && Number.isFinite(examPlan.weeklyStudyHours)) {
+    normalized.weeklyStudyHours = examPlan.weeklyStudyHours;
+  }
+  if (
+    typeof examPlan.weeklyQuestionGoal === "number" &&
+    Number.isFinite(examPlan.weeklyQuestionGoal)
+  ) {
+    normalized.weeklyQuestionGoal = examPlan.weeklyQuestionGoal;
+  }
+
+  return Object.keys(normalized).length > 0 ? normalized : undefined;
+};
+
+export class UpdateContestUseCase {
   constructor(
     private readonly dataStore: PluginDataStore,
-    repositoryFactory: RepositoryFactory
-  ) {
-    this.contestRepository = repositoryFactory.for("contests");
-  }
+    private readonly repositoryFactory: RepositoryFactory
+  ) {}
 
   async execute(input: UpdateContestInput): Promise<Contest> {
-    return await this.contestRepository.update(input.contestId, (contest) => ({
-      ...contest,
-      name: input.name ?? contest.name,
-      wall: {
-        ...contest.wall,
-        notes: input.notes ?? contest.wall.notes
-      },
-      examPlan:
-        input.examPlan !== undefined ? this.normalizeExamPlan(input.examPlan) : contest.examPlan
-    }));
-  }
+    const contestRepository = this.repositoryFactory.for("contests");
 
-  private normalizeExamPlan(examPlan: ContestExamPlan): ContestExamPlan | undefined {
-    const next: ContestExamPlan = {};
-    const examDate = examPlan.examDate?.trim();
-    const board = examPlan.board?.trim();
-
-    if (examDate) {
-      next.examDate = examDate;
-    }
-    if (board) {
-      next.board = board;
-    }
-    if (examPlan.weeklyStudyHours !== undefined && Number.isFinite(examPlan.weeklyStudyHours)) {
-      next.weeklyStudyHours = examPlan.weeklyStudyHours;
-    }
-    if (examPlan.weeklyQuestionGoal !== undefined && Number.isFinite(examPlan.weeklyQuestionGoal)) {
-      next.weeklyQuestionGoal = examPlan.weeklyQuestionGoal;
-    }
-
-    return Object.keys(next).length > 0 ? next : undefined;
+    return contestRepository.update(input.contestId, (contest) => {
+      const examPlan = normalizeExamPlan(input.examPlan) ?? contest.examPlan;
+      return new Contest(
+        contest.id,
+        input.name?.trim() ? input.name.trim() : contest.name,
+        [...contest.subjectIds],
+        contest.mural,
+        examPlan
+      );
+    });
   }
 }

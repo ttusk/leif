@@ -14,7 +14,7 @@ import { NoActiveContestError } from "@/domain/errors/DomainErrors";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
-import { createId } from "@/application/Id";
+import { createLeifId } from "@/application/Id";
 
 /**
  * Cycle tab component - manages subjects, order, status, time and stage.
@@ -179,28 +179,55 @@ export class CycleTab {
       "leif-inline-actions leif-inline-actions-compact"
     );
     actions.appendChild(
-      DomHelpers.createOverflowMenu([
-        this.renderCycleToggleButton(subject),
-        DomHelpers.createIconButton("edit", "Editar", {
-          onClick: async () => {
-            this.editingSubjectId = subject.id;
-            await this.onUpdate();
+      DomHelpers.createMenuButton(
+        [
+          {
+            label: subject.isActive ? "Pausar no ciclo" : "Ativar no ciclo",
+            icon: subject.isActive ? "pause" : "play",
+            onClick: async () => {
+              await this.toggleSubjectCycle(subject);
+            }
+          },
+          {
+            label: "Editar",
+            icon: "edit",
+            onClick: async () => {
+              this.editingSubjectId = subject.id;
+              await this.onUpdate();
+            }
           }
-        })
-      ])
+        ],
+        `Ações de ${subject.name}`
+      )
     );
 
     tr.append(
       DomHelpers.createCell(null, orderControl),
-      DomHelpers.createCell(null, title),
-      DomHelpers.createCell(null, status),
-      DomHelpers.createCell(this.formatDuration(subject.plannedStudyMinutes)),
+      DomHelpers.createNameCell(null, title),
+      DomHelpers.createStatusCell(status),
+      DomHelpers.createNumericCell(this.formatDuration(subject.plannedStudyMinutes)),
       DomHelpers.createCell(subject.currentStage ?? "—"),
-      DomHelpers.createCell(this.formatQuestionSummary(summary)),
-      DomHelpers.createCell(null, actions)
+      DomHelpers.createNumericCell(this.formatQuestionSummary(summary)),
+      DomHelpers.createActionsCell(actions)
     );
 
     return tr;
+  }
+
+  private async toggleSubjectCycle(subject: Subject): Promise<void> {
+    try {
+      const nextState = !subject.isActive;
+      await this.setSubjectActiveStateUseCase.execute({
+        subjectId: subject.id,
+        isActive: nextState
+      });
+      new Notice(
+        nextState ? `${subject.name} voltou para o ciclo.` : `${subject.name} saiu do ciclo.`
+      );
+      await this.onUpdate();
+    } catch (error) {
+      DomHelpers.notifyError(error, "Não consegui alterar essa matéria.");
+    }
   }
 
   private renderEditableRow(subject: Subject): HTMLTableRowElement {
@@ -254,12 +281,12 @@ export class CycleTab {
 
     tr.append(
       DomHelpers.createCell(null, order),
-      DomHelpers.createCell(null, title),
+      DomHelpers.createNameCell(null, title),
       DomHelpers.createCell("Editando"),
       DomHelpers.createCell(null, minutesInput),
       DomHelpers.createCell(null, stageInput),
-      DomHelpers.createCell("—"),
-      DomHelpers.createCell(null, controls)
+      DomHelpers.createNumericCell("—"),
+      DomHelpers.createActionsCell(controls)
     );
     return tr;
   }
@@ -275,7 +302,7 @@ export class CycleTab {
           throw new NoActiveContestError();
         }
         await this.createSubjectUseCase.execute({
-          id: createId(`${activeContestId}-subject`),
+          id: createLeifId(),
           contestId: activeContestId,
           name: nameInput.value,
           plannedStudyMinutes: Number(minutesInput.value)

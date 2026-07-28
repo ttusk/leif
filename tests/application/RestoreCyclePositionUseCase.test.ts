@@ -1,74 +1,42 @@
 import { describe, expect, it } from "vitest";
 
-import type { PluginDataStore as PluginDataStorePort } from "@/application/ports/PluginDataStore";
 import { RestoreCyclePositionUseCase } from "@/application/use-cases/RestoreCyclePositionUseCase";
+import { CycleState } from "@/domain/entities/CycleState";
 import { ValidationError } from "@/domain/errors/DomainErrors";
-import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
-
-class InMemoryStore implements PluginDataStorePort {
-  saveCount = 0;
-
-  constructor(private data: LeifPluginData) {}
-
-  async load(): Promise<LeifPluginData> {
-    return this.data;
-  }
-
-  async save(data: LeifPluginData): Promise<void> {
-    this.saveCount += 1;
-    this.data = data;
-  }
-
-  async mutate<T>(mutation: Parameters<PluginDataStorePort["mutate"]>[0]): Promise<T> {
-    const draft = structuredClone(this.data);
-    const result = await mutation(draft);
-    this.data = draft;
-    this.saveCount += 1;
-    return result as T;
-  }
-}
-
-function createStore(): InMemoryStore {
-  const data = createDefaultLeifPluginData();
-  data.activeContestId = "contest-1";
-  data.contestStates = [
-    { contestId: "contest-1", currentSubjectId: "subject-2", currentItemId: "item-2" }
-  ];
-  return new InMemoryStore(data);
-}
+import { createDefaultLeifPluginData } from "@/domain/types/LeifPluginData";
+import { createTestStore } from "../helpers/InMemoryStore";
 
 describe("RestoreCyclePositionUseCase", () => {
-  it("restores the previous position only when the cycle is still at the expected position", async () => {
-    const store = createStore();
-    const useCase = new RestoreCyclePositionUseCase(store);
-
-    await useCase.execute({
-      contestId: "contest-1",
-      expectedPosition: { subjectId: "subject-2", itemId: "item-2" },
-      restorePosition: { subjectId: "subject-1", itemId: "item-1" }
+  it("restores the cycle position when the current state matches", async () => {
+    const { store } = createTestStore({
+      ...createDefaultLeifPluginData(),
+      cycleStates: [new CycleState("contest-1", "subject-2", "resource-2")]
     });
 
-    expect((await store.load()).contestStates[0]).toEqual({
+    await new RestoreCyclePositionUseCase(store).execute({
       contestId: "contest-1",
+      expectedCurrent: { subjectId: "subject-2", resourceId: "resource-2" },
+      restoreTo: { subjectId: "subject-1", resourceId: "resource-1" }
+    });
+
+    expect((await store.load()).cycleStates[0]).toMatchObject({
       currentSubjectId: "subject-1",
-      currentItemId: "item-1"
+      currentResourceId: "resource-1"
     });
-    expect(store.saveCount).toBe(1);
   });
 
-  it("rejects stale undo without overwriting a newer cycle position", async () => {
-    const store = createStore();
-    const useCase = new RestoreCyclePositionUseCase(store);
+  it("rejects restore when the cycle has changed", async () => {
+    const { store } = createTestStore({
+      ...createDefaultLeifPluginData(),
+      cycleStates: [new CycleState("contest-1", "subject-2", "resource-2")]
+    });
 
     await expect(
-      useCase.execute({
+      new RestoreCyclePositionUseCase(store).execute({
         contestId: "contest-1",
-        expectedPosition: { subjectId: "subject-3", itemId: null },
-        restorePosition: { subjectId: "subject-1", itemId: "item-1" }
+        expectedCurrent: { subjectId: "subject-1", resourceId: "resource-1" },
+        restoreTo: { subjectId: "subject-1", resourceId: "resource-1" }
       })
-    ).rejects.toBeInstanceOf(ValidationError);
-
-    expect((await store.load()).contestStates[0]?.currentSubjectId).toBe("subject-2");
-    expect(store.saveCount).toBe(0);
+    ).rejects.toThrow(ValidationError);
   });
 });

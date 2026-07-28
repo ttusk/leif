@@ -1,100 +1,125 @@
-import { createDefaultLeifPluginData, type LeifPluginData } from "@/domain/types/LeifPluginData";
+import { createLeifId } from "@/application/Id";
+import { Contest, type ContestExamPlan } from "@/domain/entities/Contest";
+import { CycleState } from "@/domain/entities/CycleState";
+import { ImportedProgress } from "@/domain/entities/ImportedProgress";
+import { Mural, MuralSubjectSnapshot } from "@/domain/entities/Mural";
+import { Resource } from "@/domain/entities/Resource";
+import { ResourceAccess } from "@/domain/entities/ResourceAccess";
+import { ResourceGoal } from "@/domain/entities/ResourceGoal";
+import { StudyRecord } from "@/domain/entities/StudyRecord";
+import { StudySession } from "@/domain/entities/StudySession";
+import { Subject } from "@/domain/entities/Subject";
+import { Topic } from "@/domain/entities/Topic";
+import { GoalUnit } from "@/domain/types/GoalUnit";
+import {
+  createDefaultLeifPluginData,
+  LEIF_DATA_SCHEMA_VERSION,
+  type LeifPluginData
+} from "@/domain/types/LeifPluginData";
 
-function legacyCollection<T>(value: T[] | undefined, name: string): T[] {
-  if (value === undefined) return [];
-  if (!Array.isArray(value)) {
-    throw new Error(`Legacy Leif field "${name}" must be an array. No data was written.`);
-  }
-  return value;
+interface LegacyContest {
+  id: string;
+  name: string;
+  subjectIds?: string[];
+  wall?: {
+    notes?: string;
+    noticeLinks?: Array<{ title: string; url: string }>;
+    examLinks?: Array<{ title: string; url: string }>;
+    subjectSnapshots?: Array<{
+      subjectId: string;
+      weight?: number;
+      score?: number;
+      targetItems?: string[];
+      targetResources?: string[];
+    }>;
+  };
+  examPlan?: ContestExamPlan;
 }
 
-function legacyRelationIds(value: string[] | undefined, name: string): string[] {
-  return legacyCollection(value, name);
+interface LegacySubject {
+  id: string;
+  contestId: string;
+  name: string;
+  order: number;
+  isActive?: boolean;
+  plannedStudyMinutes?: number;
+  currentStage?: string;
+  itemIds?: string[];
+  resourceIds?: string[];
+  topicIds?: string[];
 }
 
-function normalizeLegacyShape(data: LeifPluginData): LeifPluginData {
-  const defaults = createDefaultLeifPluginData();
-  const contests = legacyCollection(data.contests, "contests").map((contest) => ({
-    ...contest,
-    subjectIds: legacyRelationIds(contest.subjectIds, `contest:${contest.id}:subjectIds`),
-    wall: {
-      noticeLinks: legacyCollection(contest.wall?.noticeLinks, `contest:${contest.id}:noticeLinks`),
-      examLinks: legacyCollection(contest.wall?.examLinks, `contest:${contest.id}:examLinks`),
-      subjectSnapshots: legacyCollection(
-        contest.wall?.subjectSnapshots,
-        `contest:${contest.id}:subjectSnapshots`
-      ),
-      ...(contest.wall?.notes === undefined ? {} : { notes: contest.wall.notes })
-    }
-  }));
-  const subjects = legacyCollection(data.subjects, "subjects").map((subject) => ({
-    ...subject,
-    itemIds: legacyRelationIds(subject.itemIds, `subject:${subject.id}:itemIds`),
-    topicIds: legacyRelationIds(subject.topicIds, `subject:${subject.id}:topicIds`)
-  }));
-  const topics = legacyCollection(data.topics, "topics").map((topic) => ({
-    ...topic,
-    resourceReferences: legacyCollection(
-      topic.resourceReferences,
-      `topic:${topic.id}:resourceReferences`
-    )
-  }));
-  const studyItems = legacyCollection(data.studyItems, "studyItems").map((item) => ({
-    ...item,
-    resourceReferences: legacyCollection(
-      item.resourceReferences,
-      `studyItem:${item.id}:resourceReferences`
-    )
-  }));
-
-  return {
-    ...defaults,
-    ...data,
-    activeContestId: data.activeContestId ?? null,
-    contests,
-    contestStates: legacyCollection(data.contestStates, "contestStates"),
-    subjects,
-    topics,
-    studyItems,
-    studySessions: legacyCollection(data.studySessions, "studySessions")
+interface LegacyTopic {
+  id: string;
+  subjectId: string;
+  name: string;
+  resourceReferences?: LegacyResourceReference[];
+  questionNotebook?: {
+    id?: string;
+    name: string;
+    url: string;
+    solvedQuestions?: number;
+    correctAnswers?: number;
+    notes?: string;
   };
 }
 
-/**
- * Renumbers ordered children within each parent while preserving their
- * effective order. Array position is used as the stable tie-breaker.
- */
-function normalizeOrdersByParent<T extends { order: number }>(
-  items: T[],
-  getParentKey: (item: T) => string
-): T[] {
-  const groups = new Map<string, Array<{ item: T; sourceIndex: number }>>();
-
-  items.forEach((item, sourceIndex) => {
-    const parentKey = getParentKey(item);
-    const group = groups.get(parentKey) ?? [];
-    group.push({ item, sourceIndex });
-    groups.set(parentKey, group);
-  });
-
-  const normalizedOrders = new Map<T, number>();
-  groups.forEach((group) => {
-    group
-      .sort(
-        (left, right) => left.item.order - right.item.order || left.sourceIndex - right.sourceIndex
-      )
-      .forEach(({ item }, index) => normalizedOrders.set(item, index + 1));
-  });
-
-  return items.map((item) => ({ ...item, order: normalizedOrders.get(item) ?? 1 }));
+interface LegacyStudyItem {
+  id: string;
+  subjectId: string;
+  title: string;
+  order: number;
+  totalPages?: number;
+  questionCount?: number;
+  completed?: boolean;
+  resourceReferences?: LegacyResourceReference[];
 }
 
-function normalizeOrderedData(data: LeifPluginData): LeifPluginData {
-  return {
-    ...data,
-    subjects: normalizeOrdersByParent(data.subjects, (subject) => subject.contestId),
-    studyItems: normalizeOrdersByParent(data.studyItems, (item) => item.subjectId)
-  };
+interface LegacyResourceReference {
+  id?: string;
+  title?: string;
+  name?: string;
+  url: string;
+  type?: string;
+  notes?: string;
+}
+
+interface LegacyStudySession {
+  id: string;
+  contestId: string;
+  subjectId?: string;
+  studyItemId?: string;
+  topicId?: string;
+  type?: string;
+  studiedAt?: string;
+  date?: string;
+  phase?: string;
+  reference?: string;
+  pagesOrCount?: number;
+  correctAnswers?: number;
+  completed?: boolean;
+  notes?: string;
+}
+
+interface LegacyCycleState {
+  contestId: string;
+  currentSubjectId?: string | null;
+  currentItemId?: string | null;
+  currentResourceId?: string | null;
+}
+
+interface LegacyData {
+  schemaVersion?: number;
+  activeContestId?: string | null;
+  contests?: LegacyContest[];
+  contestStates?: LegacyCycleState[];
+  cycleStates?: LegacyCycleState[];
+  subjects?: LegacySubject[];
+  topics?: LegacyTopic[];
+  studyItems?: LegacyStudyItem[];
+  resources?: Resource[];
+  studySessions?: LegacyStudySession[] | StudySession[];
+  runtimeState?: LeifPluginData["runtimeState"];
 }
 
 export class UnsupportedSchemaVersionError extends Error {
@@ -110,68 +135,320 @@ export class UnsupportedSchemaVersionError extends Error {
   }
 }
 
-/**
- * Service for migrating plugin data between schema versions.
- * Handles backward compatibility when the data structure changes.
- */
 export class DataMigrationService {
-  private readonly CURRENT_VERSION = 1;
+  private readonly CURRENT_VERSION = LEIF_DATA_SCHEMA_VERSION;
 
-  /**
-   * Migrates data from any previous version to the current version.
-   *
-   * @param data - The data to migrate (may be from any version)
-   * @returns Migrated data at the current schema version
-   */
   migrate(data: LeifPluginData): LeifPluginData {
-    let current = normalizeLegacyShape(data);
-    const version = current.schemaVersion ?? 1;
-
+    const legacy = data as unknown as LegacyData;
+    const version = legacy.schemaVersion ?? 1;
     if (version > this.CURRENT_VERSION) {
       throw new UnsupportedSchemaVersionError(version, this.CURRENT_VERSION);
     }
-
-    // Apply migrations sequentially
-    if (version < 2) {
-      current = this.migrateV1toV2(current);
+    if (version >= this.CURRENT_VERSION && !legacy.studyItems && !legacy.contestStates) {
+      return normalizeCurrentData(legacy);
     }
-    if (version < 3) {
-      current = this.migrateV2toV3(current);
-    }
-
-    // Ordering is a presentation invariant. Identity conflicts are deliberately
-    // preserved so a repair flow can resolve them without silently losing data.
-    current = normalizeOrderedData(current);
-
-    // Always include the current version
-    return {
-      ...current,
-      schemaVersion: this.CURRENT_VERSION
-    };
+    return projectLegacyData(legacy);
   }
 
-  /**
-   * Migration from version 1 to version 2.
-   * Add future migrations here when schema changes.
-   */
-  private migrateV1toV2(data: LeifPluginData): LeifPluginData {
-    // Example: If we added a new field, we'd initialize it here
-    // return { ...data, newField: defaultValue };
-    return data;
-  }
-
-  /**
-   * Migration from version 2 to version 3.
-   * Placeholder for future migrations.
-   */
-  private migrateV2toV3(data: LeifPluginData): LeifPluginData {
-    return data;
-  }
-
-  /**
-   * Gets the current schema version.
-   */
   getCurrentVersion(): number {
     return this.CURRENT_VERSION;
   }
+}
+
+function projectLegacyData(data: LegacyData): LeifPluginData {
+  const defaults = createDefaultLeifPluginData();
+  const resources: Resource[] = [];
+  const notebookResourceByTopic = new Map<string, string>();
+
+  const contests = collection(data.contests).map(
+    (contest) =>
+      new Contest(
+        contest.id,
+        contest.name,
+        relationIds(contest.subjectIds),
+        muralFromLegacy(contest.wall),
+        contest.examPlan
+      )
+  );
+
+  const subjects = normalizeOrdersByParent(
+    collection(data.subjects),
+    (subject) => subject.contestId
+  ).map(
+    (subject) =>
+      new Subject(
+        subject.id,
+        subject.contestId,
+        subject.name,
+        subject.order,
+        subject.isActive ?? true,
+        subject.plannedStudyMinutes ?? 0,
+        subject.currentStage,
+        relationIds(subject.resourceIds ?? subject.itemIds),
+        relationIds(subject.topicIds)
+      )
+  );
+
+  const topics = collection(data.topics).map((topic) => {
+    const resourceReferences = collection(topic.resourceReferences);
+    resourceReferences.forEach((reference, index) => {
+      const resourceId = reference.id ?? `${topic.id}-access-${index + 1}`;
+      resources.push(
+        new Resource(
+          resourceId,
+          topic.subjectId,
+          reference.title ?? reference.name ?? reference.url,
+          nextResourceOrder(resources, topic.subjectId),
+          legacyReferenceFormat(reference.type),
+          undefined,
+          false,
+          [topic.id],
+          [
+            new ResourceAccess(
+              reference.title ?? reference.name ?? reference.url,
+              reference.url,
+              reference.notes
+            )
+          ]
+        )
+      );
+      appendSubjectResource(subjects, topic.subjectId, resourceId);
+    });
+
+    if (topic.questionNotebook) {
+      const notebook = topic.questionNotebook;
+      const resourceId = notebook.id ?? `${topic.id}-notebook`;
+      notebookResourceByTopic.set(topic.id, resourceId);
+      resources.push(
+        new Resource(
+          resourceId,
+          topic.subjectId,
+          notebook.name,
+          nextResourceOrder(resources, topic.subjectId),
+          "questoes",
+          undefined,
+          false,
+          [topic.id],
+          [new ResourceAccess(notebook.name, notebook.url, notebook.notes)],
+          new ImportedProgress(notebook.solvedQuestions ?? 0, notebook.correctAnswers ?? 0)
+        )
+      );
+      appendSubjectResource(subjects, topic.subjectId, resourceId);
+    }
+
+    return new Topic(topic.id, topic.subjectId, topic.name);
+  });
+
+  normalizeOrdersByParent(collection(data.studyItems), (item) => item.subjectId).forEach((item) => {
+    const goal = legacyItemGoal(item);
+    const resource = new Resource(
+      item.id,
+      item.subjectId,
+      item.title,
+      item.order,
+      item.totalPages !== undefined
+        ? "pdf"
+        : item.questionCount !== undefined
+          ? "questoes"
+          : "outro",
+      goal,
+      item.completed ?? false,
+      [],
+      collection(item.resourceReferences).map(
+        (reference) =>
+          new ResourceAccess(
+            reference.title ?? reference.name ?? reference.url,
+            reference.url,
+            reference.notes
+          )
+      )
+    );
+    resources.push(resource);
+    appendSubjectResource(subjects, item.subjectId, item.id);
+  });
+
+  collection(data.resources).forEach((resource) => resources.push(resource));
+
+  const studySessions = collection(
+    data.studySessions as Array<LegacyStudySession | StudySession> | undefined
+  )
+    .map((session) => projectStudySession(session, notebookResourceByTopic))
+    .filter((session): session is StudySession => session !== null);
+
+  return {
+    ...defaults,
+    schemaVersion: LEIF_DATA_SCHEMA_VERSION,
+    activeContestId: data.activeContestId ?? null,
+    contests,
+    cycleStates: collection(data.cycleStates ?? data.contestStates).map(
+      (state) =>
+        new CycleState(
+          state.contestId,
+          state.currentSubjectId ?? null,
+          state.currentResourceId ?? state.currentItemId ?? null
+        )
+    ),
+    subjects,
+    topics,
+    resources,
+    studySessions,
+    runtimeState: {
+      ...defaults.runtimeState!,
+      ...data.runtimeState
+    }
+  };
+}
+
+function normalizeCurrentData(data: LegacyData): LeifPluginData {
+  const defaults = createDefaultLeifPluginData();
+  return {
+    ...defaults,
+    ...(data as LeifPluginData),
+    schemaVersion: LEIF_DATA_SCHEMA_VERSION,
+    activeContestId: data.activeContestId ?? null,
+    contests: collection(data.contests) as unknown as LeifPluginData["contests"],
+    cycleStates: collection(data.cycleStates) as unknown as LeifPluginData["cycleStates"],
+    subjects: collection(data.subjects) as unknown as LeifPluginData["subjects"],
+    topics: collection(data.topics) as unknown as LeifPluginData["topics"],
+    resources: collection(data.resources),
+    studySessions: collection(data.studySessions as StudySession[] | undefined),
+    runtimeState: {
+      ...defaults.runtimeState!,
+      ...data.runtimeState
+    }
+  };
+}
+
+function projectStudySession(
+  session: LegacyStudySession | StudySession,
+  notebookResourceByTopic: Map<string, string>
+): StudySession | null {
+  if ("records" in session) {
+    return session;
+  }
+  if (!session.subjectId) {
+    return null;
+  }
+  const quantity = session.pagesOrCount;
+  const unit = legacySessionUnit(session.type);
+  const notes = [
+    session.phase ? `Fase: ${session.phase}` : undefined,
+    session.reference ? `Referência: ${session.reference}` : undefined,
+    session.notes
+  ]
+    .filter((value): value is string => Boolean(value))
+    .join("\n");
+  const resourceId =
+    session.studyItemId ??
+    (session.topicId ? notebookResourceByTopic.get(session.topicId) : undefined);
+  const record = new StudyRecord(
+    session.id,
+    session.subjectId,
+    legacyActivity(session.type),
+    resourceId,
+    session.topicId,
+    quantity,
+    quantity !== undefined ? unit : undefined,
+    session.correctAnswers,
+    session.completed ?? false,
+    notes || undefined
+  );
+  return new StudySession(
+    createLeifId(),
+    session.contestId,
+    (session.studiedAt ?? session.date ?? "1970-01-01").slice(0, 10),
+    [record]
+  );
+}
+
+function muralFromLegacy(wall: LegacyContest["wall"]): Mural {
+  const linkLines = [...collection(wall?.noticeLinks), ...collection(wall?.examLinks)].map(
+    (link) => `[${link.title}](${link.url})`
+  );
+  const notes = [wall?.notes, ...linkLines].filter(Boolean).join("\n") || undefined;
+  return new Mural(
+    notes,
+    collection(wall?.subjectSnapshots).map(
+      (snapshot) =>
+        new MuralSubjectSnapshot(
+          snapshot.subjectId,
+          snapshot.weight,
+          snapshot.score,
+          relationIds(snapshot.targetResources ?? snapshot.targetItems)
+        )
+    )
+  );
+}
+
+function legacyItemGoal(item: LegacyStudyItem): ResourceGoal | undefined {
+  if (item.totalPages !== undefined) {
+    return new ResourceGoal(item.totalPages, GoalUnit.PAGINAS);
+  }
+  if (item.questionCount !== undefined) {
+    return new ResourceGoal(item.questionCount, GoalUnit.QUESTOES);
+  }
+  return undefined;
+}
+
+function legacyActivity(type: string | undefined): string {
+  if (type === "pdf") return "leitura";
+  if (type === "questions") return "questoes";
+  if (type === "video") return "video";
+  return type ?? "outro";
+}
+
+function legacySessionUnit(type: string | undefined): GoalUnit {
+  if (type === "questions") return GoalUnit.QUESTOES;
+  if (type === "video") return GoalUnit.MINUTOS;
+  return GoalUnit.PAGINAS;
+}
+
+function legacyReferenceFormat(type: string | undefined): string {
+  if (type === "pdf" || type === "video" || type === "link") return type;
+  return type ?? "link";
+}
+
+function appendSubjectResource(subjects: Subject[], subjectId: string, resourceId: string): void {
+  const subject = subjects.find((entry) => entry.id === subjectId);
+  if (subject && !subject.resourceIds.includes(resourceId)) {
+    subject.resourceIds.push(resourceId);
+  }
+}
+
+function nextResourceOrder(resources: Resource[], subjectId: string): number {
+  return (
+    resources
+      .filter((resource) => resource.subjectId === subjectId)
+      .reduce((max, resource) => Math.max(max, resource.order), 0) + 1
+  );
+}
+
+function collection<T>(value: T[] | undefined): T[] {
+  return Array.isArray(value) ? value : [];
+}
+
+function relationIds(value: string[] | undefined): string[] {
+  return collection(value);
+}
+
+function normalizeOrdersByParent<T extends { order: number }>(
+  items: T[],
+  getParentKey: (item: T) => string
+): T[] {
+  const groups = new Map<string, Array<{ item: T; sourceIndex: number }>>();
+  items.forEach((item, sourceIndex) => {
+    const parentKey = getParentKey(item);
+    groups.set(parentKey, [...(groups.get(parentKey) ?? []), { item, sourceIndex }]);
+  });
+
+  const normalizedOrders = new Map<T, number>();
+  groups.forEach((group) => {
+    group
+      .sort(
+        (left, right) => left.item.order - right.item.order || left.sourceIndex - right.sourceIndex
+      )
+      .forEach(({ item }, index) => normalizedOrders.set(item, index + 1));
+  });
+
+  return items.map((item) => ({ ...item, order: normalizedOrders.get(item) ?? 1 }));
 }

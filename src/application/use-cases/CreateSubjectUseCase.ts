@@ -1,8 +1,7 @@
-import type { PluginDataStore } from "@/application/ports/PluginDataStore";
-import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
 import { Subject } from "@/domain/entities/Subject";
-import { Contest } from "@/domain/entities/Contest";
-import { AlreadyExistsError, NotFoundError, ValidationError } from "@/domain/errors/DomainErrors";
+import { NotFoundError, ValidationError } from "@/domain/errors/DomainErrors";
+import type { RepositoryFactory } from "@/application/ports/EntityRepository";
+import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import { CreateSubjectValidator } from "@/application/validation/InputValidators";
 
 export interface CreateSubjectInput {
@@ -14,20 +13,11 @@ export interface CreateSubjectInput {
   currentStage?: string;
 }
 
-/**
- * Use case for creating a new subject under a contest.
- */
 export class CreateSubjectUseCase {
-  private readonly contestRepository: EntityRepositoryPort<Contest>;
-  private readonly subjectRepository: EntityRepositoryPort<Subject>;
-
   constructor(
     private readonly dataStore: PluginDataStore,
-    repositoryFactory: RepositoryFactory
-  ) {
-    this.contestRepository = repositoryFactory.for("contests");
-    this.subjectRepository = repositoryFactory.for("subjects");
-  }
+    _repositoryFactory?: RepositoryFactory
+  ) {}
 
   async execute(input: CreateSubjectInput): Promise<Subject> {
     const validation = new CreateSubjectValidator().validate(input);
@@ -35,20 +25,21 @@ export class CreateSubjectUseCase {
       throw new ValidationError(validation.errors.join(", "));
     }
 
-    return this.dataStore.mutate((data) => {
-      const contest = data.contests.find((candidate) => candidate.id === input.contestId);
-      if (!contest) throw new NotFoundError("contests", input.contestId);
-      if (data.subjects.some((subject) => subject.id === input.id)) {
-        throw new AlreadyExistsError("subjects", input.id);
+    return this.dataStore.mutate((draft) => {
+      const contest = draft.contests.find((entry) => entry.id === input.contestId);
+      if (!contest) {
+        throw new NotFoundError("contests", input.contestId);
+      }
+      if (draft.subjects.some((subject) => subject.id === input.id)) {
+        throw new ValidationError(`Subject "${input.id}" already exists.`);
       }
 
-      const contestSubjects = data.subjects.filter(
+      const contestSubjects = draft.subjects.filter(
         (subject) => subject.contestId === input.contestId
       );
       const nextOrder =
-        contestSubjects.length === 0
-          ? 1
-          : Math.max(...contestSubjects.map((subject) => subject.order)) + 1;
+        contestSubjects.reduce((max, subject) => Math.max(max, subject.order), 0) + 1;
+
       const subject = new Subject(
         input.id,
         input.contestId,
@@ -56,16 +47,12 @@ export class CreateSubjectUseCase {
         nextOrder,
         input.isActive ?? true,
         input.plannedStudyMinutes,
-        input.currentStage,
-        [],
-        []
+        input.currentStage
       );
-      data.subjects.push(subject);
-      const contestIndex = data.contests.indexOf(contest);
-      data.contests[contestIndex] = {
-        ...contest,
-        subjectIds: [...contest.subjectIds, subject.id]
-      };
+
+      draft.subjects.push(subject);
+      contest.subjectIds.push(subject.id);
+
       return subject;
     });
   }

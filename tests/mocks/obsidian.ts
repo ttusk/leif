@@ -1,6 +1,7 @@
 const notices: string[] = [];
 const registeredIcons = new Map<string, string>();
 const openModals: Modal[] = [];
+const shownMenus: Menu[] = [];
 
 globalThis.createEl = ((tagName, options) => {
   const element = document.createElement(tagName);
@@ -14,10 +15,74 @@ globalThis.createEl = ((tagName, options) => {
 }) as typeof createEl;
 
 type ViewCreator = (leaf: WorkspaceLeaf) => ItemView;
+type VaultEventCallback = (...args: unknown[]) => unknown;
+
+interface EventRef {
+  off: () => void;
+}
+
+export interface RecordedMenuItem {
+  title: string | DocumentFragment | null;
+  icon: string | null;
+  disabled: boolean;
+  callback?: (evt: MouseEvent | KeyboardEvent) => unknown;
+}
 
 export class Notice {
   constructor(message: string) {
     notices.push(message);
+  }
+}
+
+export class Menu {
+  readonly items: RecordedMenuItem[] = [];
+  useNativeMenu = false;
+  shownAtMouseEvent = false;
+
+  setUseNativeMenu(useNativeMenu: boolean): this {
+    this.useNativeMenu = useNativeMenu;
+    return this;
+  }
+
+  addItem(callback: (item: MenuItem) => unknown): this {
+    const item = new MenuItem();
+    callback(item);
+    this.items.push(item.record);
+    return this;
+  }
+
+  showAtMouseEvent(_event: MouseEvent): this {
+    this.shownAtMouseEvent = true;
+    shownMenus.push(this);
+    return this;
+  }
+}
+
+export class MenuItem {
+  readonly record: RecordedMenuItem = {
+    title: null,
+    icon: null,
+    disabled: false
+  };
+
+  setTitle(title: string | DocumentFragment): this {
+    this.record.title = title;
+    return this;
+  }
+
+  setIcon(icon: string | null): this {
+    this.record.icon = icon;
+    return this;
+  }
+
+  setDisabled(disabled: boolean): this {
+    this.record.disabled = disabled;
+    return this;
+  }
+
+  onClick(callback: (evt: MouseEvent | KeyboardEvent) => unknown): this {
+    this.record.callback = callback;
+    return this;
   }
 }
 
@@ -27,6 +92,7 @@ export class Plugin {
   commands: Array<{ id: string; name: string; callback: () => Promise<void> | void }> = [];
   ribbonIcons: Array<{ icon: string; title: string; callback: (evt: MouseEvent) => unknown }> = [];
   settingTabs: PluginSettingTab[] = [];
+  registeredEvents: EventRef[] = [];
   private storedData: unknown = null;
 
   constructor(app = new App(), manifest: { version?: string } = {}) {
@@ -49,6 +115,10 @@ export class Plugin {
 
   registerView(type: string, viewCreator: ViewCreator): void {
     this.app.workspace.registerView(type, viewCreator);
+  }
+
+  registerEvent(eventRef: EventRef): void {
+    this.registeredEvents.push(eventRef);
   }
 
   async loadData(): Promise<unknown> {
@@ -74,6 +144,7 @@ export class TFile extends TAbstractFile {}
 export class Vault {
   private readonly files = new Map<string, { file: TFile; content: string }>();
   private readonly folders = new Map<string, TAbstractFile>();
+  private readonly listeners = new Map<string, Set<VaultEventCallback>>();
   readonly adapter = {
     exists: async (path: string) => this.files.has(path) || this.folders.has(path),
     read: async (path: string) => this.files.get(path)?.content ?? "",
@@ -91,6 +162,10 @@ export class Vault {
     }),
     rename: async (source: string, destination: string) => {
       this.renamePath(source, destination);
+    },
+    remove: async (path: string) => {
+      this.files.delete(path);
+      this.folders.delete(path);
     }
   };
 
@@ -121,6 +196,21 @@ export class Vault {
 
   async rename(file: TAbstractFile, newPath: string): Promise<void> {
     this.renamePath(file.path, newPath);
+  }
+
+  on(name: string, callback: VaultEventCallback): EventRef {
+    const callbacks = this.listeners.get(name) ?? new Set<VaultEventCallback>();
+    callbacks.add(callback);
+    this.listeners.set(name, callbacks);
+    return {
+      off: () => {
+        callbacks.delete(callback);
+      }
+    };
+  }
+
+  trigger(name: string, ...args: unknown[]): void {
+    this.listeners.get(name)?.forEach((callback) => callback(...args));
   }
 
   private renamePath(oldPath: string, newPath: string): void {
@@ -244,6 +334,7 @@ export class MarkdownRenderer {
 
 export class WorkspaceLeaf {
   view: ItemView | null = null;
+  openedFile?: TFile;
   readonly containerEl: HTMLDivElement;
 
   constructor(private readonly workspace: Workspace) {
@@ -259,6 +350,10 @@ export class WorkspaceLeaf {
 
     this.view = viewCreator(this);
     await this.view.onOpen();
+  }
+
+  async openFile(file: TFile): Promise<void> {
+    this.openedFile = file;
   }
 }
 
@@ -329,4 +424,12 @@ export function getOpenModals(): readonly Modal[] {
 
 export function resetOpenModals(): void {
   openModals.length = 0;
+}
+
+export function getShownMenus(): readonly Menu[] {
+  return shownMenus;
+}
+
+export function resetShownMenus(): void {
+  shownMenus.length = 0;
 }

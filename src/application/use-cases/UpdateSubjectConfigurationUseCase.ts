@@ -1,7 +1,7 @@
-import type { PluginDataStore } from "@/application/ports/PluginDataStore";
-import type { EntityRepositoryPort, RepositoryFactory } from "@/application/ports/EntityRepository";
-import type { Subject } from "@/domain/entities/Subject";
+import { Subject } from "@/domain/entities/Subject";
 import { ValidationError } from "@/domain/errors/DomainErrors";
+import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import type { RepositoryFactory } from "@/application/ports/EntityRepository";
 import { UpdateSubjectConfigurationValidator } from "@/application/validation/InputValidators";
 
 export interface UpdateSubjectConfigurationInput {
@@ -10,18 +10,11 @@ export interface UpdateSubjectConfigurationInput {
   currentStage?: string;
 }
 
-/**
- * Use case for updating a subject's configuration.
- */
 export class UpdateSubjectConfigurationUseCase {
-  private readonly subjectRepository: EntityRepositoryPort<Subject>;
-
   constructor(
     private readonly dataStore: PluginDataStore,
-    repositoryFactory: RepositoryFactory
-  ) {
-    this.subjectRepository = repositoryFactory.for("subjects");
-  }
+    private readonly repositoryFactory: RepositoryFactory
+  ) {}
 
   async execute(input: UpdateSubjectConfigurationInput): Promise<Subject> {
     const validation = new UpdateSubjectConfigurationValidator().validate(input);
@@ -29,10 +22,20 @@ export class UpdateSubjectConfigurationUseCase {
       throw new ValidationError(validation.errors.join(", "));
     }
 
-    return await this.subjectRepository.update(input.subjectId, (subject) => ({
-      ...subject,
-      plannedStudyMinutes: input.plannedStudyMinutes ?? subject.plannedStudyMinutes,
-      currentStage: input.currentStage ?? subject.currentStage
-    }));
+    const subjectRepository = this.repositoryFactory.for("subjects");
+
+    return subjectRepository.update(input.subjectId, (subject) => {
+      return new Subject(
+        subject.id,
+        subject.contestId,
+        subject.name,
+        subject.order,
+        subject.isActive,
+        input.plannedStudyMinutes ?? subject.plannedStudyMinutes,
+        input.currentStage ?? subject.currentStage,
+        [...subject.resourceIds],
+        [...subject.topicIds]
+      );
+    });
   }
 }

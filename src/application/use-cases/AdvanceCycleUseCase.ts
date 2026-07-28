@@ -1,83 +1,57 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
-import type { ContestState } from "@/domain/entities/ContestState";
-import { ActiveCycleSnapshot } from "@/application/use-cases/GetActiveCycleSnapshotUseCase";
-import { CycleService } from "@/domain/services/CycleService";
-import { ItemProgressService } from "@/domain/services/ItemProgressService";
-import { ActiveContestGuard } from "@/application/guards/ActiveContestGuard";
+import { CycleState, type CyclePosition } from "@/domain/entities/CycleState";
 import { NotFoundError, ValidationError } from "@/domain/errors/DomainErrors";
+import { CycleService } from "@/domain/services/CycleService";
 
-/**
- * Use case for advancing the study cycle to the next subject.
- */
+export interface AdvanceCycleResult {
+  previous: CyclePosition;
+  current: CyclePosition;
+}
+
 export class AdvanceCycleUseCase {
-  private readonly guard: ActiveContestGuard;
+  private readonly cycleService = new CycleService();
 
-  constructor(
-    private readonly dataStore: PluginDataStore,
-    private readonly cycleService: CycleService = new CycleService(),
-    private readonly progressService: ItemProgressService = new ItemProgressService()
-  ) {
-    this.guard = new ActiveContestGuard(dataStore);
-  }
+  constructor(private readonly dataStore: PluginDataStore) {}
 
-  async execute(): Promise<
-    ActiveCycleSnapshot & { currentSubjectId: string | null; currentItemId: string | null }
-  > {
-    const activeContestId = await this.guard.requireActiveContest();
+  async execute(): Promise<AdvanceCycleResult> {
+    return this.dataStore.mutate((draft) => {
+      const activeContestId = draft.activeContestId;
+      if (!activeContestId) {
+        throw new ValidationError("There is no active contest.");
+      }
+      if (!draft.contests.some((contest) => contest.id === activeContestId)) {
+        throw new NotFoundError("contests", activeContestId);
+      }
 
-    const contestSubjects = await this.guard.getActiveContestSubjects();
+      const subjects = draft.subjects.filter((subject) => subject.contestId === activeContestId);
+      const subjectIds = new Set(subjects.map((subject) => subject.id));
+      const resources = draft.resources.filter((resource) => subjectIds.has(resource.subjectId));
+      const sessions = draft.studySessions.filter(
+        (session) => session.contestId === activeContestId
+      );
+      let stateIndex = draft.cycleStates.findIndex((state) => state.contestId === activeContestId);
+      if (stateIndex === -1) {
+        draft.cycleStates.push(new CycleState(activeContestId));
+        stateIndex = draft.cycleStates.length - 1;
+      }
 
-    const data = await this.dataStore.load();
-    const currentState = data.contestStates.find((state) => state.contestId === activeContestId);
+      const state = draft.cycleStates[stateIndex];
+      const previous = this.cycleService.getRecommendation(subjects, resources, sessions, state);
+      const current = this.cycleService.advance(subjects, resources, sessions, {
+        ...state,
+        currentSubjectId: previous.subjectId,
+        currentResourceId: previous.resourceId
+      });
+      if (!current) {
+        throw new ValidationError(`Contest "${activeContestId}" has no active subjects.`);
+      }
+      draft.cycleStates[stateIndex] = new CycleState(
+        activeContestId,
+        current.subjectId,
+        current.resourceId
+      );
 
-    if (!currentState) {
-      throw new NotFoundError("contestStates", activeContestId);
-    }
-
-    const nextSubject = this.cycleService.getNextActiveSubject(
-      contestSubjects,
-      currentState.currentSubjectId ?? undefined
-    );
-
-    if (!nextSubject) {
-      throw new ValidationError(`Contest "${activeContestId}" has no active subjects.`);
-    }
-
-    const subjectItems = data.studyItems.filter((item) => item.subjectId === nextSubject.id);
-    const isCompleted = this.progressService.buildCompletionPredicate(
-      subjectItems,
-      data.studySessions
-    );
-
-    const nextState: ContestState = {
-      contestId: currentState.contestId,
-      currentSubjectId: nextSubject.id,
-      currentItemId: this.cycleService.getNextItemId(nextSubject, undefined, isCompleted)
-    };
-
-    await this.dataStore.save({
-      ...data,
-      contestStates: data.contestStates.map((state) =>
-        state.contestId === nextState.contestId ? nextState : state
-      )
+      return { previous, current };
     });
-
-    const subjectAfter = this.cycleService.getNextActiveSubject(contestSubjects, nextSubject.id);
-    const subjectAfterItems = data.studyItems.filter((item) => item.subjectId === subjectAfter?.id);
-    const isSubjectAfterCompleted = this.progressService.buildCompletionPredicate(
-      subjectAfterItems,
-      data.studySessions
-    );
-
-    return {
-      contestId: activeContestId,
-      currentSubject: nextSubject,
-      nextSubject: subjectAfter,
-      currentItemId: nextState.currentItemId,
-      nextItemId: subjectAfter
-        ? this.cycleService.getNextItemId(subjectAfter, undefined, isSubjectAfterCompleted)
-        : null,
-      currentSubjectId: nextState.currentSubjectId
-    };
   }
 }

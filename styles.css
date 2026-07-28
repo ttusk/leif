@@ -477,44 +477,6 @@ form.leif-card,
   white-space: nowrap;
 }
 
-.leif-overflow-menu {
-  position: relative;
-}
-
-.leif-overflow-trigger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 28px;
-  min-height: 28px;
-  list-style: none;
-  cursor: pointer;
-}
-
-.leif-overflow-trigger::-webkit-details-marker {
-  display: none;
-}
-
-.leif-overflow-trigger:focus-visible {
-  outline: 2px solid var(--leif-focus);
-  outline-offset: 1px;
-}
-
-.leif-overflow-menu-content {
-  position: absolute;
-  z-index: var(--layer-menu);
-  inset-block-start: calc(100% + var(--size-4-1));
-  inset-inline-end: 0;
-  display: flex;
-  align-items: center;
-  gap: var(--size-4-1);
-  width: max-content;
-  padding: var(--size-4-1);
-  border: 1px solid var(--leif-border-hover);
-  border-radius: var(--radius-s);
-  background: var(--background-primary);
-}
-
 .leif-subject-picker {
   display: inline-flex;
   align-items: center;
@@ -660,7 +622,7 @@ form.leif-card,
   font-variant-numeric: tabular-nums;
 }
 
-/* Hoje and Fio do ciclo */
+/* Hoje and cycle recommendation */
 
 .leif-next-activity {
   display: grid;
@@ -692,9 +654,7 @@ form.leif-card,
   align-items: flex-end;
 }
 
-.leif-next-activity-label,
-.leif-cycle-context-label,
-.leif-cycle-thread-state {
+.leif-next-activity-label {
   color: var(--leif-text-muted);
   font-size: var(--font-ui-smaller);
   font-weight: var(--font-medium);
@@ -719,100 +679,38 @@ form.leif-card,
   margin-top: var(--size-4-2);
 }
 
-.leif-cycle-thread {
-  grid-column: 1 / -1;
+.leif-cycle-recommendation {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--size-4-3) var(--size-4-5);
+  padding-block: var(--size-4-2);
+  border-bottom: 1px solid var(--leif-border);
+}
+
+.leif-cycle-recommendation-summary,
+.leif-cycle-recommendation-now {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  margin: var(--size-4-2) 0 0;
-  padding: 0;
-  list-style: none;
-}
-
-.leif-cycle-thread-step {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(52px, auto) minmax(0, 1fr);
-  gap: var(--size-4-2);
-  min-height: 36px;
-  padding: var(--size-4-1) 0 var(--size-4-3) var(--size-4-4);
-}
-
-.leif-cycle-thread-step::before {
-  content: "";
-  position: absolute;
-  inset-block: 0;
-  inset-inline-start: 3px;
-  width: 2px;
-  background: var(--leif-accent);
-}
-
-.leif-cycle-thread-step::after {
-  content: "";
-  position: absolute;
-  inset-block-start: 7px;
-  inset-inline-start: 0;
-  width: 8px;
-  height: 8px;
-  border: 2px solid var(--leif-bg);
-  border-radius: 50%;
-  background: var(--leif-accent);
-}
-
-.leif-cycle-thread-step[data-cycle-state="next"] {
-  color: var(--leif-text-muted);
-}
-
-.leif-cycle-thread-step[data-cycle-state="next"]::before,
-.leif-cycle-thread-step[data-cycle-state="next"]::after {
-  background: var(--leif-border-hover);
-}
-
-.leif-cycle-thread-step:last-child::before {
-  inset-block-end: calc(100% - 11px);
-}
-
-.leif-cycle-thread-subject {
+  gap: var(--size-4-1);
   min-width: 0;
+}
+
+.leif-cycle-recommendation-label {
+  color: var(--leif-text-muted);
+  font-size: var(--font-ui-smaller);
+  font-weight: var(--font-medium);
+}
+
+.leif-cycle-recommendation-subject {
+  color: var(--leif-text);
+  font-size: var(--font-ui-medium);
+  line-height: var(--line-height-tight);
   overflow-wrap: anywhere;
 }
 
-/* Cycle context and sessions */
-
-.leif-cycle-context {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: var(--size-4-2) var(--size-4-3);
-  padding-inline-start: var(--size-4-3);
-  border-inline-start: 2px solid var(--leif-accent);
-}
-
-.leif-cycle-context-value {
-  font-weight: var(--font-semibold);
-}
-
-.leif-cycle-context-now {
-  display: flex;
-  flex-direction: column;
-  gap: var(--size-4-1);
-  min-width: 0;
-}
-
-.leif-cycle-context-now-line {
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--size-4-1);
-}
-
-.leif-cycle-context-sublabel,
-.leif-cycle-context-next {
-  color: var(--leif-text-muted);
-  font-size: var(--font-ui-small);
-}
-
-.leif-cycle-context-actions {
-  margin-inline-start: auto;
+.leif-cycle-recommendation-action {
+  flex: 0 0 auto;
 }
 
 .leif-session-filters {
@@ -865,7 +763,6 @@ form.leif-card,
   border-bottom: 1px solid var(--leif-border);
   text-align: start;
   vertical-align: middle;
-  overflow-wrap: anywhere;
 }
 
 .leif-table th {
@@ -875,16 +772,46 @@ form.leif-card,
   white-space: nowrap;
 }
 
+.leif-table-cell-name {
+  min-width: 220px;
+  overflow-wrap: break-word;
+}
+
+.leif-table-cell-numeric {
+  white-space: nowrap;
+}
+
+.leif-table-cell-status {
+  white-space: nowrap;
+}
+
+.leif-table-actions {
+  position: sticky;
+  z-index: 2;
+  right: 0;
+  inset-inline-end: 0;
+  min-width: 44px;
+  padding-inline: var(--size-4-2);
+  background: var(--leif-bg);
+  white-space: nowrap;
+  box-shadow: inset 1px 0 var(--leif-border);
+}
+
 .leif-table tbody tr:last-child > td {
   border-bottom: 0;
 }
 
-.leif-table tbody tr:not(.leif-detail-row):hover > td {
+.leif-table tbody tr:not(.leif-detail-row):hover > td,
+.leif-table tbody tr:not(.leif-detail-row):hover > .leif-table-actions {
   background: var(--background-modifier-hover);
 }
 
 .leif-editing-row > td,
 .leif-detail-row > td {
+  background: var(--leif-bg-editing);
+}
+
+.leif-editing-row > .leif-table-actions {
   background: var(--leif-bg-editing);
 }
 
@@ -996,7 +923,14 @@ form.leif-card,
 .leif-contest-card-title,
 .leif-wall-snapshot-title {
   font-size: var(--font-ui-medium);
-  overflow-wrap: anywhere;
+}
+
+.leif-contest-card-title {
+  overflow-wrap: break-word;
+}
+
+.leif-wall-snapshot-title {
+  overflow-wrap: break-word;
 }
 
 .leif-contest-meta,
@@ -1189,7 +1123,7 @@ form.leif-card,
 .leif-view.is-compact .leif-card-header,
 .leif-view.is-compact .leif-resource-detail-header,
 .leif-view.is-compact .leif-detail-list-item,
-.leif-view.is-compact .leif-cycle-context {
+.leif-view.is-compact .leif-cycle-recommendation {
   align-items: flex-start;
   flex-direction: column;
 }
@@ -1201,6 +1135,11 @@ form.leif-card,
 
 .leif-view.is-compact button,
 .leif-view.is-compact .leif-form-actions button {
+  min-height: 40px;
+}
+
+.leif-view.is-compact .leif-table-actions button,
+.leif-view.is-compact .leif-inline-actions button {
   min-height: 40px;
 }
 
@@ -1222,11 +1161,6 @@ form.leif-card,
 @media (forced-colors: active) {
   .leif-view button.leif-tab-button.is-active {
     border-bottom-color: Highlight;
-  }
-
-  .leif-cycle-thread-step::before,
-  .leif-cycle-thread-step::after {
-    background: Highlight;
   }
 
   .leif-wall-editor,

@@ -26,10 +26,12 @@ export async function openLeifView(plugin: Obsidian.Plugin): Promise<void> {
   const existingLeaf = plugin.app.workspace.getLeavesOfType(LEIF_VIEW_TYPE)[0];
   const leaf = existingLeaf ?? plugin.app.workspace.getLeaf();
 
-  await leaf.setViewState({
-    type: LEIF_VIEW_TYPE,
-    active: true
-  });
+  if (!existingLeaf) {
+    await leaf.setViewState({
+      type: LEIF_VIEW_TYPE,
+      active: true
+    });
+  }
 
   plugin.app.workspace.setActiveLeaf(leaf, { focus: true });
 }

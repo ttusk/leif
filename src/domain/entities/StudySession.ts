@@ -1,45 +1,38 @@
 import { ValidationError } from "@/domain/errors/DomainErrors";
+import type { StudyRecord } from "@/domain/entities/StudyRecord";
 
-export const StudySessionType = {
-  PDF: "pdf",
-  VIDEO: "video",
-  QUESTIONS: "questions"
-} as const;
-
-export type StudySessionType = (typeof StudySessionType)[keyof typeof StudySessionType];
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/;
 
 /**
- * Represents a registered study session.
+ * Sessão de estudo: one study sitting that groups one or more ordered
+ * Registros de estudo. A session is the atomic unit of history: saving it
+ * persists all records and any cycle changes together, and empty sessions
+ * never persist.
  */
 export class StudySession {
   constructor(
     public readonly id: string,
     public readonly contestId: string,
-    public readonly type: StudySessionType,
-    public readonly studiedAt: string,
-    public readonly subjectId?: string,
-    public readonly studyItemId?: string,
-    public readonly topicId?: string,
-    public readonly phase?: string,
-    public readonly reference?: string,
-    public readonly pagesOrCount?: number,
-    public readonly correctAnswers?: number,
-    public readonly completed?: boolean
+    public readonly date: string,
+    public readonly records: StudyRecord[],
+    public readonly startTime?: string,
+    public readonly endTime?: string,
+    public readonly notes?: string
   ) {
     if (!id?.trim()) throw new ValidationError("StudySession ID is required");
     if (!contestId?.trim()) throw new ValidationError("StudySession contestId is required");
-    if (!type) throw new ValidationError("StudySession type is required");
-    if (!studiedAt?.trim()) throw new ValidationError("StudySession studiedAt is required");
-    if (pagesOrCount !== undefined && pagesOrCount < 0)
-      throw new ValidationError("StudySession pagesOrCount cannot be negative");
-    if (correctAnswers !== undefined && correctAnswers < 0)
-      throw new ValidationError("StudySession correctAnswers cannot be negative");
-    if (
-      correctAnswers !== undefined &&
-      pagesOrCount !== undefined &&
-      correctAnswers > pagesOrCount
-    ) {
-      throw new ValidationError("StudySession correctAnswers cannot exceed pagesOrCount");
+    if (!date?.trim() || !DATE_PATTERN.test(date)) {
+      throw new ValidationError("StudySession date must use YYYY-MM-DD");
+    }
+    if (startTime !== undefined && !TIME_PATTERN.test(startTime)) {
+      throw new ValidationError("StudySession startTime must use HH:MM");
+    }
+    if (endTime !== undefined && !TIME_PATTERN.test(endTime)) {
+      throw new ValidationError("StudySession endTime must use HH:MM");
+    }
+    if (!Array.isArray(records) || records.length === 0) {
+      throw new ValidationError("StudySession requires at least one record");
     }
   }
 }

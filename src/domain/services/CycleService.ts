@@ -1,19 +1,18 @@
+import type { CyclePosition, CycleState } from "@/domain/entities/CycleState";
+import type { Resource } from "@/domain/entities/Resource";
+import type { StudyRecord } from "@/domain/entities/StudyRecord";
+import type { StudySession } from "@/domain/entities/StudySession";
 import type { Subject } from "@/domain/entities/Subject";
+import { GoalProgressService } from "@/domain/services/GoalProgressService";
 
 /**
- * Service for managing study cycle navigation.
- * Handles circular navigation through subjects and study items.
+ * Service for study-cycle navigation. The cycle rotates active Matérias; on
+ * each visit it recommends the first incomplete ordered Recurso of the current
+ * Matéria. Assuntos do not add another cycle level.
  */
 export class CycleService {
-  /**
-   * Generic circular navigation through a collection.
-   * Returns the next item in the cycle, wrapping around to the start.
-   *
-   * @param items - The collection to navigate through
-   * @param currentItem - The current item (optional)
-   * @param idGetter - Function to extract ID from an item
-   * @returns The next item in the cycle, or null if collection is empty
-   */
+  constructor(private readonly progress: GoalProgressService = new GoalProgressService()) {}
+
   private getNextInCycle<T>(
     items: T[],
     currentItem: T | undefined,
@@ -36,85 +35,172 @@ export class CycleService {
     return items[(currentIndex + 1) % items.length];
   }
 
-  /**
-   * Gets the next active subject in the study cycle.
-   *
-   * @param subjects - All subjects
-   * @param currentSubjectId - ID of the current subject (optional)
-   * @returns The next active subject, or null if no active subjects exist
-   */
-  getNextActiveSubject(subjects: Subject[], currentSubjectId?: string): Subject | null {
-    const activeSubjects = subjects
+  private activeSubjectsInOrder(subjects: Subject[]): Subject[] {
+    return subjects
       .filter((subject) => subject.isActive)
       .sort((left, right) => left.order - right.order);
-
-    const currentSubject = currentSubjectId
-      ? activeSubjects.find((s) => s.id === currentSubjectId)
-      : undefined;
-
-    return this.getNextInCycle(activeSubjects, currentSubject, (s) => s.id);
   }
 
   /**
-   * Gets the next study item ID for a subject.
-   *
-   * @param subject - The subject containing items
-   * @param currentItemId - ID of the current item (optional)
-   * @param isCompleted - Optional predicate that returns true when an item is
-   *   considered completed. When provided, the method skips completed items
-   *   and returns null if every item is completed.
-   * @returns The next item ID, or null if no items exist or all are completed
+   * Gets the next active subject in the study cycle, wrapping around.
    */
-  getNextItemId(
+  getNextActiveSubject(subjects: Subject[], currentSubjectId?: string): Subject | null {
+    const activeSubjects = this.activeSubjectsInOrder(subjects);
+    const currentSubject = currentSubjectId
+      ? activeSubjects.find((subject) => subject.id === currentSubjectId)
+      : undefined;
+
+    return this.getNextInCycle(activeSubjects, currentSubject, (subject) => subject.id);
+  }
+
+  private firstIncompleteFromRecords(
     subject: Subject,
-    currentItemId?: string,
-    isCompleted?: (itemId: string) => boolean
+    resources: Resource[],
+    records: StudyRecord[]
   ): string | null {
-    if (subject.itemIds.length === 0) {
-      return null;
-    }
-
-    if (!isCompleted) {
-      if (!currentItemId) {
-        return subject.itemIds[0];
-      }
-
-      const currentIndex = subject.itemIds.findIndex((itemId) => itemId === currentItemId);
-
-      if (currentIndex === -1) {
-        return subject.itemIds[0];
-      }
-
-      return subject.itemIds[(currentIndex + 1) % subject.itemIds.length];
-    }
-
-    const findNext = (): string | null => {
-      for (const candidate of subject.itemIds) {
-        if (!isCompleted(candidate)) {
-          return candidate;
-        }
-      }
-      return null;
-    };
-
-    if (!currentItemId) {
-      return findNext();
-    }
-
-    const currentIndex = subject.itemIds.findIndex((itemId) => itemId === currentItemId);
-
-    if (currentIndex === -1) {
-      return findNext();
-    }
-
-    const total = subject.itemIds.length;
-    for (let offset = 1; offset <= total; offset += 1) {
-      const nextId = subject.itemIds[(currentIndex + offset) % total];
-      if (!isCompleted(nextId)) {
-        return nextId;
+    const byId = new Map(resources.map((resource) => [resource.id, resource]));
+    for (const resourceId of subject.resourceIds) {
+      const resource = byId.get(resourceId);
+      if (resource && !this.progress.isCompleteFromRecords(resource, records)) {
+        return resourceId;
       }
     }
-
     return null;
+  }
+
+  /**
+   * The first incomplete ordered resource of a subject, or null when there is
+   * none. Resources without a goal are incomplete until explicitly completed.
+   */
+  firstIncompleteResourceId(
+    subject: Subject,
+    resources: Resource[],
+    sessions: StudySession[]
+  ): string | null {
+    return this.firstIncompleteFromRecords(
+      subject,
+      resources,
+      sessions.flatMap((session) => session.records)
+    );
+  }
+
+  private recommendationFromRecords(
+    subjects: Subject[],
+    resources: Resource[],
+    records: StudyRecord[],
+    state: CycleState | undefined
+  ): CyclePosition {
+    const activeSubjects = this.activeSubjectsInOrder(subjects);
+    const stored = state?.currentSubjectId
+      ? activeSubjects.find((subject) => subject.id === state.currentSubjectId)
+      : undefined;
+    const subject = stored ?? activeSubjects[0] ?? null;
+
+    if (!subject) {
+      return { subjectId: null, resourceId: null };
+    }
+
+    return {
+      subjectId: subject.id,
+      resourceId: this.firstIncompleteFromRecords(subject, resources, records)
+    };
+  }
+
+  /**
+   * The position the cycle recommends studying now: the stored current
+   * subject when still active (otherwise the first active one) and its first
+   * incomplete ordered resource.
+   */
+  getRecommendation(
+    subjects: Subject[],
+    resources: Resource[],
+    sessions: StudySession[],
+    state: CycleState | undefined
+  ): CyclePosition {
+    return this.recommendationFromRecords(
+      subjects,
+      resources,
+      sessions.flatMap((session) => session.records),
+      state
+    );
+  }
+
+  private advanceFromRecords(
+    subjects: Subject[],
+    resources: Resource[],
+    records: StudyRecord[],
+    currentSubjectId: string | null | undefined
+  ): CyclePosition | null {
+    const nextSubject = this.getNextActiveSubject(subjects, currentSubjectId ?? undefined);
+    if (!nextSubject) {
+      return null;
+    }
+    return {
+      subjectId: nextSubject.id,
+      resourceId: this.firstIncompleteFromRecords(nextSubject, resources, records)
+    };
+  }
+
+  /**
+   * Rotates to the next active subject and points at its first incomplete
+   * resource. Returns null when no subject is active.
+   */
+  advance(
+    subjects: Subject[],
+    resources: Resource[],
+    sessions: StudySession[],
+    state: CycleState | undefined
+  ): CyclePosition | null {
+    return this.advanceFromRecords(
+      subjects,
+      resources,
+      sessions.flatMap((session) => session.records),
+      state?.currentSubjectId
+    );
+  }
+
+  /**
+   * Advances the cycle once per leading record that matches the consecutive
+   * recommendation, stopping at the first record that is incomplete or does
+   * not match. `priorSessions` must exclude the session being saved; each
+   * matched record is folded into the progress baseline before the next
+   * recommendation is computed.
+   */
+  advanceForCompletedRecords(
+    subjects: Subject[],
+    resources: Resource[],
+    priorSessions: StudySession[],
+    state: CycleState | undefined,
+    records: StudyRecord[]
+  ): { position: CyclePosition; advancements: number } {
+    const effectiveRecords = priorSessions.flatMap((session) => session.records);
+    let position = this.recommendationFromRecords(subjects, resources, effectiveRecords, state);
+    let advancements = 0;
+
+    for (const record of records) {
+      if (!record.completed) {
+        break;
+      }
+      if (position.subjectId === null || record.subjectId !== position.subjectId) {
+        break;
+      }
+      if ((record.resourceId ?? null) !== position.resourceId) {
+        break;
+      }
+      effectiveRecords.push(record);
+      const next = this.advanceFromRecords(
+        subjects,
+        resources,
+        effectiveRecords,
+        position.subjectId
+      );
+      if (!next) {
+        break;
+      }
+      position = next;
+      advancements += 1;
+    }
+
+    return { position, advancements };
   }
 }

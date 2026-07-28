@@ -1,38 +1,37 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
-import type { CyclePosition } from "@/application/use-cases/RegisterRecommendedStudySessionUseCase";
+import { CycleState, type CyclePosition } from "@/domain/entities/CycleState";
 import { NotFoundError, ValidationError } from "@/domain/errors/DomainErrors";
 
 export interface RestoreCyclePositionInput {
   contestId: string;
-  expectedPosition: CyclePosition;
-  restorePosition: CyclePosition;
+  expectedCurrent: CyclePosition;
+  restoreTo: CyclePosition;
 }
 
-/** Restores a cycle pointer only when no newer advancement has replaced it. */
 export class RestoreCyclePositionUseCase {
   constructor(private readonly dataStore: PluginDataStore) {}
 
-  async execute(input: RestoreCyclePositionInput): Promise<CyclePosition> {
-    return this.dataStore.mutate((data) => {
-      const index = data.contestStates.findIndex((state) => state.contestId === input.contestId);
-      if (index < 0) {
-        throw new NotFoundError("contestStates", input.contestId);
+  async execute(input: RestoreCyclePositionInput): Promise<CycleState> {
+    return this.dataStore.mutate((draft) => {
+      const index = draft.cycleStates.findIndex((state) => state.contestId === input.contestId);
+      if (index === -1) {
+        throw new NotFoundError("cycleStates", input.contestId);
       }
-
-      const current = data.contestStates[index];
+      const current = draft.cycleStates[index];
       if (
-        (current.currentSubjectId ?? null) !== input.expectedPosition.subjectId ||
-        (current.currentItemId ?? null) !== input.expectedPosition.itemId
+        current.currentSubjectId !== input.expectedCurrent.subjectId ||
+        current.currentResourceId !== input.expectedCurrent.resourceId
       ) {
         throw new ValidationError("O ciclo mudou depois deste registro e não pode ser desfeito.");
       }
 
-      data.contestStates[index] = {
-        ...current,
-        currentSubjectId: input.restorePosition.subjectId,
-        currentItemId: input.restorePosition.itemId
-      };
-      return input.restorePosition;
+      const restored = new CycleState(
+        input.contestId,
+        input.restoreTo.subjectId,
+        input.restoreTo.resourceId
+      );
+      draft.cycleStates[index] = restored;
+      return restored;
     });
   }
 }

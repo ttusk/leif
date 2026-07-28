@@ -62,7 +62,7 @@ export class LeifView extends ItemView {
     this.itemsTab = new ItemsTab(dataStore, () => this.refresh());
     this.topicsTab = new TopicsTab(dataStore, () => this.refresh());
     this.sessionsTab = new SessionsTab(dataStore, () => this.refresh());
-    this.wallTab = new WallTab(dataStore, () => this.refresh());
+    this.wallTab = new WallTab(this.app, dataStore, () => this.refresh());
     this.setActiveContestUseCase = new SetActiveContestUseCase(
       dataStore,
       new EntityRepositoryFactory(dataStore)
@@ -104,6 +104,10 @@ export class LeifView extends ItemView {
     await this.updateHeader(data);
     this.updateDiagnostics();
     await this.updateActiveTab(data);
+  }
+
+  async openTab(tabId: LeifTabId): Promise<void> {
+    await this.selectTab(tabId);
   }
 
   /**
