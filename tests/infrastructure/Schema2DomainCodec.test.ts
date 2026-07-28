@@ -77,27 +77,23 @@ const workspace = [
 `
   },
   {
-    path: "Leif/concursos/trt/sessoes/2026-07/2026-07-27/sessao.md",
-    content: `${doc(
-      "sessao",
-      "session-1",
-      "Sessão 2026-07-27",
-      'data: 2026-07-27\ninicio: "19:00"\nfim: "20:00"\n'
-    )}## Registros
+    path: "Leif/concursos/trt/registros/2026-07.md",
+    content: `${doc("registros", "registros-contest-1-2026-07", "Registros — 2026-07", "mes: 2026-07\n")}
 
 <!-- leif:registros:start -->
-1. [[registros/leitura-pdf-01|Leitura PDF 01]]
+## 2026-07-27 · Português
+
+leif-id:: record-1
+data:: 2026-07-27
+materia:: [[../materias/portugues/materia]]
+recurso:: [[../materias/portugues/recursos/pdf-01/recurso]]
+quantidade:: 30
+unidade:: questoes
+acertos:: 24
+concluido:: true
+notas:: "Revisão\\nfinal"
 <!-- leif:registros:end -->
 `
-  },
-  {
-    path: "Leif/concursos/trt/sessoes/2026-07/2026-07-27/registros/leitura-pdf-01.md",
-    content: doc(
-      "registro",
-      "record-1",
-      "Leitura PDF 01",
-      'materia: "[[../../../materias/portugues/materia]]"\nrecurso: "[[../../../materias/portugues/recursos/pdf-01/recurso]]"\nquantidade: 30\nunidade: questoes\nacertos: 24\nconcluido: true\n'
-    )
   },
   {
     path: "Leif/concursos/trt/mural.md",
@@ -152,23 +148,17 @@ describe("Schema2DomainCodec", () => {
       accesses: [{ title: "PDF principal", url: "https://example.com/pdf" }],
       baseline: { quantity: 30, correctAnswers: 24 }
     });
-    expect(decoded.studySessions[0]).toMatchObject({
-      id: "session-1",
+    expect(decoded.studyRecords[0]).toMatchObject({
+      id: "record-1",
       contestId: "contest-1",
       date: "2026-07-27",
-      startTime: "19:00",
-      endTime: "20:00",
-      records: [
-        {
-          id: "record-1",
-          subjectId: "subject-1",
-          resourceId: "resource-1",
-          quantity: 30,
-          unit: "questoes",
-          correctAnswers: 24,
-          completed: true
-        }
-      ]
+      subjectId: "subject-1",
+      resourceId: "resource-1",
+      quantity: 30,
+      unit: "questoes",
+      correctAnswers: 24,
+      completed: true,
+      notes: "Revisão\nfinal"
     });
     expect(decoded.cycleStates).toMatchObject([
       {
@@ -182,15 +172,55 @@ describe("Schema2DomainCodec", () => {
   it("accepts wikilink properties re-quoted by Obsidian during a staged move", () => {
     const rewritten = workspace.map((file) => ({
       ...file,
-      content: file.content.replace(/^((?:materia|recurso): )"(\[\[.+\]\])"$/gm, '$1"\\"$2\\""')
+      content: file.content.replace(/^((?:materia|recurso):: )(\[\[.+\]\])$/gm, '$1"$2"')
     }));
 
     const decoded = Schema2DomainCodec.decode(Schema2WorkspaceIndex.build(rewritten));
 
-    expect(decoded.studySessions[0].records[0]).toMatchObject({
+    expect(decoded.studyRecords[0]).toMatchObject({
       subjectId: "subject-1",
       resourceId: "resource-1"
     });
+  });
+
+  it("flattens legacy session documents while reading an existing vault", () => {
+    const legacy = [
+      ...workspace.filter((file) => !file.path.includes("/registros/2026-07.md")),
+      {
+        path: "Leif/concursos/trt/sessoes/2026-07/2026-07-27/sessao.md",
+        content: `${doc(
+          "sessao",
+          "session-1",
+          "Sessão 2026-07-27",
+          "data: 2026-07-27\n"
+        )}## Registros
+
+<!-- leif:registros:start -->
+1. [[registros/leitura|Leitura]]
+<!-- leif:registros:end -->
+`
+      },
+      {
+        path: "Leif/concursos/trt/sessoes/2026-07/2026-07-27/registros/leitura.md",
+        content: doc(
+          "registro",
+          "legacy-record",
+          "Leitura",
+          'materia: "[[../../../materias/portugues/materia]]"\nquantidade: 10\nunidade: paginas\nconcluido: false\n'
+        )
+      }
+    ];
+
+    const decoded = Schema2DomainCodec.decode(Schema2WorkspaceIndex.build(legacy));
+
+    expect(decoded.studyRecords).toMatchObject([
+      {
+        id: "legacy-record",
+        contestId: "contest-1",
+        date: "2026-07-27",
+        subjectId: "subject-1"
+      }
+    ]);
   });
 
   it("rejects linked topics that do not belong to the resource subject", () => {
