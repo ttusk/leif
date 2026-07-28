@@ -16,10 +16,7 @@ describe("SelectCycleSubjectUseCase", () => {
         new Subject("a", "contest-1", "Português", 1, true, 60, undefined, ["ra"]),
         new Subject("b", "contest-1", "Direito", 2, true, 60, undefined, ["rb"])
       );
-      data.resources.push(
-        new Resource("ra", "a", "PDF A", 1),
-        new Resource("rb", "b", "PDF B", 1)
-      );
+      data.resources.push(new Resource("ra", "a", "PDF A", 1), new Resource("rb", "b", "PDF B", 1));
       data.cycleStates.push(new CycleState("contest-1", "a", "ra"));
     });
 
@@ -41,8 +38,8 @@ describe("SelectCycleSubjectUseCase", () => {
       data.subjects.push(new Subject("a", "contest-1", "Português", 1, false));
     });
 
-    await expect(
-      new SelectCycleSubjectUseCase(store).execute({ subjectId: "a" })
-    ).rejects.toThrow(ValidationError);
+    await expect(new SelectCycleSubjectUseCase(store).execute({ subjectId: "a" })).rejects.toThrow(
+      ValidationError
+    );
   });
 });

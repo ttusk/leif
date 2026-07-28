@@ -43,7 +43,7 @@ describe("LeifPlugin", () => {
     expect(registeredPlugin.commands.map((command) => command.name)).toEqual([
       "Abrir painel",
       "Abrir Hoje",
-      "Novos registros",
+      "Novos registros de estudo",
       "Registrar estudo recomendado",
       "Avançar recomendação",
       "Validar Markdown",

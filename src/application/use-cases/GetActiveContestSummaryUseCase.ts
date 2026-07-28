@@ -33,8 +33,7 @@ export class GetActiveContestSummaryUseCase {
 
     const subjectSummaries = contestSubjects.map((subject) => {
       const records = data.studyRecords.filter(
-        (record) =>
-          record.contestId === activeContestId && record.subjectId === subject.id
+        (record) => record.contestId === activeContestId && record.subjectId === subject.id
       );
       const pagesRead = records
         .filter((record) => record.unit === GoalUnit.PAGINAS)

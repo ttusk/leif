@@ -6,10 +6,7 @@
 
 export const STORAGE_SCHEMA_VERSION = 4;
 
-export type MigrationSource =
-  | "legacy-json"
-  | "markdown-schema-1"
-  | "markdown-schema-2-sessions";
+export type MigrationSource = "legacy-json" | "markdown-schema-1" | "markdown-schema-2-sessions";
 export type MigrationStatus = "started" | "migrated" | "failed";
 
 export interface MigrationDiagnostic {

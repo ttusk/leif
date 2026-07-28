@@ -165,44 +165,42 @@ describe("Schema1MarkdownProjector", () => {
   });
 
   it("projects schema-1 study records into one-record study sessions", () => {
-    const projected = Schema1MarkdownProjector.project(
-      [
-        {
-          path: "Leif/concursos/trt/concurso.md",
-          content: doc("concurso", "contest-1", "TRT")
-        },
-        {
-          path: "Leif/concursos/trt/registros/2026-07/2026-07-27-record-1.md",
-          content: doc(
-            "registro",
-            "record-1",
-            "Registro",
-            [
-              "contest-id: contest-1",
-              "type: questions",
-              "studied-at: 2026-07-27T19:30:00.000Z",
-              "subject-id: subject-1",
-              "item-id: resource-1",
-              "topic-id: topic-1",
-              "phase: Teoria",
-              "reference: Bateria 01",
-              "count: 30",
-              "correct: 24",
-              "completed: true"
-            ].join("\n") + "\n"
-          )
-        },
-        {
-          path: "Leif/concursos/trt/registros/2026-07/2026-07-27-orphan.md",
-          content: doc(
-            "registro",
-            "orphan-record",
-            "Registro órfão",
-            "contest-id: contest-1\ntype: pdf\nstudied-at: 2026-07-27T20:00:00.000Z\n"
-          )
-        }
-      ]
-    );
+    const projected = Schema1MarkdownProjector.project([
+      {
+        path: "Leif/concursos/trt/concurso.md",
+        content: doc("concurso", "contest-1", "TRT")
+      },
+      {
+        path: "Leif/concursos/trt/registros/2026-07/2026-07-27-record-1.md",
+        content: doc(
+          "registro",
+          "record-1",
+          "Registro",
+          [
+            "contest-id: contest-1",
+            "type: questions",
+            "studied-at: 2026-07-27T19:30:00.000Z",
+            "subject-id: subject-1",
+            "item-id: resource-1",
+            "topic-id: topic-1",
+            "phase: Teoria",
+            "reference: Bateria 01",
+            "count: 30",
+            "correct: 24",
+            "completed: true"
+          ].join("\n") + "\n"
+        )
+      },
+      {
+        path: "Leif/concursos/trt/registros/2026-07/2026-07-27-orphan.md",
+        content: doc(
+          "registro",
+          "orphan-record",
+          "Registro órfão",
+          "contest-id: contest-1\ntype: pdf\nstudied-at: 2026-07-27T20:00:00.000Z\n"
+        )
+      }
+    ]);
 
     expect(projected.studyRecords).toMatchObject([
       {

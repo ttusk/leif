@@ -305,9 +305,7 @@ describe("LeifView", () => {
     expect(dashboardSummary?.textContent).toContain("Motivo: próxima matéria ativa no ciclo.");
     expect(view.contentEl.querySelector(".leif-cycle-thread")).toBeNull();
 
-    await (view as unknown as { openTab: (tabId: "records") => Promise<void> }).openTab(
-      "records"
-    );
+    await (view as unknown as { openTab: (tabId: "records") => Promise<void> }).openTab("records");
     const recordsRecommendation = view.contentEl.querySelector(".leif-cycle-recommendation");
     const recordsSummary = view.contentEl.querySelector(".leif-cycle-recommendation-summary");
 
@@ -321,9 +319,7 @@ describe("LeifView", () => {
     await seedUiCycleData(dataStore);
 
     const { view } = await openLeifView(dataStore);
-    await (view as unknown as { openTab: (tabId: "records") => Promise<void> }).openTab(
-      "records"
-    );
+    await (view as unknown as { openTab: (tabId: "records") => Promise<void> }).openTab("records");
 
     const advance = view.contentEl.querySelector(
       ".leif-cycle-recommendation-action"
@@ -351,9 +347,7 @@ describe("LeifView", () => {
     await seedUiCycleData(dataStore);
 
     const { view } = await openLeifView(dataStore);
-    await (view as unknown as { openTab: (tabId: "records") => Promise<void> }).openTab(
-      "records"
-    );
+    await (view as unknown as { openTab: (tabId: "records") => Promise<void> }).openTab("records");
     const subject = view.contentEl.querySelector(
       "[data-record-cycle-subject]"
     ) as HTMLSelectElement;
@@ -398,9 +392,7 @@ describe("LeifView", () => {
     await seedUiRecordHistory(dataStore);
 
     const { view } = await openLeifView(dataStore);
-    await (view as unknown as { openTab: (tabId: "records") => Promise<void> }).openTab(
-      "records"
-    );
+    await (view as unknown as { openTab: (tabId: "records") => Promise<void> }).openTab("records");
 
     const table = view.contentEl.querySelector(".leif-record-table");
     expect(Array.from(table?.querySelectorAll("th") ?? []).map((th) => th.textContent)).toEqual([
@@ -443,9 +435,7 @@ describe("LeifView", () => {
     await seedUiRecordHistory(dataStore);
 
     const { view } = await openLeifView(dataStore);
-    await (view as unknown as { openTab: (tabId: "records") => Promise<void> }).openTab(
-      "records"
-    );
+    await (view as unknown as { openTab: (tabId: "records") => Promise<void> }).openTab("records");
     const menuTrigger = view.contentEl.querySelector(
       "[data-record-id='record-1'] .leif-menu-trigger"
     );
@@ -461,9 +451,7 @@ describe("LeifView", () => {
     await seedUiRecordHistory(dataStore);
 
     const { view } = await openLeifView(dataStore);
-    await (view as unknown as { openTab: (tabId: "records") => Promise<void> }).openTab(
-      "records"
-    );
+    await (view as unknown as { openTab: (tabId: "records") => Promise<void> }).openTab("records");
     view.contentEl
       .querySelector("[data-record-id='record-1'] .leif-menu-trigger")
       ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -483,9 +471,7 @@ describe("LeifView", () => {
     await seedUiRecordHistory(dataStore);
 
     const { view } = await openLeifView(dataStore);
-    await (view as unknown as { openTab: (tabId: "records") => Promise<void> }).openTab(
-      "records"
-    );
+    await (view as unknown as { openTab: (tabId: "records") => Promise<void> }).openTab("records");
     view.contentEl
       .querySelector("[data-record-id='record-1'] .leif-menu-trigger")
       ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -510,9 +496,7 @@ describe("LeifView", () => {
     await seedUiRecordHistory(dataStore);
 
     const { view } = await openLeifView(dataStore);
-    await (view as unknown as { openTab: (tabId: "records") => Promise<void> }).openTab(
-      "records"
-    );
+    await (view as unknown as { openTab: (tabId: "records") => Promise<void> }).openTab("records");
     view.contentEl
       .querySelector("[data-record-id='record-1'] .leif-menu-trigger")
       ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -555,9 +539,7 @@ describe("LeifView", () => {
     await seedUiRecordHistory(dataStore);
 
     const { view } = await openLeifView(dataStore);
-    await (view as unknown as { openTab: (tabId: "records") => Promise<void> }).openTab(
-      "records"
-    );
+    await (view as unknown as { openTab: (tabId: "records") => Promise<void> }).openTab("records");
     view.contentEl
       .querySelector("[data-record-id='record-1'] .leif-menu-trigger")
       ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
@@ -590,9 +572,7 @@ describe("LeifView", () => {
     await seedUiRecordHistory(dataStore);
 
     const { view } = await openLeifView(dataStore);
-    await (view as unknown as { openTab: (tabId: "records") => Promise<void> }).openTab(
-      "records"
-    );
+    await (view as unknown as { openTab: (tabId: "records") => Promise<void> }).openTab("records");
 
     const subject = view.contentEl.querySelector(
       "[data-record-filter-subject]"
@@ -632,9 +612,7 @@ describe("LeifView", () => {
     await seedUiCycleData(dataStore);
 
     const { view } = await openLeifView(dataStore);
-    await (view as unknown as { openTab: (tabId: "records") => Promise<void> }).openTab(
-      "records"
-    );
+    await (view as unknown as { openTab: (tabId: "records") => Promise<void> }).openTab("records");
     const firstRecord = view.contentEl.querySelector("[data-record-draft-index='0']");
     const firstResource = firstRecord?.querySelector(
       "[data-record-editor-resource]"
@@ -671,9 +649,7 @@ describe("LeifView", () => {
     await seedUiCycleData(dataStore);
 
     const { view } = await openLeifView(dataStore);
-    await (view as unknown as { openTab: (tabId: "records") => Promise<void> }).openTab(
-      "records"
-    );
+    await (view as unknown as { openTab: (tabId: "records") => Promise<void> }).openTab("records");
     (
       view.contentEl.querySelector(".leif-cycle-recommendation-action") as HTMLButtonElement
     ).click();

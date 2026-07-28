@@ -146,7 +146,9 @@ describe("independent study record use cases", () => {
       quantity: 12,
       correctAnswers: 10
     });
-    expect((await store.load()).studyRecords.find((record) => record.id === "record-2")).toBeTruthy();
+    expect(
+      (await store.load()).studyRecords.find((record) => record.id === "record-2")
+    ).toBeTruthy();
 
     await new DeleteStudyRecordUseCase(store).execute({ recordId: "record-1" });
     expect((await store.load()).studyRecords.map((record) => record.id)).toEqual(["record-2"]);

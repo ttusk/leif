@@ -397,8 +397,7 @@ export class Schema2PluginDataStore implements PluginDataStorePort {
     } catch (error) {
       const diagnostic = {
         code: "SCHEMA2_SESSION_FLATTENING_FAILED",
-        message:
-          error instanceof Error ? error.message : "Session Markdown flattening failed."
+        message: error instanceof Error ? error.message : "Session Markdown flattening failed."
       };
       const completedAt = new Date().toISOString();
       const receipt = buildMigrationReceipt(
@@ -417,8 +416,7 @@ export class Schema2PluginDataStore implements PluginDataStorePort {
           ...diagnostic,
           severity: "erro",
           path: backupPath,
-          guidance:
-            "Recupere o backup da migração antes de editar os registros deste concurso."
+          guidance: "Recupere o backup da migração antes de editar os registros deste concurso."
         }
       ];
       this.lastReadOnlyContestIds = data.contests.map((contest) => contest.id);

@@ -102,10 +102,7 @@ export class RecordsTab {
     container.appendChild(this.renderRecordHistory(data, contestId));
   }
 
-  private renderRecommendationSubjectChoice(
-    data: LeifPluginData,
-    contestId: string
-  ): HTMLElement {
+  private renderRecommendationSubjectChoice(data: LeifPluginData, contestId: string): HTMLElement {
     const subjects = data.subjects
       .filter((subject) => subject.contestId === contestId && subject.isActive)
       .sort((left, right) => left.order - right.order);

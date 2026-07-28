@@ -358,8 +358,6 @@ function isStudyRecord(document: IndexedSchema2Document): document is IndexedStu
   return document.type === "registro";
 }
 
-function isStudyRecordMonth(
-  document: IndexedSchema2Document
-): document is IndexedStudyRecordMonth {
+function isStudyRecordMonth(document: IndexedSchema2Document): document is IndexedStudyRecordMonth {
   return document.type === "registros";
 }

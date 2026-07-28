@@ -42,9 +42,9 @@ describe("StudyRecord", () => {
   });
 
   it("validates quantity, unit and correct answers as a coherent group", () => {
-    expect(
-      () => new StudyRecord("r", "c", "2026-07-27", "s", undefined, undefined, 30)
-    ).toThrow(ValidationError);
+    expect(() => new StudyRecord("r", "c", "2026-07-27", "s", undefined, undefined, 30)).toThrow(
+      ValidationError
+    );
     expect(
       () =>
         new StudyRecord(
@@ -60,16 +60,7 @@ describe("StudyRecord", () => {
     ).toThrow(ValidationError);
     expect(
       () =>
-        new StudyRecord(
-          "r",
-          "c",
-          "2026-07-27",
-          "s",
-          undefined,
-          undefined,
-          -1,
-          GoalUnit.QUESTOES
-        )
+        new StudyRecord("r", "c", "2026-07-27", "s", undefined, undefined, -1, GoalUnit.QUESTOES)
     ).toThrow(ValidationError);
     expect(
       () =>
@@ -87,17 +78,7 @@ describe("StudyRecord", () => {
     ).toThrow(ValidationError);
     expect(
       () =>
-        new StudyRecord(
-          "r",
-          "c",
-          "2026-07-27",
-          "s",
-          undefined,
-          undefined,
-          undefined,
-          undefined,
-          5
-        )
+        new StudyRecord("r", "c", "2026-07-27", "s", undefined, undefined, undefined, undefined, 5)
     ).toThrow(ValidationError);
 
     const record = new StudyRecord(

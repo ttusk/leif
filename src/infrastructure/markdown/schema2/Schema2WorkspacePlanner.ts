@@ -388,12 +388,7 @@ function planPaths(
     const id = recordMonthDocumentId(contestId, month);
     recordMonths.set(
       recordMonthKey(contestId, month),
-      reuseOrAllocate(
-        currentById,
-        id,
-        `${contestRoot}/registros/${month}.md`,
-        used
-      )
+      reuseOrAllocate(currentById, id, `${contestRoot}/registros/${month}.md`, used)
     );
   });
 

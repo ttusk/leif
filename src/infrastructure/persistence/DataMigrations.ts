@@ -415,9 +415,11 @@ function preserveLegacySessionMetadata(
   const sessionNotes = session.notes
     ? `Observações da antiga sessão:\n${session.notes}`
     : undefined;
-  return [recordNotes, timing, sessionNotes]
-    .filter((value): value is string => Boolean(value))
-    .join("\n\n") || undefined;
+  return (
+    [recordNotes, timing, sessionNotes]
+      .filter((value): value is string => Boolean(value))
+      .join("\n\n") || undefined
+  );
 }
 
 function muralFromLegacy(wall: LegacyContest["wall"]): Mural {

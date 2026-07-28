@@ -31,9 +31,7 @@ export class SelectCycleSubjectUseCase {
       }
 
       const subjectIds = new Set(
-        draft.subjects
-          .filter((entry) => entry.contestId === contestId)
-          .map((entry) => entry.id)
+        draft.subjects.filter((entry) => entry.contestId === contestId).map((entry) => entry.id)
       );
       const resources = draft.resources.filter((resource) => subjectIds.has(resource.subjectId));
       const records = draft.studyRecords.filter((record) => record.contestId === contestId);

@@ -36,7 +36,8 @@ export class UpdateStudyRecordUseCase {
       const updated = buildStudyRecord(draft, current.contestId, input.date ?? current.date, {
         id: current.id,
         subjectId: input.subjectId ?? current.subjectId,
-        resourceId: input.resourceId === null ? undefined : (input.resourceId ?? current.resourceId),
+        resourceId:
+          input.resourceId === null ? undefined : (input.resourceId ?? current.resourceId),
         topicId: input.topicId === null ? undefined : (input.topicId ?? current.topicId),
         quantity: input.quantity === null ? undefined : (input.quantity ?? current.quantity),
         unit: input.unit === null ? undefined : (input.unit ?? current.unit),

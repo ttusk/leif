@@ -1,8 +1,5 @@
 import { createLeifId } from "@/application/Id";
-import type {
-  MutableLeifPluginData,
-  PluginDataStore
-} from "@/application/ports/PluginDataStore";
+import type { MutableLeifPluginData, PluginDataStore } from "@/application/ports/PluginDataStore";
 import { RegisterStudyRecordsValidator } from "@/application/validation/InputValidators";
 import { StudyRecord } from "@/domain/entities/StudyRecord";
 import { AlreadyExistsError, NotFoundError, ValidationError } from "@/domain/errors/DomainErrors";

@@ -208,12 +208,8 @@ describe("DataMigrationService", () => {
       ] as never
     } as never);
 
-    expect(
-      (migrated as unknown as { studyRecords: unknown[] }).studyRecords
-    ).toHaveLength(1);
-    expect(
-      (migrated as unknown as { studyRecords: unknown[] }).studyRecords[0]
-    ).toMatchObject({
+    expect((migrated as unknown as { studyRecords: unknown[] }).studyRecords).toHaveLength(1);
+    expect((migrated as unknown as { studyRecords: unknown[] }).studyRecords[0]).toMatchObject({
       id: "old-session-1",
       contestId: "contest-1",
       date: "2026-07-27",

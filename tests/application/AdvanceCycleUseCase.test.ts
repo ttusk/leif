@@ -53,7 +53,7 @@ describe("AdvanceCycleUseCase", () => {
   });
 
   it("skips completed resources when calculating the next recommendation", async () => {
-    const { store, factory } = await seedCycle();
+    const { store } = await seedCycle();
     await new RegisterStudyRecordsUseCase(store).execute({
       contestId: "contest-1",
       date: "2026-07-27",

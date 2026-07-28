@@ -204,18 +204,16 @@ function decodeLegacySession(
 ): StudyRecord[] {
   const contestId = requiredParent(session, "contestId");
   const date = requiredProperty(session, "data");
-  return readResolvedRegion(context.index, session, "registros", "registro").map(
-    (record) => {
-      const sessionId = requiredParent(record, "sessionId");
-      if (sessionId !== session.id) {
-        throw new Schema2DomainCodecError(
-          "invalid-link-target",
-          `Record "${record.id}" must belong to session "${session.id}".`
-        );
-      }
-      return decodeLegacyRecord(record, contestId, date, context);
+  return readResolvedRegion(context.index, session, "registros", "registro").map((record) => {
+    const sessionId = requiredParent(record, "sessionId");
+    if (sessionId !== session.id) {
+      throw new Schema2DomainCodecError(
+        "invalid-link-target",
+        `Record "${record.id}" must belong to session "${session.id}".`
+      );
     }
-  );
+    return decodeLegacyRecord(record, contestId, date, context);
+  });
 }
 
 function decodeLegacyRecord(
@@ -250,10 +248,7 @@ function decodeLegacyRecord(
   );
 }
 
-function decodeRecordMonth(
-  month: IndexedSchema2Document,
-  context: DecodeContext
-): StudyRecord[] {
+function decodeRecordMonth(month: IndexedSchema2Document, context: DecodeContext): StudyRecord[] {
   const contestId = requiredParent(month, "contestId");
   return parseMonthlyRecordProperties(readOptionalRegion(month, "registros")).map((properties) => {
     const id = requiredInlineProperty(properties, "leif-id", month);
