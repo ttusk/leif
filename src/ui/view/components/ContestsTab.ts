@@ -7,7 +7,9 @@ import { createLeifId } from "@/application/Id";
 import type { Contest } from "@/domain/entities/Contest";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
+import { ConfirmationModal } from "@/ui/confirmation/ConfirmationModal";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
+import type { App } from "obsidian";
 
 export class ContestsTab {
   private readonly createContest: CreateContestUseCase;
@@ -17,6 +19,7 @@ export class ContestsTab {
   private editingContestId: string | null = null;
 
   constructor(
+    private readonly app: App,
     dataStore: PluginDataStore,
     private readonly onUpdate: () => Promise<void>
   ) {
@@ -77,9 +80,11 @@ export class ContestsTab {
             label: "Excluir",
             icon: "trash-2",
             onClick: async () => {
-              const confirmed = window.confirm(
-                `Excluir o concurso "${contest.name}" e todo o seu conteúdo de estudo?`
-              );
+              const confirmed = await ConfirmationModal.ask(this.app, {
+                title: "Excluir concurso?",
+                message: `O concurso "${contest.name}" e todo o seu conteúdo de estudo serão excluídos.`,
+                confirmLabel: "Excluir concurso"
+              });
               if (!confirmed) return;
               await this.deleteContest.execute({ contestId: contest.id });
               await this.onUpdate();

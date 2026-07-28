@@ -998,7 +998,8 @@ form.leif-card,
 }
 
 .leif-changelog,
-.leif-migration {
+.leif-migration,
+.leif-confirmation {
   display: flex;
   flex-direction: column;
   gap: var(--size-4-3);
@@ -1006,7 +1007,8 @@ form.leif-card,
 }
 
 .leif-changelog > h1,
-.leif-migration > h1 {
+.leif-migration > h1,
+.leif-confirmation > h2 {
   margin: 0;
 }
 
@@ -1017,7 +1019,8 @@ form.leif-card,
 }
 
 .leif-changelog__actions,
-.leif-migration__actions {
+.leif-migration__actions,
+.leif-confirmation__actions {
   display: flex;
   align-items: center;
   justify-content: flex-end;

@@ -57,11 +57,11 @@ export class LeifView extends ItemView {
       }
       return this.selectTab(tabId);
     });
-    this.contestsTab = new ContestsTab(dataStore, () => this.refresh());
+    this.contestsTab = new ContestsTab(this.app, dataStore, () => this.refresh());
     this.cycleTab = new CycleTab(dataStore, () => this.refresh());
-    this.itemsTab = new ItemsTab(dataStore, () => this.refresh());
-    this.topicsTab = new TopicsTab(dataStore, () => this.refresh());
-    this.sessionsTab = new SessionsTab(dataStore, () => this.refresh());
+    this.itemsTab = new ItemsTab(this.app, dataStore, () => this.refresh());
+    this.topicsTab = new TopicsTab(this.app, dataStore, () => this.refresh());
+    this.sessionsTab = new SessionsTab(this.app, dataStore, () => this.refresh());
     this.wallTab = new WallTab(this.app, dataStore, () => this.refresh());
     this.setActiveContestUseCase = new SetActiveContestUseCase(
       dataStore,

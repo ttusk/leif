@@ -6,8 +6,10 @@ import { createLeifId } from "@/application/Id";
 import type { Topic } from "@/domain/entities/Topic";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
+import { ConfirmationModal } from "@/ui/confirmation/ConfirmationModal";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 import { SubjectPicker } from "@/ui/view/shared/SubjectPicker";
+import type { App } from "obsidian";
 
 /**
  * Assuntos view — readable table per selected Matéria. Display rows show the
@@ -22,6 +24,7 @@ export class TopicsTab {
   private editingTopicId: string | null = null;
 
   constructor(
+    private readonly app: App,
     dataStore: PluginDataStore,
     private readonly onUpdate: () => Promise<void>
   ) {
@@ -96,7 +99,11 @@ export class TopicsTab {
             label: "Excluir",
             icon: "trash-2",
             onClick: async () => {
-              const confirmed = window.confirm(`Excluir o assunto "${topic.name}"?`);
+              const confirmed = await ConfirmationModal.ask(this.app, {
+                title: "Excluir assunto?",
+                message: `O assunto "${topic.name}" será excluído.`,
+                confirmLabel: "Excluir assunto"
+              });
               if (!confirmed) return;
               await this.deleteTopic.execute({ topicId: topic.id });
               await this.onUpdate();

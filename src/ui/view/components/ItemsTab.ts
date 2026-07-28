@@ -10,9 +10,11 @@ import { ResourceGoal } from "@/domain/entities/ResourceGoal";
 import { GoalUnit, isGoalUnit } from "@/domain/types/GoalUnit";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
+import { ConfirmationModal } from "@/ui/confirmation/ConfirmationModal";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 import { formatGoalQuantity, goalUnitOptions } from "@/ui/view/shared/StudyLabels";
 import { SubjectPicker } from "@/ui/view/shared/SubjectPicker";
+import type { App } from "obsidian";
 
 /**
  * Recursos view — readable table per selected Matéria. Display rows show the
@@ -28,6 +30,7 @@ export class ItemsTab {
   private editingResourceId: string | null = null;
 
   constructor(
+    private readonly app: App,
     dataStore: PluginDataStore,
     private readonly onUpdate: () => Promise<void>
   ) {
@@ -109,9 +112,11 @@ export class ItemsTab {
             label: "Excluir",
             icon: "trash-2",
             onClick: async () => {
-              const confirmed = window.confirm(
-                `Excluir o recurso "${resource.title}" e remover suas referências?`
-              );
+              const confirmed = await ConfirmationModal.ask(this.app, {
+                title: "Excluir recurso?",
+                message: `O recurso "${resource.title}" será excluído e suas referências serão removidas.`,
+                confirmLabel: "Excluir recurso"
+              });
               if (!confirmed) return;
               await this.deleteResource.execute({ resourceId: resource.id });
               await this.onUpdate();

@@ -315,7 +315,7 @@ function normalizeCurrentData(data: LegacyData): LeifPluginData {
     contests: collection(data.contests) as unknown as LeifPluginData["contests"],
     cycleStates: collection(data.cycleStates) as unknown as LeifPluginData["cycleStates"],
     subjects: collection(data.subjects) as unknown as LeifPluginData["subjects"],
-    topics: collection(data.topics) as unknown as LeifPluginData["topics"],
+    topics: collection(data.topics),
     resources: collection(data.resources),
     studySessions: collection(data.studySessions as StudySession[]),
     runtimeState: {

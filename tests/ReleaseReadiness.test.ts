@@ -33,10 +33,12 @@ describe("community release readiness", () => {
   it("uses APIs and DOM patterns supported by the declared Obsidian version", () => {
     const viewRegistration = read("src/ui/view/registerLeifView.ts");
     const domHelpers = read("src/ui/view/shared/DomHelpers.ts");
+    const source = sourceFiles("src").map(read).join("\n");
 
     expect(viewRegistration).not.toContain("workspace.revealLeaf");
     expect(domHelpers).not.toContain("document.createElement");
     expect(domHelpers).not.toMatch(/addEventListener\([^,]+,\s*options\.onClick\)/);
+    expect(source).not.toContain("window.confirm");
   });
 
   it("compiles against the exact minimum Obsidian API and remains mobile-safe", () => {
@@ -82,5 +84,21 @@ describe("community release readiness", () => {
     expect(workflow).toContain("contents: write");
     expect(workflow).toContain("softprops/action-gh-release@v2");
     expect(workflow).toContain("main.js");
+    expect(workflow).toContain("actions/attest@v4");
+    expect(workflow).toContain("id-token: write");
+    expect(workflow).toContain("attestations: write");
+    expect(workflow).toContain("artifact-metadata: write");
+    expect(workflow).toMatch(
+      /subject-path:\s*\|[\s\S]*main\.js[\s\S]*styles\.css[\s\S]*manifest\.json/
+    );
+  });
+
+  it("keeps marketplace static-analysis warnings resolved", () => {
+    expect(read("src/infrastructure/markdown/schema2/Schema2DomainCodec.ts")).toContain(
+      "JSON.parse(value) as unknown"
+    );
+    expect(read("src/infrastructure/persistence/DataMigrations.ts")).not.toContain(
+      'topics: collection(data.topics) as unknown as LeifPluginData["topics"]'
+    );
   });
 });

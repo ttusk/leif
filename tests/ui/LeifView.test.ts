@@ -19,7 +19,14 @@ import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { createDefaultLeifPluginData } from "@/domain/types/LeifPluginData";
 import { EntityRepositoryFactory } from "@/infrastructure/persistence/EntityRepositoryFactory";
 import { LEIF_VIEW_TYPE, registerLeifView } from "@/ui/view/registerLeifView";
-import { App, getShownMenus, Plugin, resetShownMenus } from "../mocks/obsidian";
+import {
+  App,
+  getOpenModals,
+  getShownMenus,
+  Plugin,
+  resetOpenModals,
+  resetShownMenus
+} from "../mocks/obsidian";
 import { MarkdownRenderer } from "obsidian";
 
 class InMemoryPluginDataStore implements PluginDataStore {
@@ -194,6 +201,7 @@ async function openLeifView(dataStore: PluginDataStore) {
 describe("LeifView", () => {
   beforeEach(() => {
     document.body.innerHTML = "";
+    resetOpenModals();
     resetShownMenus();
   });
 
@@ -416,7 +424,6 @@ describe("LeifView", () => {
   it("keeps a session when its targeted deletion confirmation is cancelled", async () => {
     const dataStore = new InMemoryPluginDataStore();
     await seedUiSessionHistory(dataStore);
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
 
     const { view } = await openLeifView(dataStore);
     await (view as unknown as { openTab: (tabId: "sessions") => Promise<void> }).openTab(
@@ -427,9 +434,13 @@ describe("LeifView", () => {
       ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await (getShownMenus()[0]?.items[2]?.callback?.(new MouseEvent("click")) as Promise<void>);
 
-    expect(confirm).toHaveBeenCalledWith(expect.stringContaining("27/07/2026"));
+    const [modal] = getOpenModals();
+    expect(modal?.contentEl.textContent).toContain("27/07/2026");
+    modal?.contentEl
+      .querySelector("[data-confirmation-cancel]")
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
     expect((await dataStore.load()).studySessions).toHaveLength(2);
-    confirm.mockRestore();
   });
 
   it("edits a grouped session and saves all records together", async () => {
@@ -774,7 +785,6 @@ describe("LeifView", () => {
   it("keeps a recurso when its targeted deletion confirmation is cancelled", async () => {
     const dataStore = new InMemoryPluginDataStore();
     await seedUiCycleData(dataStore);
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
 
     const { view } = await openLeifView(dataStore);
     await (view as unknown as { openTab: (tabId: "items") => Promise<void> }).openTab("items");
@@ -783,11 +793,37 @@ describe("LeifView", () => {
       ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await (getShownMenus()[0]?.items[1]?.callback?.(new MouseEvent("click")) as Promise<void>);
 
-    expect(confirm).toHaveBeenCalledWith(expect.stringContaining("PDF 01"));
+    const [modal] = getOpenModals();
+    expect(modal?.contentEl.textContent).toContain("PDF 01");
+    modal?.contentEl
+      .querySelector("[data-confirmation-cancel]")
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
     expect(
       (await dataStore.load()).resources.some((resource) => resource.id === "resource-1")
     ).toBe(true);
-    confirm.mockRestore();
+  });
+
+  it("deletes a recurso after its native confirmation is accepted", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiCycleData(dataStore);
+
+    const { view } = await openLeifView(dataStore);
+    await (view as unknown as { openTab: (tabId: "items") => Promise<void> }).openTab("items");
+    view.contentEl
+      .querySelector("[data-resource-id='resource-1'] .leif-menu-trigger")
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await (getShownMenus()[0]?.items[1]?.callback?.(new MouseEvent("click")) as Promise<void>);
+
+    getOpenModals()[0]
+      ?.contentEl.querySelector("[data-confirmation-confirm]")
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    await vi.waitFor(async () => {
+      expect(
+        (await dataStore.load()).resources.some((resource) => resource.id === "resource-1")
+      ).toBe(false);
+    });
   });
 
   it("renders the Assuntos view as a readable table with the sticky actions column", async () => {
@@ -817,8 +853,6 @@ describe("LeifView", () => {
     await dataStore.mutate((draft) => {
       draft.topics.push(new Topic("topic-1", "subject-1", "Concordância nominal"));
     });
-    const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
-
     const { view } = await openLeifView(dataStore);
     await (view as unknown as { openTab: (tabId: "topics") => Promise<void> }).openTab("topics");
     view.contentEl
@@ -826,9 +860,13 @@ describe("LeifView", () => {
       ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await (getShownMenus()[0]?.items[1]?.callback?.(new MouseEvent("click")) as Promise<void>);
 
-    expect(confirm).toHaveBeenCalledWith(expect.stringContaining("Concordância nominal"));
+    const [modal] = getOpenModals();
+    expect(modal?.contentEl.textContent).toContain("Concordância nominal");
+    modal?.contentEl
+      .querySelector("[data-confirmation-cancel]")
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
     expect((await dataStore.load()).topics.some((topic) => topic.id === "topic-1")).toBe(true);
-    confirm.mockRestore();
   });
 
   it("renders the Matérias table with a sticky Actions column and one-line No ciclo", async () => {

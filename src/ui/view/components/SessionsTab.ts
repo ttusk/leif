@@ -12,10 +12,12 @@ import type { StudyRecord } from "@/domain/entities/StudyRecord";
 import type { StudySession } from "@/domain/entities/StudySession";
 import { GoalUnit, isGoalUnit } from "@/domain/types/GoalUnit";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
+import { ConfirmationModal } from "@/ui/confirmation/ConfirmationModal";
 import { CycleRecommendationPanel } from "@/ui/view/shared/CycleRecommendationPanel";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 import { formatActivity, formatGoalQuantity, goalUnitOptions } from "@/ui/view/shared/StudyLabels";
 import type { RecommendedStudyRegistration } from "@/ui/view/components/DashboardTab";
+import type { App } from "obsidian";
 
 interface SessionFilters {
   subjectId: string;
@@ -49,6 +51,7 @@ export class SessionsTab {
   private recommendedRegistration: RecommendedStudyRegistration | null = null;
 
   constructor(
+    private readonly app: App,
     dataStore: PluginDataStore,
     private readonly onUpdate: () => Promise<void>
   ) {
@@ -309,9 +312,11 @@ export class SessionsTab {
           icon: "trash-2",
           onClick: async () => {
             const date = this.formatSessionDate(session.date);
-            const confirmed = window.confirm(
-              `Excluir a sessão de ${date} e todos os seus registros?`
-            );
+            const confirmed = await ConfirmationModal.ask(this.app, {
+              title: "Excluir sessão?",
+              message: `A sessão de ${date} e todos os seus registros serão excluídos.`,
+              confirmLabel: "Excluir sessão"
+            });
             if (!confirmed) return;
             await this.deleteSession.execute({ sessionId: session.id });
             await this.onUpdate();

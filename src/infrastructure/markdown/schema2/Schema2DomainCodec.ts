@@ -419,7 +419,7 @@ function requiredWikiLinkProperty(document: IndexedSchema2Document, property: st
 function unwrapObsidianQuotedWikiLink(value: string): string {
   if (!value.startsWith('"') || !value.endsWith('"')) return value;
   try {
-    const parsed = JSON.parse(value);
+    const parsed = JSON.parse(value) as unknown;
     return typeof parsed === "string" ? parsed : value;
   } catch {
     return value;
