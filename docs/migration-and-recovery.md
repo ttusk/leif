@@ -4,8 +4,9 @@ Leif 3.0 makes readable Markdown schema 2 the only writable store for study data
 
 ## What gets migrated
 
-- **Legacy JSON (`data.json`)**: schema 1 and schema 2 concurso data, subjects, items, topics, resources, sessions, and cycle state.
+- **Legacy JSON (`data.json`)**: schema 1 through schema 3 concurso data, subjects, items, topics, resources, sessions, and cycle state.
 - **Markdown schema 1** bundles (`Leif/concursos/<slug>-<shortId>/...` with `^leif-ref-<hex>` block IDs).
+- **Markdown schema 2 session trees**: backed up and consolidated into monthly Registro documents on startup.
 - **Already current schema-2** concursos are left untouched.
 - **Interrupted migrations** are detected by a `started` receipt and resumed as recovery, never as a fresh automatic migration.
 
@@ -39,7 +40,8 @@ Backups are kept forever. They are never deleted automatically.
 - **Topic resource references → independent Recursos** linked to that Assunto.
 - **QuestionNotebook → a question-type Recurso** linked to its Assunto.
 - **Unreconstructable notebook counters → an `ImportedProgress` baseline** (`progresso-importado` / `acertos-importados`), computed so existing registros are not double-counted.
-- **Old flat StudySession → one Sessão with one Registro**. The old session ID becomes the Registro ID; a new session ID is generated.
+- **Old flat StudySession → one independent Registro**. Its ID, Concurso, date, measurements, and notes are preserved.
+- **Schema-3 Sessão aggregates → independent Registros**. Every child keeps its ID and inherits the Sessão date and Concurso; legacy timing or session notes are preserved on the first Registro.
 - **Old current item pointer → current Recurso pointer**, stored as readable wikilinks (`materia-atual` / `recurso-atual`) in `concurso.md`.
 - **Wall notes/links/snapshots → one `mural.md`**. Structured snapshots are preserved as readable Markdown.
 - **Unknown Markdown schema-1 properties, prose, comments, sections, notes, and attachments → preserved** in the matching schema-2 tree or in an explicit preserved-notes section.

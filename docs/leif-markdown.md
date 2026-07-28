@@ -33,12 +33,8 @@ Leif/
         │       └── recursos/
         │           └── <recurso-slug>/
         │               └── recurso.md
-        └── sessoes/
-            └── YYYY-MM/
-                └── <data-hora-slug>/
-                    ├── sessao.md
-                    └── registros/
-                        └── <registro-slug>.md
+        └── registros/
+            └── YYYY-MM.md
 ```
 
 `Leif/diagnosticos.md` is regenerated after validation and is excluded from contest indexing.
@@ -77,7 +73,7 @@ Managed region:
 <!-- leif:materias:end -->
 ```
 
-`materia-atual` and `recurso-atual` are the cycle position pointers, stored as readable wikilinks. They are informational; the cycle rotates on each visit by recommending the first incomplete ordered Recurso of the active Matéria.
+`materia-atual` and `recurso-atual` are the recommendation pointers, stored as readable wikilinks. Saving, editing, or deleting a Registro never changes them; only an explicit learner action advances or restores the recommendation.
 
 ### materia.md
 
@@ -120,34 +116,39 @@ Managed regions:
 
 A Recurso completes when accumulated registros reach its goal, or when `concluido: true` is set explicitly. A goal-less Recurso is completed only by `concluido: true`.
 
-### sessao.md
+### registros/YYYY-MM.md
 
 ```yaml
-data: 2026-07-27
-inicio: "19:00"
-fim: "21:00"
+leif-type: registros
+leif-schema: 2
+leif-id: registros-<contest-id>-2026-07
+mes: 2026-07
 ```
 
-`data` is required; `inicio` and `fim` are optional `HH:MM`. Free-form session notes are allowed. A managed `registros` region contains the ordered wikilinks to child registro files.
+One monthly document physically stores all Registros of its Concurso and month. The document is not a domain aggregate: every Registro remains independently identified and independently editable.
 
-A Sessão persists all its Registros and any cycle change in one atomic write. Consecutive completed records that match the recommended Matéria and Recurso advance the cycle until the first mismatch.
+The managed `registros` region contains one H2 section per Registro:
 
-### registro.md
+```md
+## 2026-07-27 · Português
 
-```yaml
-materia: "[[../../../materias/portugues/materia]]"
-recurso: "[[../../../materias/portugues/recursos/aula-03/recurso]]"
-assunto: "[[../../../materias/portugues/assuntos/concordancia/assunto]]"
-quantidade: 30
-unidade: paginas
-acertos: 0
-concluido: true
+leif-id:: 01J...
+data:: 2026-07-27
+materia:: [[../materias/portugues/materia]]
+recurso:: [[../materias/portugues/recursos/aula-03/recurso]]
+assunto:: [[../materias/portugues/assuntos/concordancia/assunto]]
+quantidade:: 30
+unidade:: paginas
+acertos:: 0
+concluido:: true
+notas:: "Revisão final"
 ```
 
-- `materia` is required and must belong to the session's concurso.
+- `leif-id`, `data`, and `materia` are required. The Matéria must belong to the document's Concurso.
 - `recurso` and `assunto` are optional and must belong to the selected Matéria.
 - `quantidade`, `unidade`, and `acertos` are optional but validated as a coherent group (`quantidade⇔unidade`, and `acertos ≤ quantidade`).
-- The former `atividade` property is no longer used. Leif accepts it in older files and removes it on the next canonical write.
+- `notas` is an optional JSON-quoted string so line breaks remain on one parseable property line.
+- The former `atividade` property and the former `sessoes/` tree are migration-only. Leif backs up and consolidates them automatically.
 
 ### mural.md
 
@@ -155,7 +156,7 @@ One per concurso. The H1 is `Mural`, and the body is free-form Markdown. Leif re
 
 ## IDs and duplicate repair
 
-Leif assigns a `leif-id` to any valid new file that lacks one on the next sync. Leif repairs a duplicate ID automatically only when the last-known index proves which document is the new copy. Ambiguous duplicates block synchronization until you resolve them by removing one of the conflicting `leif-id` values.
+Leif assigns a `leif-id` to any valid new entity file that lacks one on the next sync. Monthly Registro IDs are inline properties and must be unique across the workspace. Leif repairs a duplicated entity-document ID automatically only when the last-known index proves which document is the new copy; ambiguous document or Registro duplicates block synchronization.
 
 ## Validation and diagnostics
 

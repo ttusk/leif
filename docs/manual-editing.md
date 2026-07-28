@@ -10,7 +10,7 @@ Leif 3.0 reads and writes its study data as readable Markdown in `Leif/`. This g
 
 ## Create
 
-1. Create the file in the correct folder for its entity type (see the layout in `docs/leif-markdown.md`).
+1. Create the file in the correct folder for its entity type (see the layout in `docs/leif-markdown.md`). For a Registro, add a new H2 block to the matching monthly document instead.
 2. Use the matching template (or any existing entity of the same type) as the reference for frontmatter and managed regions.
 3. Omit `leif-id`. Leif assigns one on the next sync.
 4. Use the file's H1 as the canonical name. Do not put the name in frontmatter.
@@ -32,7 +32,7 @@ To force a clean copy:
 
 ## Rename
 
-- Rename the **file** freely. Leif resolves entities by `leif-id`, so a rename preserves identity, cycle position, registros, and mural links.
+- Rename an **entity file** freely. Leif resolves entities by `leif-id`, so a rename preserves identity, cycle position, registros, and mural links. Monthly Registro documents keep their `YYYY-MM.md` names.
 - Rename the **H1** to rename the entity. The next sync updates parent wikilink labels automatically.
 - Do not put IDs in filenames; readable slugs own the path.
 
@@ -48,7 +48,7 @@ If the move crosses concursos (e.g., moves a Recurso to another Matéria), any r
 
 ## Reorder
 
-Sequence is owned by ordered wikilink lists. Reorder a Matéria, Recurso, Assunto, or Registro by editing the linked list inside the parent's managed region between `<!-- leif:<region>:start -->` and `<!-- leif:<region>:end -->`.
+Plan sequence is owned by ordered wikilink lists. Reorder a Matéria, Recurso, or Assunto by editing the linked list inside the parent's managed region between `<!-- leif:<region>:start -->` and `<!-- leif:<region>:end -->`. Registros are historical facts and are canonicalized by date and ID instead of owning a study sequence.
 
 The first incomplete ordered Recurso of the active Matéria is the recommendation, so reordering changes what **Hoje** shows next.
 
@@ -58,12 +58,12 @@ See **Copy**. The duplicate must either receive a new `leif-id` (delete the copi
 
 ## Delete
 
-Delete the file. Leif:
+Delete an entity file, or remove one Registro H2 block from its monthly document. Leif:
 
 - cancels pending writes affected by the deletion,
 - removes the link from the parent's wikilink region on the next sync,
 - keeps cycle position only if it still resolves, otherwise clears it,
-- leaves the backup of the file in `Leif/.backups/emporarily` untouched.
+- leaves existing migration and manual backups under `Leif/.backups/` untouched.
 
 Deleting a parent (e.g., a Matéria) cascades to its children through the planner; run **Leif: Validar e sincronizar Markdown** to apply the planned deletions.
 
