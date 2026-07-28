@@ -13,6 +13,7 @@ import { DomHelpers } from "@/ui/view/shared/DomHelpers";
 export class WallTab {
   private readonly updateMural: UpdateContestMuralUseCase;
   private editing = false;
+  private rendererComponent?: Component;
 
   constructor(
     private readonly app: App,
@@ -38,6 +39,8 @@ export class WallTab {
       container.appendChild(this.renderEditor(contest.id, contest.mural.notes ?? ""));
       return;
     }
+    this.rendererComponent?.unload();
+    this.rendererComponent = new Component();
     container.appendChild(await this.renderReadView(contest.mural.notes ?? ""));
   }
 
@@ -50,7 +53,7 @@ export class WallTab {
     const notesHeading = DomHelpers.createElement("h3", "leif-section-subtitle");
     notesHeading.textContent = "Notas";
     const notesBody = DomHelpers.createElement("div", "leif-wall-notes-content");
-    await MarkdownRenderer.render(this.app, notes, notesBody, "", new Component());
+    await MarkdownRenderer.render(this.app, notes, notesBody, "", this.rendererComponent!);
     notesSection.append(notesHeading, notesBody);
     const actions = DomHelpers.createElement("div", "leif-form-actions");
     actions.appendChild(

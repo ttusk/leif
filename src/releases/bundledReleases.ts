@@ -2,6 +2,21 @@ import type { BundledReleaseNote } from "@/application/services/ChangelogService
 
 export const BUNDLED_RELEASES: readonly BundledReleaseNote[] = [
   {
+    version: "3.0.1",
+    title: "Leif 3.0.1",
+    body: `## Corrigido
+
+- Mural em modo leitura agora descarrega o componente anterior do MarkdownRenderer antes de renderizar novamente, evitando assinaturas acumuladas entre atualizações.
+- Atualização de painéis abertos usa o tipo da LeifView diretamente antes de chamar render, mantendo o refresh compatível com a API do Obsidian.
+- Seletor de recuperação usa createDiv para respeitar as regras de revisão de plugins do Obsidian.
+
+## Internas
+
+- Ajustes de tipagem evitam interfaces vazias e casts opcionais desnecessários na migração de dados.
+- Mock de testes do Obsidian passa a cobrir createDiv.`,
+    githubUrl: "https://github.com/ttusk/leif/releases/tag/3.0.1"
+  },
+  {
     version: "3.0.0",
     title: "Leif 3.0",
     body: `## Markdown schema 2 como única autoridade de estudo

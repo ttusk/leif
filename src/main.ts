@@ -20,6 +20,7 @@ import { ChangelogModal } from "@/ui/changelog/ChangelogModal";
 import { BackupRecoveryPickerModal } from "@/ui/recovery/BackupRecoveryPickerModal";
 import type { LeifTabId } from "@/ui/constants";
 import { LEIF_VIEW_TYPE, openLeifView, registerLeifView } from "@/ui/view/registerLeifView";
+import type { LeifView } from "@/ui/view/LeifView";
 
 const MARKDOWN_SYNC_DEBOUNCE_MS = 400;
 const SELF_WRITE_SUPPRESSION_MS = MARKDOWN_SYNC_DEBOUNCE_MS * 2;
@@ -289,8 +290,8 @@ export default class LeifPlugin extends Plugin {
   private async refreshOpenLeifViews(): Promise<void> {
     await Promise.all(
       this.app.workspace.getLeavesOfType(LEIF_VIEW_TYPE).map(async (leaf) => {
-        const view = leaf.view;
-        if (!view || !("render" in view) || typeof view.render !== "function") return;
+        const view = leaf.view as LeifView | null;
+        if (!view || typeof view.render !== "function") return;
         await view.render();
       })
     );

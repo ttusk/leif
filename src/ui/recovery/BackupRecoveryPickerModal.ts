@@ -13,7 +13,7 @@ export class BackupRecoveryPickerModal extends Modal {
     this.contentEl.replaceChildren();
     const title = createEl("h2", { cls: "leif-recovery-picker-title" });
     title.textContent = "Recuperar backup";
-    const list = createEl("div", { cls: "leif-recovery-picker-list" });
+    const list = createDiv({ cls: "leif-recovery-picker-list" });
 
     this.backups.forEach((backupPath) => {
       const button = createEl("button", { cls: "leif-recovery-picker-option" });

@@ -4,6 +4,19 @@ Todas as mudanças notáveis do Leif são documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [3.0.1] - 2026-07-28
+
+### Corrigido
+
+- Mural em modo leitura agora descarrega o componente anterior do MarkdownRenderer antes de renderizar novamente, evitando assinaturas acumuladas entre atualizações.
+- Atualização de painéis abertos usa o tipo da LeifView diretamente antes de chamar render, mantendo o refresh compatível com a API do Obsidian.
+- Seletor de recuperação usa createDiv para respeitar as regras de revisão de plugins do Obsidian.
+
+### Internas
+
+- Ajustes de tipagem evitam interfaces vazias e casts opcionais desnecessários na migração de dados.
+- Mock de testes do Obsidian passa a cobrir createDiv.
+
 ## [3.0.0] - 2026-07-27
 
 ### Markdown schema 2 como única autoridade de estudo
@@ -135,6 +148,7 @@ Consolida as mudanças das versões 2.0.0 a 2.0.3:
 - Bloqueios de segurança reportados em português no painel.
 - Prévia de migração compacta, abas de navegação sem interferência do tema, progresso de assuntos e posições de reordenação em uma única linha, e estados de data e pendências mais claros.
 
+[3.0.1]: https://github.com/ttusk/leif/compare/3.0.0...3.0.1
 [3.0.0]: https://github.com/ttusk/leif/compare/2.1.1...3.0.0
 [2.1.1]: https://github.com/ttusk/leif/compare/2.1.0...2.1.1
 [2.1.0]: https://github.com/ttusk/leif/compare/2.0.3...2.1.0

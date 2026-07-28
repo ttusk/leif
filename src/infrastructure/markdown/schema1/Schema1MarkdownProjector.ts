@@ -24,10 +24,10 @@ interface Schema1Document {
   content: string;
 }
 
-interface ProjectedSchema1StudyData extends Pick<
+type ProjectedSchema1StudyData = Pick<
   LeifPluginData,
   "contests" | "cycleStates" | "subjects" | "topics" | "resources" | "studySessions"
-> {}
+>;
 
 export interface Schema1ProjectOptions {
   sessionIdForRecord?: (recordId: string) => string;

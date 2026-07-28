@@ -269,9 +269,7 @@ function projectLegacyData(data: LegacyData): LeifPluginData {
 
   collection(data.resources).forEach((resource) => resources.push(resource));
 
-  const studySessions = collection(
-    data.studySessions as Array<LegacyStudySession | StudySession> | undefined
-  )
+  const studySessions = collection(data.studySessions as Array<LegacyStudySession | StudySession>)
     .map((session) => projectStudySession(session, notebookResourceByTopic))
     .filter((session): session is StudySession => session !== null);
 
@@ -311,7 +309,7 @@ function normalizeCurrentData(data: LegacyData): LeifPluginData {
     subjects: collection(data.subjects) as unknown as LeifPluginData["subjects"],
     topics: collection(data.topics) as unknown as LeifPluginData["topics"],
     resources: collection(data.resources),
-    studySessions: collection(data.studySessions as StudySession[] | undefined),
+    studySessions: collection(data.studySessions as StudySession[]),
     runtimeState: {
       ...defaults.runtimeState!,
       ...data.runtimeState

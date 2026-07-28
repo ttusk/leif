@@ -1,9 +1,9 @@
 {
   "id": "leif",
   "name": "Leif",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "minAppVersion": "1.5.7",
-  "description": "Organize concursos, matérias, assuntos, recursos, sessões e mural de estudo no Obsidian.",
+  "description": "Organize concursos, matérias, assuntos, recursos, sessões e mural de estudo.",
   "author": "Luiz Gustavo",
   "authorUrl": "https://github.com/ttusk",
   "isDesktopOnly": false

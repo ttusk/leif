@@ -1,7 +1,7 @@
 {
   "name": "leif",
-  "version": "3.0.0",
-  "description": "Organize concursos, matérias, assuntos, recursos, sessões e mural de estudo no Obsidian.",
+  "version": "3.0.1",
+  "description": "Organize concursos, matérias, assuntos, recursos, sessões e mural de estudo.",
   "main": "main.js",
   "author": {
     "name": "Luiz Gustavo",

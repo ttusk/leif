@@ -14,6 +14,15 @@ globalThis.createEl = ((tagName, options) => {
   return element;
 }) as typeof createEl;
 
+globalThis.createDiv = ((options) => {
+  const element = document.createElement("div");
+  const className = typeof options === "string" ? options : options?.cls;
+  if (className) {
+    element.className = Array.isArray(className) ? className.join(" ") : className;
+  }
+  return element;
+}) as typeof createDiv;
+
 type ViewCreator = (leaf: WorkspaceLeaf) => ItemView;
 type VaultEventCallback = (...args: unknown[]) => unknown;
 
