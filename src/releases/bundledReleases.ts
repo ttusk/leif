@@ -2,6 +2,17 @@ import type { BundledReleaseNote } from "@/application/services/ChangelogService
 
 export const BUNDLED_RELEASES: readonly BundledReleaseNote[] = [
   {
+    version: "3.0.2",
+    title: "Leif 3.0.2",
+    body: `## Corrigido
+
+- Ativação do Leif 3 agora aceita recursos legados com total de páginas ou questões igual a zero, preservando o formato e tratando a meta desconhecida como ausente.
+- Seletor global de concurso usa o menu nativo do Obsidian, sem manter o menu customizado da interface anterior.
+- Gerenciamento de concursos usa tabela legível, coluna Ações fixa e menu nativo com edição explícita.
+- Exclusões de concurso, sessão, recurso e assunto agora identificam o alvo e pedem confirmação antes de remover dados.`,
+    githubUrl: "https://github.com/ttusk/leif/releases/tag/3.0.2"
+  },
+  {
     version: "3.0.1",
     title: "Leif 3.0.1",
     body: `## Corrigido

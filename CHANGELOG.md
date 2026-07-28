@@ -4,6 +4,15 @@ Todas as mudanças notáveis do Leif são documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [3.0.2] - 2026-07-28
+
+### Corrigido
+
+- Ativação do Leif 3 agora aceita recursos legados com total de páginas ou questões igual a zero, preservando o formato e tratando a meta desconhecida como ausente.
+- Seletor global de concurso usa o menu nativo do Obsidian, sem manter o menu customizado da interface anterior.
+- Gerenciamento de concursos usa tabela legível, coluna Ações fixa e menu nativo com edição explícita.
+- Exclusões de concurso, sessão, recurso e assunto agora identificam o alvo e pedem confirmação antes de remover dados.
+
 ## [3.0.1] - 2026-07-28
 
 ### Corrigido
