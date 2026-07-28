@@ -1,7 +1,7 @@
 {
   "name": "leif",
   "version": "3.1.2",
-  "description": "Organize concursos, matérias, assuntos, recursos, sessões e mural de estudo.",
+  "description": "Organize concursos, matérias, assuntos, recursos, registros e mural de estudo.",
   "main": "main.js",
   "author": {
     "name": "Luiz Gustavo",

@@ -240,7 +240,7 @@ function domainMessage(error: Schema2DomainCodecError): string {
 function domainGuidance(error: Schema2DomainCodecError): string {
   switch (error.code) {
     case "missing-parent":
-      return "Mova o arquivo para a pasta canônica de concurso, matéria, recurso, assunto ou sessão.";
+      return "Mova o arquivo para a pasta canônica de concurso, matéria, recurso, assunto ou registros mensais.";
     case "invalid-property":
       return "Revise os campos obrigatórios e os grupos coerentes como meta/unidade.";
     case "invalid-link-target":
