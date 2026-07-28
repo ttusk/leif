@@ -1,6 +1,5 @@
 import type { Resource } from "@/domain/entities/Resource";
 import type { StudyRecord } from "@/domain/entities/StudyRecord";
-import type { StudySession } from "@/domain/entities/StudySession";
 
 /**
  * Computes aggregate progress for Recursos. Only records whose unit matches
@@ -12,11 +11,8 @@ export class GoalProgressService {
   /**
    * Accumulated compatible progress for a resource, including its baseline.
    */
-  progressFor(resource: Resource, sessions: StudySession[]): number {
-    return this.progressFromRecords(
-      resource,
-      sessions.flatMap((session) => session.records)
-    );
+  progressFor(resource: Resource, records: StudyRecord[]): number {
+    return this.progressFromRecords(resource, records);
   }
 
   /**
@@ -36,9 +32,8 @@ export class GoalProgressService {
   /**
    * Correct answers accumulated for a resource, including its baseline.
    */
-  correctAnswersFor(resource: Resource, sessions: StudySession[]): number {
-    const recorded = sessions
-      .flatMap((session) => session.records)
+  correctAnswersFor(resource: Resource, records: StudyRecord[]): number {
+    const recorded = records
       .filter((record) => record.resourceId === resource.id)
       .reduce((total, record) => total + (record.correctAnswers ?? 0), 0);
     return recorded + (resource.baseline?.correctAnswers ?? 0);
@@ -49,11 +44,8 @@ export class GoalProgressService {
    * compatible progress meets the goal. A goal-less resource is incomplete
    * until explicitly completed.
    */
-  isComplete(resource: Resource, sessions: StudySession[]): boolean {
-    return this.isCompleteFromRecords(
-      resource,
-      sessions.flatMap((session) => session.records)
-    );
+  isComplete(resource: Resource, records: StudyRecord[]): boolean {
+    return this.isCompleteFromRecords(resource, records);
   }
 
   /**
@@ -71,17 +63,17 @@ export class GoalProgressService {
 
   /**
    * Builds a predicate that returns true when a given resource id is complete
-   * for the supplied set of resources and sessions.
+   * for the supplied set of resources and records.
    */
   buildCompletionPredicate(
     resources: Resource[],
-    sessions: StudySession[]
+    records: StudyRecord[]
   ): (resourceId: string) => boolean {
     const byId = new Map(resources.map((resource) => [resource.id, resource]));
     return (resourceId: string) => {
       const resource = byId.get(resourceId);
       if (!resource) return false;
-      return this.isComplete(resource, sessions);
+      return this.isComplete(resource, records);
     };
   }
 }

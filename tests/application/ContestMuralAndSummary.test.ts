@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { CreateContestUseCase } from "@/application/use-cases/CreateContestUseCase";
 import { CreateSubjectUseCase } from "@/application/use-cases/CreateSubjectUseCase";
 import { GetActiveContestSummaryUseCase } from "@/application/use-cases/GetActiveContestSummaryUseCase";
-import { RegisterStudySessionUseCase } from "@/application/use-cases/RegisterStudySessionUseCase";
+import { RegisterStudyRecordsUseCase } from "@/application/use-cases/RegisterStudyRecordsUseCase";
 import { UpdateContestMuralUseCase } from "@/application/use-cases/UpdateContestMuralUseCase";
 import { GoalUnit } from "@/domain/types/GoalUnit";
 import { createTestStore } from "../helpers/InMemoryStore";
@@ -40,7 +40,7 @@ describe("contest mural and summary", () => {
       name: "Português",
       plannedStudyMinutes: 60
     });
-    await new RegisterStudySessionUseCase(store, factory).execute({
+    await new RegisterStudyRecordsUseCase(store).execute({
       contestId: "contest-1",
       date: "2026-07-27",
       records: [
@@ -59,7 +59,7 @@ describe("contest mural and summary", () => {
       subjectSummaries: [
         {
           subjectId: "subject-1",
-          totalSessions: 1,
+          totalRecords: 3,
           pagesRead: 20,
           questionsSolved: 10,
           minutesStudied: 30,

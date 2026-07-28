@@ -3,7 +3,6 @@ import { CycleState } from "@/domain/entities/CycleState";
 import { Resource } from "@/domain/entities/Resource";
 import { ResourceGoal } from "@/domain/entities/ResourceGoal";
 import { StudyRecord } from "@/domain/entities/StudyRecord";
-import { StudySession } from "@/domain/entities/StudySession";
 import { Subject } from "@/domain/entities/Subject";
 import { CycleService } from "@/domain/services/CycleService";
 import { GoalUnit } from "@/domain/types/GoalUnit";
@@ -45,6 +44,8 @@ const buildRecord = (overrides: {
 }): StudyRecord =>
   new StudyRecord(
     `record-${Math.random().toString(36).slice(2, 9)}`,
+    "contest-1",
+    "2026-07-27",
     overrides.subjectId,
     overrides.resourceId,
     undefined,
@@ -52,14 +53,6 @@ const buildRecord = (overrides: {
     overrides.unit,
     undefined,
     overrides.completed ?? false
-  );
-
-const sessionOf = (contestId: string, ...records: StudyRecord[]): StudySession =>
-  new StudySession(
-    `session-${Math.random().toString(36).slice(2, 9)}`,
-    contestId,
-    "2026-07-27",
-    records
   );
 
 describe("CycleService subject rotation", () => {
@@ -148,14 +141,11 @@ describe("CycleService recommendation", () => {
       buildResource("r1", "s1", 1, false, new ResourceGoal(10, GoalUnit.PAGINAS)),
       buildResource("r2", "s1", 2)
     ];
-    const sessions = [
-      sessionOf(
-        "contest-1",
-        buildRecord({ subjectId: "s1", resourceId: "r1", quantity: 10, unit: GoalUnit.PAGINAS })
-      )
+    const records = [
+      buildRecord({ subjectId: "s1", resourceId: "r1", quantity: 10, unit: GoalUnit.PAGINAS })
     ];
 
-    expect(service.getRecommendation([subject], resources, sessions, undefined).resourceId).toBe(
+    expect(service.getRecommendation([subject], resources, records, undefined).resourceId).toBe(
       "r2"
     );
   });
@@ -213,140 +203,5 @@ describe("CycleService.advance", () => {
     const paused = buildSubject({ id: "s1", isActive: false });
 
     expect(service.advance([paused], [], [], new CycleState("contest-1", "s1", null))).toBeNull();
-  });
-});
-
-describe("CycleService.advanceForCompletedRecords", () => {
-  const setup = () => {
-    const subjects = [
-      buildSubject({ id: "s1", order: 1, resourceIds: ["r1"] }),
-      buildSubject({ id: "s2", order: 2, resourceIds: ["r2"] }),
-      buildSubject({ id: "s3", order: 3, resourceIds: [] })
-    ];
-    const resources = [buildResource("r1", "s1", 1), buildResource("r2", "s2", 1)];
-    return { subjects, resources };
-  };
-
-  it("advances through consecutive records matching consecutive recommendations", () => {
-    const { subjects, resources } = setup();
-    const state = new CycleState("contest-1", "s1", "r1");
-    const records = [
-      buildRecord({ subjectId: "s1", resourceId: "r1", completed: true }),
-      buildRecord({ subjectId: "s2", resourceId: "r2", completed: true })
-    ];
-
-    const result = service.advanceForCompletedRecords(subjects, resources, [], state, records);
-
-    expect(result).toEqual({
-      position: { subjectId: "s3", resourceId: null },
-      advancements: 2
-    });
-  });
-
-  it("stops at the first mismatch but keeps the advancements already made", () => {
-    const { subjects, resources } = setup();
-    const state = new CycleState("contest-1", "s1", "r1");
-    const records = [
-      buildRecord({ subjectId: "s1", resourceId: "r1", completed: true }),
-      buildRecord({ subjectId: "s3", completed: true })
-    ];
-
-    const result = service.advanceForCompletedRecords(subjects, resources, [], state, records);
-
-    expect(result).toEqual({ position: { subjectId: "s2", resourceId: "r2" }, advancements: 1 });
-  });
-
-  it("stops at the first record that is not completed", () => {
-    const { subjects, resources } = setup();
-    const state = new CycleState("contest-1", "s1", "r1");
-    const records = [
-      buildRecord({ subjectId: "s1", resourceId: "r1", completed: false }),
-      buildRecord({ subjectId: "s1", resourceId: "r1", completed: true })
-    ];
-
-    const result = service.advanceForCompletedRecords(subjects, resources, [], state, records);
-
-    expect(result).toEqual({ position: { subjectId: "s1", resourceId: "r1" }, advancements: 0 });
-  });
-
-  it("requires the record resource to match the recommendation exactly", () => {
-    const { subjects, resources } = setup();
-    const state = new CycleState("contest-1", "s1", "r1");
-    const wrongResource = [buildRecord({ subjectId: "s1", resourceId: "rX", completed: true })];
-    const missingResource = [buildRecord({ subjectId: "s1", completed: true })];
-
-    expect(
-      service.advanceForCompletedRecords(subjects, resources, [], state, wrongResource).advancements
-    ).toBe(0);
-    expect(
-      service.advanceForCompletedRecords(subjects, resources, [], state, missingResource)
-        .advancements
-    ).toBe(0);
-  });
-
-  it("matches a subject-only record when the recommendation has no resource", () => {
-    const { subjects, resources } = setup();
-    const state = new CycleState("contest-1", "s3", null);
-    const records = [buildRecord({ subjectId: "s3", completed: true })];
-
-    const result = service.advanceForCompletedRecords(subjects, resources, [], state, records);
-
-    expect(result).toEqual({ position: { subjectId: "s1", resourceId: "r1" }, advancements: 1 });
-  });
-
-  it("does not advance when the first record already mismatches", () => {
-    const { subjects, resources } = setup();
-    const state = new CycleState("contest-1", "s1", "r1");
-    const records = [buildRecord({ subjectId: "s2", resourceId: "r2", completed: true })];
-
-    const result = service.advanceForCompletedRecords(subjects, resources, [], state, records);
-
-    expect(result).toEqual({ position: { subjectId: "s1", resourceId: "r1" }, advancements: 0 });
-  });
-
-  it("counts records saved in the same session when picking the next recommendation", () => {
-    const subjects = [
-      buildSubject({ id: "s1", order: 1, resourceIds: ["r1"] }),
-      buildSubject({ id: "s2", order: 2, resourceIds: ["r2", "r3"] })
-    ];
-    const resources = [
-      buildResource("r1", "s1", 1),
-      buildResource("r2", "s2", 1, false, new ResourceGoal(10, GoalUnit.PAGINAS)),
-      buildResource("r3", "s2", 2)
-    ];
-    const state = new CycleState("contest-1", "s1", "r1");
-    const prior = [
-      sessionOf(
-        "contest-1",
-        buildRecord({
-          subjectId: "s2",
-          resourceId: "r2",
-          completed: true,
-          quantity: 5,
-          unit: GoalUnit.PAGINAS
-        })
-      )
-    ];
-    const records = [
-      buildRecord({ subjectId: "s1", resourceId: "r1", completed: true }),
-      buildRecord({
-        subjectId: "s2",
-        resourceId: "r2",
-        completed: true,
-        quantity: 5,
-        unit: GoalUnit.PAGINAS
-      })
-    ];
-
-    const result = service.advanceForCompletedRecords(subjects, resources, prior, state, records);
-
-    expect(result).toEqual({ position: { subjectId: "s1", resourceId: "r1" }, advancements: 2 });
-
-    // r2's goal is met by prior + same-session progress, so s2's next recommendation is r3.
-    const all = [...prior, sessionOf("contest-1", ...records)];
-    expect(
-      service.getRecommendation(subjects, resources, all, new CycleState("contest-1", "s2", null))
-        .resourceId
-    ).toBe("r3");
   });
 });

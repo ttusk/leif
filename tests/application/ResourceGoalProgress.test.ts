@@ -4,7 +4,7 @@ import { CreateContestUseCase } from "@/application/use-cases/CreateContestUseCa
 import { CreateResourceUseCase } from "@/application/use-cases/CreateResourceUseCase";
 import { CreateSubjectUseCase } from "@/application/use-cases/CreateSubjectUseCase";
 import { GetActiveContestProgressDashboardUseCase } from "@/application/use-cases/GetActiveContestProgressDashboardUseCase";
-import { RegisterStudySessionUseCase } from "@/application/use-cases/RegisterStudySessionUseCase";
+import { RegisterStudyRecordsUseCase } from "@/application/use-cases/RegisterStudyRecordsUseCase";
 import { ResourceGoal } from "@/domain/entities/ResourceGoal";
 import { GoalUnit } from "@/domain/types/GoalUnit";
 import { createTestStore } from "../helpers/InMemoryStore";
@@ -25,7 +25,7 @@ describe("resource goal progress", () => {
       title: "PDF 01",
       goal: new ResourceGoal(30, GoalUnit.PAGINAS)
     });
-    await new RegisterStudySessionUseCase(store, factory).execute({
+    await new RegisterStudyRecordsUseCase(store).execute({
       contestId: "contest-1",
       date: "2026-07-27",
       records: [
@@ -58,7 +58,7 @@ describe("resource goal progress", () => {
     });
   });
 
-  it("groups question progress by session date", async () => {
+  it("groups question progress by record date", async () => {
     const { store, factory } = createTestStore();
     await new CreateContestUseCase(store, factory).execute({ id: "contest-1", name: "TRT" });
     await new CreateSubjectUseCase(store, factory).execute({
@@ -67,7 +67,7 @@ describe("resource goal progress", () => {
       name: "Português",
       plannedStudyMinutes: 60
     });
-    await new RegisterStudySessionUseCase(store, factory).execute({
+    await new RegisterStudyRecordsUseCase(store).execute({
       contestId: "contest-1",
       date: "2026-07-27",
       records: [

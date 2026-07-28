@@ -6,7 +6,6 @@ import { SetActiveContestUseCase } from "@/application/use-cases/SetActiveContes
 import { UpdateContestUseCase } from "@/application/use-cases/UpdateContestUseCase";
 import { Resource } from "@/domain/entities/Resource";
 import { StudyRecord } from "@/domain/entities/StudyRecord";
-import { StudySession } from "@/domain/entities/StudySession";
 import { NotFoundError } from "@/domain/errors/DomainErrors";
 import { createTestStore } from "../helpers/InMemoryStore";
 
@@ -57,11 +56,7 @@ describe("contest management", () => {
       });
       data.resources.push(new Resource("resource-1", "subject-1", "Aula 01", 1));
       data.topics.push({ id: "topic-1", subjectId: "subject-1", name: "Concordância" });
-      data.studySessions.push(
-        new StudySession("session-1", "contest-1", "2026-07-27", [
-          new StudyRecord("record-1", "subject-1")
-        ])
-      );
+      data.studyRecords.push(new StudyRecord("record-1", "contest-1", "2026-07-27", "subject-1"));
     });
 
     await new DeleteContestUseCase(store).execute({ contestId: "contest-1" });
@@ -72,7 +67,7 @@ describe("contest management", () => {
     expect(data.subjects).toHaveLength(0);
     expect(data.resources).toHaveLength(0);
     expect(data.topics).toHaveLength(0);
-    expect(data.studySessions).toHaveLength(0);
+    expect(data.studyRecords).toHaveLength(0);
     await expect(new DeleteContestUseCase(store).execute({ contestId: "missing" })).rejects.toThrow(
       NotFoundError
     );

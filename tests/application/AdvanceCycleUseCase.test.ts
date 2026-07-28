@@ -4,7 +4,7 @@ import { AdvanceCycleUseCase } from "@/application/use-cases/AdvanceCycleUseCase
 import { CreateContestUseCase } from "@/application/use-cases/CreateContestUseCase";
 import { CreateResourceUseCase } from "@/application/use-cases/CreateResourceUseCase";
 import { CreateSubjectUseCase } from "@/application/use-cases/CreateSubjectUseCase";
-import { RegisterStudySessionUseCase } from "@/application/use-cases/RegisterStudySessionUseCase";
+import { RegisterStudyRecordsUseCase } from "@/application/use-cases/RegisterStudyRecordsUseCase";
 import { ResourceGoal } from "@/domain/entities/ResourceGoal";
 import { GoalUnit } from "@/domain/types/GoalUnit";
 import { createTestStore } from "../helpers/InMemoryStore";
@@ -54,7 +54,7 @@ describe("AdvanceCycleUseCase", () => {
 
   it("skips completed resources when calculating the next recommendation", async () => {
     const { store, factory } = await seedCycle();
-    await new RegisterStudySessionUseCase(store, factory).execute({
+    await new RegisterStudyRecordsUseCase(store).execute({
       contestId: "contest-1",
       date: "2026-07-27",
       records: [
@@ -68,8 +68,9 @@ describe("AdvanceCycleUseCase", () => {
       ]
     });
 
-    await new AdvanceCycleUseCase(store).execute();
+    const result = await new AdvanceCycleUseCase(store).execute();
 
-    expect((await store.load()).cycleStates[0].currentResourceId).toBeNull();
+    expect(result.previous).toEqual({ subjectId: "subject-1", resourceId: null });
+    expect(result.current).toEqual({ subjectId: "subject-2", resourceId: "resource-2" });
   });
 });

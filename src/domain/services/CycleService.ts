@@ -1,7 +1,6 @@
 import type { CyclePosition, CycleState } from "@/domain/entities/CycleState";
 import type { Resource } from "@/domain/entities/Resource";
 import type { StudyRecord } from "@/domain/entities/StudyRecord";
-import type { StudySession } from "@/domain/entities/StudySession";
 import type { Subject } from "@/domain/entities/Subject";
 import { GoalProgressService } from "@/domain/services/GoalProgressService";
 
@@ -75,13 +74,9 @@ export class CycleService {
   firstIncompleteResourceId(
     subject: Subject,
     resources: Resource[],
-    sessions: StudySession[]
+    records: StudyRecord[]
   ): string | null {
-    return this.firstIncompleteFromRecords(
-      subject,
-      resources,
-      sessions.flatMap((session) => session.records)
-    );
+    return this.firstIncompleteFromRecords(subject, resources, records);
   }
 
   private recommendationFromRecords(
@@ -114,15 +109,10 @@ export class CycleService {
   getRecommendation(
     subjects: Subject[],
     resources: Resource[],
-    sessions: StudySession[],
+    records: StudyRecord[],
     state: CycleState | undefined
   ): CyclePosition {
-    return this.recommendationFromRecords(
-      subjects,
-      resources,
-      sessions.flatMap((session) => session.records),
-      state
-    );
+    return this.recommendationFromRecords(subjects, resources, records, state);
   }
 
   private advanceFromRecords(
@@ -148,59 +138,9 @@ export class CycleService {
   advance(
     subjects: Subject[],
     resources: Resource[],
-    sessions: StudySession[],
+    records: StudyRecord[],
     state: CycleState | undefined
   ): CyclePosition | null {
-    return this.advanceFromRecords(
-      subjects,
-      resources,
-      sessions.flatMap((session) => session.records),
-      state?.currentSubjectId
-    );
-  }
-
-  /**
-   * Advances the cycle once per leading record that matches the consecutive
-   * recommendation, stopping at the first record that is incomplete or does
-   * not match. `priorSessions` must exclude the session being saved; each
-   * matched record is folded into the progress baseline before the next
-   * recommendation is computed.
-   */
-  advanceForCompletedRecords(
-    subjects: Subject[],
-    resources: Resource[],
-    priorSessions: StudySession[],
-    state: CycleState | undefined,
-    records: StudyRecord[]
-  ): { position: CyclePosition; advancements: number } {
-    const effectiveRecords = priorSessions.flatMap((session) => session.records);
-    let position = this.recommendationFromRecords(subjects, resources, effectiveRecords, state);
-    let advancements = 0;
-
-    for (const record of records) {
-      if (!record.completed) {
-        break;
-      }
-      if (position.subjectId === null || record.subjectId !== position.subjectId) {
-        break;
-      }
-      if ((record.resourceId ?? null) !== position.resourceId) {
-        break;
-      }
-      effectiveRecords.push(record);
-      const next = this.advanceFromRecords(
-        subjects,
-        resources,
-        effectiveRecords,
-        position.subjectId
-      );
-      if (!next) {
-        break;
-      }
-      position = next;
-      advancements += 1;
-    }
-
-    return { position, advancements };
+    return this.advanceFromRecords(subjects, resources, records, state?.currentSubjectId);
   }
 }

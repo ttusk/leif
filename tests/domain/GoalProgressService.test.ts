@@ -3,7 +3,6 @@ import { ImportedProgress } from "@/domain/entities/ImportedProgress";
 import { Resource } from "@/domain/entities/Resource";
 import { ResourceGoal } from "@/domain/entities/ResourceGoal";
 import { StudyRecord } from "@/domain/entities/StudyRecord";
-import { StudySession } from "@/domain/entities/StudySession";
 import { GoalProgressService } from "@/domain/services/GoalProgressService";
 import { GoalUnit } from "@/domain/types/GoalUnit";
 
@@ -37,7 +36,9 @@ const buildRecord = (overrides: {
 }): StudyRecord =>
   new StudyRecord(
     overrides.id ?? `record-${Math.random().toString(36).slice(2, 9)}`,
-    "leitura",
+    "contest-1",
+    "2026-07-27",
+    "subject-1",
     overrides.resourceId,
     undefined,
     overrides.quantity,
@@ -45,37 +46,25 @@ const buildRecord = (overrides: {
     overrides.correctAnswers
   );
 
-const sessionOf = (...records: StudyRecord[]): StudySession =>
-  new StudySession(
-    `session-${Math.random().toString(36).slice(2, 9)}`,
-    "contest-1",
-    "2026-07-27",
-    records
-  );
-
 describe("GoalProgressService", () => {
   it("aggregates only records whose unit matches the resource goal", () => {
     const resource = buildResource({ goal: new ResourceGoal(100, GoalUnit.PAGINAS) });
-    const sessions = [
-      sessionOf(
-        buildRecord({ resourceId: "resource-1", quantity: 30, unit: GoalUnit.PAGINAS }),
-        buildRecord({ resourceId: "resource-1", quantity: 50, unit: GoalUnit.QUESTOES })
-      ),
-      sessionOf(buildRecord({ resourceId: "resource-1", quantity: 25, unit: GoalUnit.PAGINAS })),
-      sessionOf(buildRecord({ resourceId: "resource-2", quantity: 90, unit: GoalUnit.PAGINAS }))
+    const records = [
+      buildRecord({ resourceId: "resource-1", quantity: 30, unit: GoalUnit.PAGINAS }),
+      buildRecord({ resourceId: "resource-1", quantity: 50, unit: GoalUnit.QUESTOES }),
+      buildRecord({ resourceId: "resource-1", quantity: 25, unit: GoalUnit.PAGINAS }),
+      buildRecord({ resourceId: "resource-2", quantity: 90, unit: GoalUnit.PAGINAS })
     ];
 
-    expect(service.progressFor(resource, sessions)).toBe(55);
+    expect(service.progressFor(resource, records)).toBe(55);
   });
 
   it("completes a goal-bearing resource when accumulated records reach the goal", () => {
     const resource = buildResource({ goal: new ResourceGoal(100, GoalUnit.PAGINAS) });
-    const below = [
-      sessionOf(buildRecord({ resourceId: "resource-1", quantity: 99, unit: GoalUnit.PAGINAS }))
-    ];
+    const below = [buildRecord({ resourceId: "resource-1", quantity: 99, unit: GoalUnit.PAGINAS })];
     const reached = [
       ...below,
-      sessionOf(buildRecord({ resourceId: "resource-1", quantity: 1, unit: GoalUnit.PAGINAS }))
+      buildRecord({ resourceId: "resource-1", quantity: 1, unit: GoalUnit.PAGINAS })
     ];
 
     expect(service.isComplete(resource, below)).toBe(false);
@@ -84,12 +73,12 @@ describe("GoalProgressService", () => {
 
   it("keeps a goal-less resource incomplete until explicitly completed", () => {
     const resource = buildResource({});
-    const sessions = [
-      sessionOf(buildRecord({ resourceId: "resource-1", quantity: 500, unit: GoalUnit.PAGINAS }))
+    const records = [
+      buildRecord({ resourceId: "resource-1", quantity: 500, unit: GoalUnit.PAGINAS })
     ];
 
-    expect(service.isComplete(resource, sessions)).toBe(false);
-    expect(service.isComplete(buildResource({ completed: true }), sessions)).toBe(true);
+    expect(service.isComplete(resource, records)).toBe(false);
+    expect(service.isComplete(buildResource({ completed: true }), records)).toBe(true);
   });
 
   it("treats explicit completion as an override even when a goal is unmet", () => {
@@ -106,24 +95,22 @@ describe("GoalProgressService", () => {
       goal: new ResourceGoal(200, GoalUnit.QUESTOES),
       baseline: new ImportedProgress(120, 96)
     });
-    const sessions = [
-      sessionOf(
-        buildRecord({
-          resourceId: "resource-1",
-          quantity: 30,
-          unit: GoalUnit.QUESTOES,
-          correctAnswers: 24
-        })
-      )
+    const records = [
+      buildRecord({
+        resourceId: "resource-1",
+        quantity: 30,
+        unit: GoalUnit.QUESTOES,
+        correctAnswers: 24
+      })
     ];
 
-    expect(service.progressFor(resource, sessions)).toBe(150);
-    expect(service.correctAnswersFor(resource, sessions)).toBe(120);
-    expect(service.isComplete(resource, sessions)).toBe(false);
+    expect(service.progressFor(resource, records)).toBe(150);
+    expect(service.correctAnswersFor(resource, records)).toBe(120);
+    expect(service.isComplete(resource, records)).toBe(false);
     expect(
       service.isComplete(resource, [
-        ...sessions,
-        sessionOf(buildRecord({ resourceId: "resource-1", quantity: 50, unit: GoalUnit.QUESTOES }))
+        ...records,
+        buildRecord({ resourceId: "resource-1", quantity: 50, unit: GoalUnit.QUESTOES })
       ])
     ).toBe(true);
   });
