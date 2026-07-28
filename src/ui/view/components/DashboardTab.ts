@@ -40,7 +40,7 @@ export class DashboardTab {
         label: "Registrar",
         onClick: async (snapshot) => {
           if (!snapshot.currentSubject) return;
-          await this.onNavigate("sessions", {
+          await this.onNavigate("records", {
             subjectId: snapshot.currentSubject.id,
             resourceId: snapshot.currentResource?.id
           });

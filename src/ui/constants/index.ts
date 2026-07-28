@@ -16,7 +16,7 @@ export const ICON_NAMES = {
   cycle: "refresh-cw",
   items: "file-text",
   topics: "book-open",
-  sessions: "clock",
+  records: "clock",
   wall: "layout-grid",
   delete: "trash-2",
   add: "plus",
@@ -33,13 +33,13 @@ export const ICON_NAMES = {
 } as const;
 
 export type LeifTabId =
-  "dashboard" | "contests" | "cycle" | "items" | "topics" | "sessions" | "wall";
+  "dashboard" | "contests" | "cycle" | "items" | "topics" | "records" | "wall";
 
-export type LeifPrimaryTabId = "dashboard" | "sessions" | "plan" | "wall";
+export type LeifPrimaryTabId = "dashboard" | "records" | "plan" | "wall";
 
 export const PRIMARY_TABS: Array<{ id: LeifPrimaryTabId; label: string }> = [
   { id: "dashboard", label: t("tab.dashboard") },
-  { id: "sessions", label: t("tab.sessions") },
+  { id: "records", label: t("tab.records") },
   { id: "plan", label: "Plano" },
   { id: "wall", label: t("tab.wall") }
 ];

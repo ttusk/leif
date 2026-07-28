@@ -94,10 +94,10 @@ export default class LeifPlugin extends Plugin {
     });
 
     this.addCommand({
-      id: "new-study-session",
+      id: "new-study-records",
       name: "Novos registros",
       callback: async () => {
-        await this.openLeifTab("sessions");
+        await this.openLeifTab("records");
       }
     });
 
@@ -105,7 +105,7 @@ export default class LeifPlugin extends Plugin {
       id: "register-recommended-study",
       name: "Registrar estudo recomendado",
       callback: async () => {
-        await this.openLeifTab("sessions");
+        await this.openLeifTab("records");
       }
     });
 

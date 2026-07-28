@@ -31,7 +31,7 @@ describe("LeifPlugin", () => {
     expect(registeredPlugin.commands.map((command) => command.id)).toEqual([
       "open-view",
       "open-today",
-      "new-study-session",
+      "new-study-records",
       "register-recommended-study",
       "advance-cycle-without-record",
       "validate-markdown",
@@ -65,7 +65,7 @@ describe("LeifPlugin", () => {
     await plugin.initialize();
     const commands = (plugin as unknown as Plugin).commands;
 
-    await commands.find((command) => command.id === "new-study-session")?.callback();
+    await commands.find((command) => command.id === "new-study-records")?.callback();
     const openedView = app.workspace.leaves.find(
       (leaf) => leaf.view?.getDisplayText() === "Leif"
     )?.view;

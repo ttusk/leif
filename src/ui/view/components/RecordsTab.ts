@@ -32,10 +32,9 @@ interface CycleUndoState {
 }
 
 /**
- * Records tab. The historical class name is kept to avoid changing view
- * composition, but every saved StudyRecord is independent.
+ * Records tab. Every saved StudyRecord is an independent historical fact.
  */
-export class SessionsTab {
+export class RecordsTab {
   private readonly registerRecords: RegisterStudyRecordsUseCase;
   private readonly advanceCycle: AdvanceCycleUseCase;
   private readonly updateRecord: UpdateStudyRecordUseCase;

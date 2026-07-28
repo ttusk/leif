@@ -15,7 +15,7 @@ const ptBR = {
   "tab.cycle": "Matérias",
   "tab.items": "Recursos",
   "tab.topics": "Edital",
-  "tab.sessions": "Registros",
+  "tab.records": "Registros",
   "tab.wall": "Mural",
 
   "action.cancel": "Cancelar",

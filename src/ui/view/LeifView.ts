@@ -8,7 +8,7 @@ import { ContestsTab } from "@/ui/view/components/ContestsTab";
 import { CycleTab } from "@/ui/view/components/CycleTab";
 import { DashboardTab } from "@/ui/view/components/DashboardTab";
 import { ItemsTab } from "@/ui/view/components/ItemsTab";
-import { SessionsTab } from "@/ui/view/components/SessionsTab";
+import { RecordsTab } from "@/ui/view/components/RecordsTab";
 import { TopicsTab } from "@/ui/view/components/TopicsTab";
 import { WallTab } from "@/ui/view/components/WallTab";
 import { LEIF_ICON, LEIF_VIEW_TYPE } from "@/ui/view/registerLeifView";
@@ -42,7 +42,7 @@ export class LeifView extends ItemView {
   private readonly cycleTab: CycleTab;
   private readonly itemsTab: ItemsTab;
   private readonly topicsTab: TopicsTab;
-  private readonly sessionsTab: SessionsTab;
+  private readonly recordsTab: RecordsTab;
   private readonly wallTab: WallTab;
   private readonly setActiveContestUseCase: SetActiveContestUseCase;
 
@@ -52,8 +52,8 @@ export class LeifView extends ItemView {
   ) {
     super(leaf);
     this.dashboardTab = new DashboardTab(dataStore, (tabId, registration) => {
-      if (tabId === "sessions" && registration) {
-        this.sessionsTab.startRecommendedStudy(registration);
+      if (tabId === "records" && registration) {
+        this.recordsTab.startRecommendedStudy(registration);
       }
       return this.selectTab(tabId);
     });
@@ -61,7 +61,7 @@ export class LeifView extends ItemView {
     this.cycleTab = new CycleTab(dataStore, () => this.refresh());
     this.itemsTab = new ItemsTab(this.app, dataStore, () => this.refresh());
     this.topicsTab = new TopicsTab(this.app, dataStore, () => this.refresh());
-    this.sessionsTab = new SessionsTab(this.app, dataStore, () => this.refresh());
+    this.recordsTab = new RecordsTab(this.app, dataStore, () => this.refresh());
     this.wallTab = new WallTab(this.app, dataStore, () => this.refresh());
     this.setActiveContestUseCase = new SetActiveContestUseCase(
       dataStore,
@@ -421,8 +421,8 @@ export class LeifView extends ItemView {
       case "topics":
         await this.topicsTab.render(container, data);
         break;
-      case "sessions":
-        await this.sessionsTab.render(container, data);
+      case "records":
+        await this.recordsTab.render(container, data);
         break;
       case "wall":
         await this.wallTab.render(container, data);
