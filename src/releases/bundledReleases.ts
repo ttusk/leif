@@ -2,6 +2,16 @@ import type { BundledReleaseNote } from "@/application/services/ChangelogService
 
 export const BUNDLED_RELEASES: readonly BundledReleaseNote[] = [
   {
+    version: "3.0.5",
+    title: "Leif 3.0.5",
+    body: `## Melhorado
+
+- O histórico agora mostra a data em cada registro, sem a coluna de horário, e calcula questões no formato “80% (8/10)”.
+- Unidades e atividades conhecidas agora aparecem com rótulos corretos em português, sem alterar os valores salvos no Markdown.
+- O formulário de registro foi reorganizado em uma grade responsiva mais curta, com as ações reunidas no final.`,
+    githubUrl: "https://github.com/ttusk/leif/releases/tag/3.0.5"
+  },
+  {
     version: "3.0.4",
     title: "Leif 3.0.4",
     body: `## Corrigido

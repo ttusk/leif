@@ -4,6 +4,14 @@ Todas as mudanças notáveis do Leif são documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [3.0.5] - 2026-07-28
+
+### Melhorado
+
+- O histórico agora mostra a data em cada registro, sem a coluna de horário, e calcula questões no formato “80% (8/10)”.
+- Unidades e atividades conhecidas agora aparecem com rótulos corretos em português, sem alterar os valores salvos no Markdown.
+- O formulário de registro foi reorganizado em uma grade responsiva mais curta, com as ações reunidas no final.
+
 ## [3.0.4] - 2026-07-28
 
 ### Corrigido
