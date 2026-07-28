@@ -59,6 +59,12 @@ export class ObsidianMarkdownFileStore implements MarkdownFileStore {
     await this.vault.adapter.remove(normalized);
   }
 
+  async removeEmptyFolders(root: string): Promise<void> {
+    const normalized = normalizePath(root);
+    if (!(await this.vault.adapter.exists(normalized))) return;
+    await this.removeEmptyFolderTree(normalized);
+  }
+
   private async ensureParentFolder(path: string): Promise<void> {
     const segments = path.split("/").slice(0, -1);
     let current = "";
@@ -71,5 +77,16 @@ export class ObsidianMarkdownFileStore implements MarkdownFileStore {
         if (!(await this.vault.adapter.exists(current))) throw error;
       }
     }
+  }
+
+  private async removeEmptyFolderTree(path: string): Promise<boolean> {
+    const listed = await this.vault.adapter.list(path);
+    for (const folder of listed.folders) {
+      await this.removeEmptyFolderTree(folder);
+    }
+    const remaining = await this.vault.adapter.list(path);
+    if (remaining.files.length > 0 || remaining.folders.length > 0) return false;
+    await this.vault.adapter.rmdir(path, false);
+    return true;
   }
 }

@@ -369,6 +369,15 @@ export class Schema2PluginDataStore implements PluginDataStorePort {
       }
       const migrated = Schema2DomainCodec.decode(Schema2WorkspaceIndex.build(migratedFiles));
       assertMigratedStudyDataMatches(data, migrated);
+      const legacySessionRoots = uniqueSorted(
+        files.flatMap((file) => {
+          const marker = file.path.indexOf("/sessoes/");
+          return marker >= 0 ? [file.path.slice(0, marker + "/sessoes".length)] : [];
+        })
+      );
+      for (const root of legacySessionRoots) {
+        await this.markdownStore.removeEmptyFolders?.(root).catch(() => undefined);
+      }
 
       const completedAt = new Date().toISOString();
       const receipt = buildMigrationReceipt(

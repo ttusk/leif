@@ -5,4 +5,5 @@ export interface MarkdownFileStore {
   list(prefix: string): Promise<string[]>;
   move(source: string, destination: string): Promise<void>;
   remove(path: string): Promise<void>;
+  removeEmptyFolders?(root: string): Promise<void>;
 }
