@@ -355,7 +355,7 @@ function isFreshInstall(data: LeifPluginData): boolean {
     data.subjects.length === 0 &&
     data.topics.length === 0 &&
     data.resources.length === 0 &&
-    data.studySessions.length === 0
+    data.studyRecords.length === 0
   );
 }
 

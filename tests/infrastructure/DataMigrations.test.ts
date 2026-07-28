@@ -61,7 +61,7 @@ describe("DataMigrationService", () => {
           topicIds: []
         }
       ] as never
-    });
+    } as never);
 
     expect(migrated.contests[0].mural.notes).toContain("Edital publicado");
     expect(migrated.contests[0].mural.notes).toContain("[Edital](https://example.com/edital)");

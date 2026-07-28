@@ -42,7 +42,7 @@ describe("v1 upgrade compatibility", () => {
     expect(loaded.cycleStates).toEqual([]);
     expect(loaded.topics).toEqual([]);
     expect(loaded.resources).toEqual([]);
-    expect(loaded.studySessions).toEqual([]);
+    expect(loaded.studyRecords).toEqual([]);
   });
 
   it("normalizes duplicate zero-based orders independently and keeps all concursos", async () => {
@@ -82,9 +82,11 @@ describe("v1 upgrade compatibility", () => {
   it("loads and persists a large v1 study history without losing records", async () => {
     const large = createDefaultLeifPluginData() as unknown as LeifPluginData & {
       studyItems: unknown[];
+      studySessions: unknown[];
     };
     delete large.runtimeState;
     large.schemaVersion = 1;
+    large.studySessions = [];
     large.contests.push({
       id: "contest-large",
       name: "Concurso grande",
@@ -117,10 +119,10 @@ describe("v1 upgrade compatibility", () => {
     const adapter = new MemoryAdapter(large);
     const store = new PluginDataStore(adapter);
 
-    expect((await store.load()).studySessions).toHaveLength(2_000);
+    expect((await store.load()).studyRecords).toHaveLength(2_000);
     await store.mutate((data) => {
       data.activeContestId = "contest-large";
     });
-    expect((await store.load()).studySessions).toHaveLength(2_000);
+    expect((await store.load()).studyRecords).toHaveLength(2_000);
   });
 });

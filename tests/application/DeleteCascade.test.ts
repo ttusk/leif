@@ -4,9 +4,9 @@ import { CreateContestUseCase } from "@/application/use-cases/CreateContestUseCa
 import { CreateResourceUseCase } from "@/application/use-cases/CreateResourceUseCase";
 import { CreateSubjectUseCase } from "@/application/use-cases/CreateSubjectUseCase";
 import { DeleteResourceUseCase } from "@/application/use-cases/DeleteResourceUseCase";
-import { DeleteStudySessionUseCase } from "@/application/use-cases/DeleteStudySessionUseCase";
+import { DeleteStudyRecordUseCase } from "@/application/use-cases/DeleteStudyRecordUseCase";
 import { DeleteTopicUseCase } from "@/application/use-cases/DeleteTopicUseCase";
-import { RegisterStudySessionUseCase } from "@/application/use-cases/RegisterStudySessionUseCase";
+import { RegisterStudyRecordsUseCase } from "@/application/use-cases/RegisterStudyRecordsUseCase";
 import { Resource } from "@/domain/entities/Resource";
 import { Subject } from "@/domain/entities/Subject";
 import { NotFoundError } from "@/domain/errors/DomainErrors";
@@ -37,7 +37,7 @@ describe("delete cascades", () => {
     ).rejects.toThrow(NotFoundError);
   });
 
-  it("deletes study sessions without touching study structure", async () => {
+  it("deletes study records without touching study structure", async () => {
     const { store, factory } = createTestStore();
     await new CreateContestUseCase(store, factory).execute({ id: "contest-1", name: "TRT" });
     await new CreateSubjectUseCase(store, factory).execute({
@@ -46,16 +46,15 @@ describe("delete cascades", () => {
       name: "Português",
       plannedStudyMinutes: 60
     });
-    await new RegisterStudySessionUseCase(store, factory).execute({
-      id: "session-1",
+    await new RegisterStudyRecordsUseCase(store).execute({
       contestId: "contest-1",
       date: "2026-07-27",
-      records: [{ subjectId: "subject-1" }]
+      records: [{ id: "record-1", subjectId: "subject-1" }]
     });
 
-    await new DeleteStudySessionUseCase(store).execute({ sessionId: "session-1" });
+    await new DeleteStudyRecordUseCase(store).execute({ recordId: "record-1" });
 
-    expect((await store.load()).studySessions).toHaveLength(0);
+    expect((await store.load()).studyRecords).toHaveLength(0);
     expect((await store.load()).subjects).toHaveLength(1);
   });
 

@@ -6,7 +6,7 @@ import {
   CreateResourceValidator,
   CreateSubjectValidator,
   CreateTopicValidator,
-  RegisterStudySessionValidator,
+  RegisterStudyRecordsValidator,
   UpdateContestMuralValidator
 } from "@/application/validation/InputValidators";
 import { GoalUnit } from "@/domain/types/GoalUnit";
@@ -45,16 +45,16 @@ describe("input validators", () => {
     ).toBe(true);
   });
 
-  it("rejects empty sessions and invalid record units", () => {
+  it("rejects empty record batches and invalid record units", () => {
     expect(
-      new RegisterStudySessionValidator().validate({
+      new RegisterStudyRecordsValidator().validate({
         contestId: "contest-1",
         date: "2026-07-27",
         records: []
       }).valid
     ).toBe(false);
     expect(
-      new RegisterStudySessionValidator().validate({
+      new RegisterStudyRecordsValidator().validate({
         contestId: "contest-1",
         date: "2026-07-27",
         records: [{ subjectId: "subject-1", unit: "foo" as GoalUnit }]
