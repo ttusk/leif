@@ -217,22 +217,30 @@ function projectLegacyData(data: LegacyData): LeifPluginData {
 
     if (topic.questionNotebook) {
       const notebook = topic.questionNotebook;
-      const resourceId = notebook.id ?? `${topic.id}-notebook`;
+      const baseResourceId = notebook.id ?? `${topic.id}-notebook`;
+      const resourceId = uniqueResourceIdForSubject(resources, baseResourceId, topic.subjectId);
       notebookResourceByTopic.set(topic.id, resourceId);
-      resources.push(
-        new Resource(
-          resourceId,
-          topic.subjectId,
-          notebook.name,
-          nextResourceOrder(resources, topic.subjectId),
-          "questoes",
-          undefined,
-          false,
-          [topic.id],
-          [new ResourceAccess(notebook.name, notebook.url, notebook.notes)],
-          new ImportedProgress(notebook.solvedQuestions ?? 0, notebook.correctAnswers ?? 0)
-        )
+      const existing = resources.find(
+        (resource) => resource.id === resourceId && resource.subjectId === topic.subjectId
       );
+      if (existing) {
+        if (!existing.topicIds.includes(topic.id)) existing.topicIds.push(topic.id);
+      } else {
+        resources.push(
+          new Resource(
+            resourceId,
+            topic.subjectId,
+            notebook.name,
+            nextResourceOrder(resources, topic.subjectId),
+            "questoes",
+            undefined,
+            false,
+            [topic.id],
+            [new ResourceAccess(notebook.name, notebook.url, notebook.notes)],
+            new ImportedProgress(notebook.solvedQuestions ?? 0, notebook.correctAnswers ?? 0)
+          )
+        );
+      }
       appendSubjectResource(subjects, topic.subjectId, resourceId);
     }
 
@@ -419,6 +427,24 @@ function nextResourceOrder(resources: Resource[], subjectId: string): number {
       .filter((resource) => resource.subjectId === subjectId)
       .reduce((max, resource) => Math.max(max, resource.order), 0) + 1
   );
+}
+
+function uniqueResourceIdForSubject(
+  resources: readonly Resource[],
+  desiredId: string,
+  subjectId: string
+): string {
+  const existing = resources.find((resource) => resource.id === desiredId);
+  if (!existing || existing.subjectId === subjectId) return desiredId;
+
+  const subjectScopedId = `${desiredId}-${subjectId}`;
+  let candidate = subjectScopedId;
+  let suffix = 2;
+  while (resources.some((resource) => resource.id === candidate)) {
+    candidate = `${subjectScopedId}-${suffix}`;
+    suffix += 1;
+  }
+  return candidate;
 }
 
 function collection<T>(value: T[] | undefined): T[] {

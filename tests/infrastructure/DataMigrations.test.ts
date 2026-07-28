@@ -138,6 +138,58 @@ describe("DataMigrationService", () => {
     });
   });
 
+  it("merges a shared legacy question notebook into one resource", () => {
+    const migrated = service.migrate({
+      ...createDefaultLeifPluginData(),
+      schemaVersion: 1,
+      subjects: [
+        {
+          id: "subject-1",
+          contestId: "contest-1",
+          name: "Português",
+          order: 1,
+          itemIds: [],
+          topicIds: ["topic-1", "topic-2"]
+        }
+      ] as never,
+      topics: [
+        {
+          id: "topic-1",
+          subjectId: "subject-1",
+          name: "Interpretação",
+          questionNotebook: {
+            id: "shared-notebook",
+            name: "Caderno compartilhado",
+            url: "https://example.com/notebook",
+            solvedQuestions: 20,
+            correctAnswers: 15
+          }
+        },
+        {
+          id: "topic-2",
+          subjectId: "subject-1",
+          name: "Gramática",
+          questionNotebook: {
+            id: "shared-notebook",
+            name: "Caderno compartilhado",
+            url: "https://example.com/notebook",
+            solvedQuestions: 20,
+            correctAnswers: 15
+          }
+        }
+      ] as never
+    } as never);
+
+    expect(migrated.resources).toHaveLength(1);
+    expect(migrated.resources[0]).toMatchObject({
+      id: "shared-notebook",
+      subjectId: "subject-1",
+      topicIds: ["topic-1", "topic-2"],
+      baseline: { quantity: 20, correctAnswers: 15 }
+    });
+    expect(migrated.subjects[0].resourceIds).toEqual(["shared-notebook"]);
+  });
+
   it("projects old flat study sessions into one-record session aggregates", () => {
     const migrated = service.migrate({
       ...createDefaultLeifPluginData(),
