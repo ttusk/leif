@@ -95,7 +95,7 @@ export default class LeifPlugin extends Plugin {
 
     this.addCommand({
       id: "new-study-session",
-      name: "Nova sessão de estudo",
+      name: "Novos registros",
       callback: async () => {
         await this.openLeifTab("sessions");
       }
@@ -111,7 +111,7 @@ export default class LeifPlugin extends Plugin {
 
     this.addCommand({
       id: "advance-cycle-without-record",
-      name: "Avançar ciclo sem registrar",
+      name: "Avançar recomendação",
       callback: async () => {
         await this.advanceCycleWithoutRecord();
       }
@@ -181,10 +181,10 @@ export default class LeifPlugin extends Plugin {
       await this.refreshOpenLeifViews();
       const data = await this.dataStore.load();
       const subject = data.subjects.find((entry) => entry.id === result.current.subjectId);
-      new Notice(`Ciclo avançado para ${subject?.name ?? "a próxima matéria"}.`);
+      new Notice(`Recomendação avançada para ${subject?.name ?? "a próxima matéria"}.`);
     } catch {
       await this.refreshOpenLeifViews();
-      new Notice("Não foi possível avançar o ciclo.");
+      new Notice("Não foi possível avançar a recomendação.");
     }
   }
 

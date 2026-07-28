@@ -503,7 +503,6 @@ form.leif-card,
 }
 
 .leif-progress-bar-container,
-.leif-session-progress,
 .leif-pages-cell {
   width: 100%;
   min-width: 0;
@@ -665,7 +664,7 @@ form.leif-card,
   flex: 0 0 auto;
 }
 
-.leif-session-filters {
+.leif-record-filters {
   display: grid;
   grid-template-columns: minmax(140px, 1fr) repeat(3, minmax(112px, 0.7fr));
   gap: var(--size-4-2);
@@ -674,7 +673,7 @@ form.leif-card,
   background: var(--leif-bg-muted);
 }
 
-.leif-session-feedback {
+.leif-record-feedback {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -685,20 +684,20 @@ form.leif-card,
   font-size: var(--font-ui-small);
 }
 
-.leif-session-result-editor {
+.leif-record-result-editor {
   display: flex;
   align-items: end;
   gap: var(--size-4-2);
   flex-wrap: wrap;
 }
 
-.leif-session-record-editor-list {
+.leif-record-draft-list {
   display: flex;
   flex-direction: column;
   gap: var(--size-4-2);
 }
 
-.leif-session-record-editor {
+.leif-record-fields {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--size-4-2) var(--size-4-3);
@@ -707,7 +706,7 @@ form.leif-card,
   border-block: 1px solid var(--leif-border);
 }
 
-.leif-session-record-editor > .leif-inline-actions {
+.leif-record-fields > .leif-inline-actions {
   grid-column: 1 / -1;
   justify-content: flex-end;
 }
@@ -878,22 +877,22 @@ form.leif-card,
   text-align: end;
 }
 
-.leif-session-table {
+.leif-record-table {
   min-width: 900px;
 }
 
-.leif-session-table td {
+.leif-record-table td {
   vertical-align: top;
 }
 
-.leif-session-date,
+.leif-record-date,
 .leif-resource-access-list {
   display: flex;
   flex-direction: column;
   gap: var(--size-4-1);
 }
 
-.leif-session-note,
+.leif-record-note,
 .leif-table-muted {
   color: var(--leif-text-muted);
   font-size: var(--font-ui-smaller);
@@ -1043,13 +1042,13 @@ form.leif-card,
   align-items: flex-start;
 }
 
-.leif-view.is-narrow .leif-session-filters,
+.leif-view.is-narrow .leif-record-filters,
 .leif-view.is-narrow .leif-resource-material-editor,
 .leif-view.is-narrow .leif-resource-material-form {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.leif-view.is-narrow .leif-session-record-editor {
+.leif-view.is-narrow .leif-record-fields {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -1057,8 +1056,8 @@ form.leif-card,
   padding: var(--size-4-3);
 }
 
-.leif-view.is-compact .leif-session-filters,
-.leif-view.is-compact .leif-session-record-editor,
+.leif-view.is-compact .leif-record-filters,
+.leif-view.is-compact .leif-record-fields,
 .leif-view.is-compact .leif-resource-material-editor,
 .leif-view.is-compact .leif-resource-material-form,
 .leif-view.is-compact .leif-topic-question-editor,

@@ -8,7 +8,7 @@ import { CycleState } from "@/domain/entities/CycleState";
 import { Resource } from "@/domain/entities/Resource";
 import { Subject } from "@/domain/entities/Subject";
 import { createDefaultLeifPluginData } from "@/domain/types/LeifPluginData";
-import { RegisterStudySessionUseCase } from "@/application/use-cases/RegisterStudySessionUseCase";
+import { RegisterStudyRecordsUseCase } from "@/application/use-cases/RegisterStudyRecordsUseCase";
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
 import {
   App,
@@ -43,9 +43,9 @@ describe("LeifPlugin", () => {
     expect(registeredPlugin.commands.map((command) => command.name)).toEqual([
       "Abrir painel",
       "Abrir Hoje",
-      "Nova sessão de estudo",
+      "Novos registros",
       "Registrar estudo recomendado",
-      "Avançar ciclo sem registrar",
+      "Avançar recomendação",
       "Validar Markdown",
       "Validar e sincronizar Markdown",
       "Abrir relatório de diagnósticos",
@@ -71,10 +71,10 @@ describe("LeifPlugin", () => {
     )?.view;
     if (!openedView) throw new Error("Expected Leif view to open.");
     expect(openedView.contentEl.textContent).toContain("Registros");
-    expect(openedView.contentEl.textContent).toContain("Novo registro");
+    expect(openedView.contentEl.textContent).toContain("Novos registros");
 
     await commands.find((command) => command.id === "register-recommended-study")?.callback();
-    expect(openedView.contentEl.textContent).toContain("Novo registro");
+    expect(openedView.contentEl.textContent).toContain("Novos registros");
 
     await commands.find((command) => command.id === "open-today")?.callback();
     expect(openedView.contentEl.textContent).toContain("Hoje");
@@ -82,7 +82,7 @@ describe("LeifPlugin", () => {
     expect(openedView.contentEl.textContent).toContain("Próxima:");
   });
 
-  it("advances the active cycle without recording a study session", async () => {
+  it("advances the active recommendation without recording study", async () => {
     resetRecordedNotices();
     const app = new App();
     const plugin = new LeifPlugin(app as never, { version: "2.1.1" } as never);
@@ -100,7 +100,7 @@ describe("LeifPlugin", () => {
     expect(await app.vault.adapter.read("Leif/concursos/trt/concurso.md")).toContain(
       'recurso-atual: "[[materias/direito/recursos/pdf-02/recurso]]"'
     );
-    expect(getRecordedNotices()).toEqual(["Ciclo avançado para Direito."]);
+    expect(getRecordedNotices()).toEqual(["Recomendação avançada para Direito."]);
   });
 
   it("creates a manual Markdown backup from the command palette", async () => {
@@ -359,8 +359,7 @@ describe("LeifPlugin", () => {
       const dataStore = markdownDataStore(plugin) as PluginDataStore;
       const save = vi.spyOn(dataStore, "save");
 
-      await new RegisterStudySessionUseCase(dataStore).execute({
-        id: "session-regression",
+      await new RegisterStudyRecordsUseCase(dataStore).execute({
         contestId: "contest-1",
         date: "2026-07-28",
         records: [{ id: "record-regression", subjectId: "subject-1", completed: true }]
@@ -373,9 +372,8 @@ describe("LeifPlugin", () => {
       }
 
       const data = await dataStore.load();
-      expect(data.studySessions).toHaveLength(1);
-      expect(data.studySessions[0].records).toHaveLength(1);
-      expect(data.studySessions[0].records[0].id).toBe("record-regression");
+      expect(data.studyRecords).toHaveLength(1);
+      expect(data.studyRecords[0].id).toBe("record-regression");
     } finally {
       vi.useRealTimers();
     }

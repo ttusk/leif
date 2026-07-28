@@ -69,13 +69,13 @@ describe("Leif Native visual system", () => {
     const styles = readStyles();
 
     expect(styles).toMatch(
-      /\.leif-session-record-editor\s*{[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\);/s
+      /\.leif-record-fields\s*{[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\);/s
     );
     expect(styles).toMatch(
-      /\.leif-view\.is-narrow[\s\S]*?\.leif-session-record-editor\s*{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/s
+      /\.leif-view\.is-narrow[\s\S]*?\.leif-record-fields\s*{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/s
     );
     expect(styles).toMatch(
-      /\.leif-view\.is-compact[\s\S]*?\.leif-session-record-editor[\s\S]*?grid-template-columns:\s*1fr;/s
+      /\.leif-view\.is-compact[\s\S]*?\.leif-record-fields[\s\S]*?grid-template-columns:\s*1fr;/s
     );
   });
 

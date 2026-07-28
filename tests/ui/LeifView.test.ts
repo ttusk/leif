@@ -12,7 +12,6 @@ import { CycleState } from "@/domain/entities/CycleState";
 import { Resource } from "@/domain/entities/Resource";
 import { ResourceAccess } from "@/domain/entities/ResourceAccess";
 import { StudyRecord } from "@/domain/entities/StudyRecord";
-import { StudySession } from "@/domain/entities/StudySession";
 import { Topic } from "@/domain/entities/Topic";
 import { GoalUnit } from "@/domain/types/GoalUnit";
 import type { LeifPluginData } from "@/domain/types/LeifPluginData";
@@ -123,58 +122,46 @@ async function seedUiCycleData(dataStore: PluginDataStore): Promise<void> {
   });
 }
 
-async function seedUiSessionHistory(dataStore: PluginDataStore): Promise<void> {
+async function seedUiRecordHistory(dataStore: PluginDataStore): Promise<void> {
   await seedUiCycleData(dataStore);
   await dataStore.mutate((draft) => {
-    draft.studySessions.push(
-      new StudySession(
-        "session-1",
+    draft.studyRecords.push(
+      new StudyRecord(
+        "record-1",
         "contest-1",
         "2026-07-27",
-        [
-          new StudyRecord(
-            "record-1",
-            "subject-1",
-            "resource-1",
-            undefined,
-            12,
-            GoalUnit.PAGINAS,
-            undefined,
-            true
-          ),
-          new StudyRecord(
-            "record-2",
-            "subject-2",
-            "resource-2",
-            "topic-2",
-            20,
-            GoalUnit.QUESTOES,
-            16,
-            true
-          )
-        ],
-        "19:00",
-        "20:30",
-        "Bloco noturno"
+        "subject-1",
+        "resource-1",
+        undefined,
+        12,
+        GoalUnit.PAGINAS,
+        undefined,
+        true,
+        "Leitura noturna"
       ),
-      new StudySession(
-        "session-2",
+      new StudyRecord(
+        "record-2",
+        "contest-1",
+        "2026-07-27",
+        "subject-2",
+        "resource-2",
+        "topic-2",
+        20,
+        GoalUnit.QUESTOES,
+        16,
+        true
+      ),
+      new StudyRecord(
+        "record-3",
         "contest-1",
         "2026-07-20",
-        [
-          new StudyRecord(
-            "record-3",
-            "subject-1",
-            "resource-1",
-            undefined,
-            30,
-            GoalUnit.MINUTOS,
-            undefined,
-            true
-          )
-        ],
-        "08:00",
-        "08:30",
+        "subject-1",
+        "resource-1",
+        undefined,
+        30,
+        GoalUnit.MINUTOS,
+        undefined,
+        true,
         "Revisão curta"
       )
     );
@@ -329,7 +316,7 @@ describe("LeifView", () => {
     expect(view.contentEl.querySelector(".leif-cycle-thread")).toBeNull();
   });
 
-  it("advances to the next cycle subject from Registros without creating a session", async () => {
+  it("advances the visual recommendation without creating a record", async () => {
     const dataStore = new InMemoryPluginDataStore();
     await seedUiCycleData(dataStore);
 
@@ -349,26 +336,26 @@ describe("LeifView", () => {
       const data = await dataStore.load();
       expect(data.cycleStates[0]?.currentSubjectId).toBe("subject-2");
       expect(data.cycleStates[0]?.currentResourceId).toBe("resource-2");
-      expect(data.studySessions).toHaveLength(0);
+      expect(data.studyRecords).toHaveLength(0);
       expect(
         view.contentEl.querySelector(".leif-cycle-recommendation-summary")?.textContent
       ).toContain("Direito Constitucional");
-      expect(view.contentEl.querySelector(".leif-session-feedback")?.textContent).toContain(
-        "Ciclo avançado."
+      expect(view.contentEl.querySelector(".leif-record-feedback")?.textContent).toContain(
+        "Recomendação avançada."
       );
     });
   });
 
   it("renders the subject summary as a compact table", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiSessionHistory(dataStore);
+    await seedUiRecordHistory(dataStore);
 
     const { view } = await openLeifView(dataStore);
     const table = view.contentEl.querySelector(".leif-summary-table");
 
     expect(Array.from(table?.querySelectorAll("th") ?? []).map((th) => th.textContent)).toEqual([
       "Matéria",
-      "Sessões",
+      "Registros",
       "Páginas",
       "Questões"
     ]);
@@ -380,14 +367,14 @@ describe("LeifView", () => {
 
   it("renders Registros as a compact table with one row per study record", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiSessionHistory(dataStore);
+    await seedUiRecordHistory(dataStore);
 
     const { view } = await openLeifView(dataStore);
     await (view as unknown as { openTab: (tabId: "sessions") => Promise<void> }).openTab(
       "sessions"
     );
 
-    const table = view.contentEl.querySelector(".leif-session-table");
+    const table = view.contentEl.querySelector(".leif-record-table");
     expect(Array.from(table?.querySelectorAll("th") ?? []).map((th) => th.textContent)).toEqual([
       "Data",
       "Matéria",
@@ -397,24 +384,22 @@ describe("LeifView", () => {
       "Ações"
     ]);
     expect(view.contentEl.querySelector("[data-record-editor-activity]")).toBeNull();
-    expect(view.contentEl.querySelector("[data-session-filter-activity]")).toBeNull();
-    const session = table?.querySelector("[data-session-id='session-1']");
-    const records = Array.from(
-      table?.querySelectorAll("[data-session-id='session-1'].leif-session-record") ?? []
-    );
+    expect(view.contentEl.querySelector("[data-record-filter-activity]")).toBeNull();
+    const records = Array.from(table?.querySelectorAll(".leif-study-record") ?? []);
+    const reading = table?.querySelector("[data-record-id='record-1']");
+    const questions = table?.querySelector("[data-record-id='record-2']");
 
-    expect(session?.textContent).toContain("27/07/2026");
-    expect(session?.textContent).toContain("Bloco noturno");
-    expect(records).toHaveLength(2);
-    expect(records[1]?.textContent).toContain("27/07/2026");
-    expect(records[0]?.textContent).toContain("Português");
-    expect(records[0]?.textContent).toContain("PDF 01");
-    expect(records[0]?.textContent).toContain("12 páginas");
-    expect(records[1]?.textContent).toContain("Direito Constitucional");
-    expect(records[1]?.textContent).toContain("Controle de constitucionalidade");
-    expect(records[1]?.textContent).toContain("Controle concentrado");
-    expect(records[1]?.textContent).toContain("80% (16/20)");
-    expect(session?.querySelectorAll(".leif-menu-trigger")).toHaveLength(1);
+    expect(records).toHaveLength(3);
+    expect(reading?.textContent).toContain("27/07/2026");
+    expect(reading?.textContent).toContain("Leitura noturna");
+    expect(reading?.textContent).toContain("Português");
+    expect(reading?.textContent).toContain("PDF 01");
+    expect(reading?.textContent).toContain("12 páginas");
+    expect(questions?.textContent).toContain("Direito Constitucional");
+    expect(questions?.textContent).toContain("Controle de constitucionalidade");
+    expect(questions?.textContent).toContain("Controle concentrado");
+    expect(questions?.textContent).toContain("80% (16/20)");
+    expect(reading?.querySelectorAll(".leif-menu-trigger")).toHaveLength(1);
 
     const unit = view.contentEl.querySelector("[data-record-editor-unit]") as HTMLSelectElement;
     expect(Array.from(unit.options).map((option) => [option.value, option.textContent])).toEqual([
@@ -425,40 +410,36 @@ describe("LeifView", () => {
     ]);
   });
 
-  it("opens a native session menu with session-level actions", async () => {
+  it("opens a native menu with record-level actions", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiSessionHistory(dataStore);
+    await seedUiRecordHistory(dataStore);
 
     const { view } = await openLeifView(dataStore);
     await (view as unknown as { openTab: (tabId: "sessions") => Promise<void> }).openTab(
       "sessions"
     );
     const menuTrigger = view.contentEl.querySelector(
-      "[data-session-id='session-1'] .leif-menu-trigger"
+      "[data-record-id='record-1'] .leif-menu-trigger"
     );
     menuTrigger?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
     const [menu] = getShownMenus();
     expect(menu?.useNativeMenu).toBe(true);
-    expect(menu?.items.map((item) => item.title)).toEqual([
-      "Editar sessão",
-      "Adicionar registro",
-      "Excluir sessão"
-    ]);
+    expect(menu?.items.map((item) => item.title)).toEqual(["Editar registro", "Excluir registro"]);
   });
 
-  it("keeps a session when its targeted deletion confirmation is cancelled", async () => {
+  it("keeps a record when its targeted deletion confirmation is cancelled", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiSessionHistory(dataStore);
+    await seedUiRecordHistory(dataStore);
 
     const { view } = await openLeifView(dataStore);
     await (view as unknown as { openTab: (tabId: "sessions") => Promise<void> }).openTab(
       "sessions"
     );
     view.contentEl
-      .querySelector("[data-session-id='session-1'] .leif-menu-trigger")
+      .querySelector("[data-record-id='record-1'] .leif-menu-trigger")
       ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
-    await (getShownMenus()[0]?.items[2]?.callback?.(new MouseEvent("click")) as Promise<void>);
+    await (getShownMenus()[0]?.items[1]?.callback?.(new MouseEvent("click")) as Promise<void>);
 
     const [modal] = getOpenModals();
     expect(modal?.contentEl.textContent).toContain("27/07/2026");
@@ -466,126 +447,119 @@ describe("LeifView", () => {
       .querySelector("[data-confirmation-cancel]")
       ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
 
-    expect((await dataStore.load()).studySessions).toHaveLength(2);
+    expect((await dataStore.load()).studyRecords).toHaveLength(3);
   });
 
-  it("edits a grouped session and saves all records together", async () => {
+  it("deletes only the selected record after confirmation", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiSessionHistory(dataStore);
+    await seedUiRecordHistory(dataStore);
 
     const { view } = await openLeifView(dataStore);
     await (view as unknown as { openTab: (tabId: "sessions") => Promise<void> }).openTab(
       "sessions"
     );
     view.contentEl
-      .querySelector("[data-session-id='session-1'] .leif-menu-trigger")
+      .querySelector("[data-record-id='record-1'] .leif-menu-trigger")
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+    await (getShownMenus()[0]?.items[1]?.callback?.(new MouseEvent("click")) as Promise<void>);
+
+    getOpenModals()[0]
+      ?.contentEl.querySelector("[data-confirmation-confirm]")
+      ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    await vi.waitFor(async () => {
+      expect((await dataStore.load()).studyRecords.map((record) => record.id)).toEqual([
+        "record-2",
+        "record-3"
+      ]);
+      expect(view.contentEl.querySelector("[data-record-id='record-1']")).toBeNull();
+      expect(view.contentEl.querySelector("[data-record-id='record-2']")).not.toBeNull();
+    });
+  });
+
+  it("edits one record without changing neighboring records", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiRecordHistory(dataStore);
+
+    const { view } = await openLeifView(dataStore);
+    await (view as unknown as { openTab: (tabId: "sessions") => Promise<void> }).openTab(
+      "sessions"
+    );
+    view.contentEl
+      .querySelector("[data-record-id='record-1'] .leif-menu-trigger")
       ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await (getShownMenus()[0]?.items[0]?.callback?.(new MouseEvent("click")) as Promise<void>);
 
     await vi.waitFor(() => {
-      expect(view.contentEl.querySelector(".leif-session-editor")?.textContent).toContain(
-        "Editar sessão"
+      expect(view.contentEl.querySelector(".leif-record-editor-form")?.textContent).toContain(
+        "Editar registro"
       );
     });
-    const editor = view.contentEl.querySelector(".leif-session-editor");
-    expect(editor?.textContent).toContain("Editar sessão");
-    const date = editor?.querySelector("[data-session-editor-date]") as HTMLInputElement;
-    const notes = editor?.querySelector("[data-session-editor-notes]") as HTMLTextAreaElement;
-    expect(editor?.querySelector("[data-session-editor-start]")).toBeNull();
-    expect(editor?.querySelector("[data-session-editor-end]")).toBeNull();
+    const editor = view.contentEl.querySelector(".leif-record-editor-form");
+    const date = editor?.querySelector("[data-record-edit-date]") as HTMLInputElement;
+    const notes = editor?.querySelector("[data-record-edit-notes]") as HTMLTextAreaElement;
     date.value = "2026-07-28";
-    notes.value = "Bloco ajustado";
+    notes.value = "Leitura ajustada";
+    const quantity = editor?.querySelector("[data-record-editor-quantity]") as HTMLInputElement;
+    quantity.value = "18";
 
-    const firstRecord = editor?.querySelector("[data-record-editor-index='0']");
-    const firstQuantity = firstRecord?.querySelector(
-      "[data-record-editor-quantity]"
-    ) as HTMLInputElement;
-    firstQuantity.value = "18";
-
-    (
-      editor?.querySelector("[data-record-editor-index='1'] [data-record-editor-remove]") as
-        HTMLButtonElement | undefined
-    )?.click();
-    (view.contentEl.querySelector("[data-session-editor-add-record]") as HTMLButtonElement).click();
-    const addedRecord = view.contentEl.querySelector("[data-record-editor-index='1']");
-    const addedSubject = addedRecord?.querySelector(
-      "[data-record-editor-subject]"
-    ) as HTMLSelectElement;
-    const addedResource = addedRecord?.querySelector(
-      "[data-record-editor-resource]"
-    ) as HTMLSelectElement;
-    const addedQuantity = addedRecord?.querySelector(
-      "[data-record-editor-quantity]"
-    ) as HTMLInputElement;
-    const addedCorrect = addedRecord?.querySelector(
-      "[data-record-editor-correct]"
-    ) as HTMLInputElement;
-    addedSubject.value = "subject-2";
-    addedSubject.dispatchEvent(new Event("change", { bubbles: true }));
-    addedResource.value = "resource-2";
-    addedQuantity.value = "30";
-    addedCorrect.value = "24";
-
-    (view.contentEl.querySelector("[data-session-editor-save]") as HTMLButtonElement).click();
+    (view.contentEl.querySelector("[data-record-edit-save]") as HTMLButtonElement).click();
 
     await vi.waitFor(async () => {
       const data = await dataStore.load();
-      expect(data.studySessions[0].date).toBe("2026-07-28");
-      expect(data.studySessions[0].startTime).toBe("19:00");
-      expect(data.studySessions[0].endTime).toBe("20:30");
-      expect(data.studySessions[0].notes).toBe("Bloco ajustado");
-      expect(data.studySessions[0].records).toHaveLength(2);
-      expect(data.studySessions[0].records[0].id).toBe("record-1");
-      expect(data.studySessions[0].records[0].quantity).toBe(18);
-      expect(data.studySessions[0].records[1].subjectId).toBe("subject-2");
-      expect(data.studySessions[0].records[1].resourceId).toBe("resource-2");
-      expect(data.studySessions[0].records[1].correctAnswers).toBe(24);
+      expect(data.studyRecords.find((record) => record.id === "record-1")).toMatchObject({
+        date: "2026-07-28",
+        notes: "Leitura ajustada",
+        quantity: 18
+      });
+      expect(data.studyRecords.find((record) => record.id === "record-2")).toMatchObject({
+        date: "2026-07-27",
+        quantity: 20,
+        correctAnswers: 16
+      });
     });
-    expect(view.contentEl.querySelector(".leif-session-editor")).toBeNull();
-    expect(view.contentEl.textContent).toContain("Bloco ajustado");
+    expect(view.contentEl.querySelector(".leif-record-editor-form")).toBeNull();
+    expect(view.contentEl.textContent).toContain("Leitura ajustada");
   });
 
-  it("keeps the session editor open and unchanged when save validation fails", async () => {
+  it("keeps the record editor open and unchanged when save validation fails", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiSessionHistory(dataStore);
+    await seedUiRecordHistory(dataStore);
 
     const { view } = await openLeifView(dataStore);
     await (view as unknown as { openTab: (tabId: "sessions") => Promise<void> }).openTab(
       "sessions"
     );
     view.contentEl
-      .querySelector("[data-session-id='session-1'] .leif-menu-trigger")
+      .querySelector("[data-record-id='record-1'] .leif-menu-trigger")
       ?.dispatchEvent(new MouseEvent("click", { bubbles: true }));
     await (getShownMenus()[0]?.items[0]?.callback?.(new MouseEvent("click")) as Promise<void>);
     await vi.waitFor(() => {
-      expect(view.contentEl.querySelector(".leif-session-editor")).not.toBeNull();
+      expect(view.contentEl.querySelector(".leif-record-editor-form")).not.toBeNull();
     });
 
-    const editor = view.contentEl.querySelector(".leif-session-editor");
-    const firstRecord = editor?.querySelector("[data-record-editor-index='0']");
-    const quantity = firstRecord?.querySelector(
-      "[data-record-editor-quantity]"
-    ) as HTMLInputElement;
-    const unit = firstRecord?.querySelector("[data-record-editor-unit]") as HTMLSelectElement;
+    const editor = view.contentEl.querySelector(".leif-record-editor-form");
+    const quantity = editor?.querySelector("[data-record-editor-quantity]") as HTMLInputElement;
+    const unit = editor?.querySelector("[data-record-editor-unit]") as HTMLSelectElement;
     quantity.value = "12";
     unit.value = "";
 
-    (view.contentEl.querySelector("[data-session-editor-save]") as HTMLButtonElement).click();
+    (view.contentEl.querySelector("[data-record-edit-save]") as HTMLButtonElement).click();
 
     await vi.waitFor(() => {
-      const error = view.contentEl.querySelector(".leif-session-editor-error");
+      const error = view.contentEl.querySelector(".leif-record-editor-error");
       expect(error?.getAttribute("role")).toBe("alert");
-      expect(error?.textContent).toContain("Não foi possível salvar a sessão");
+      expect(error?.textContent).toContain("Não foi possível salvar o registro");
     });
-    expect(view.contentEl.querySelector(".leif-session-editor")).not.toBeNull();
+    expect(view.contentEl.querySelector(".leif-record-editor-form")).not.toBeNull();
     const data = await dataStore.load();
-    expect(data.studySessions[0].records[0].unit).toBe(GoalUnit.PAGINAS);
-    expect(data.studySessions[0].date).toBe("2026-07-27");
+    expect(data.studyRecords[0].unit).toBe(GoalUnit.PAGINAS);
+    expect(data.studyRecords[0].date).toBe("2026-07-27");
   });
 
-  it("filters grouped Registros by matéria and date range", async () => {
+  it("filters independent Registros by matéria and date range", async () => {
     const dataStore = new InMemoryPluginDataStore();
-    await seedUiSessionHistory(dataStore);
+    await seedUiRecordHistory(dataStore);
 
     const { view } = await openLeifView(dataStore);
     await (view as unknown as { openTab: (tabId: "sessions") => Promise<void> }).openTab(
@@ -593,27 +567,26 @@ describe("LeifView", () => {
     );
 
     const subject = view.contentEl.querySelector(
-      "[data-session-filter-subject]"
+      "[data-record-filter-subject]"
     ) as HTMLSelectElement;
-    const from = view.contentEl.querySelector("[data-session-filter-from]") as HTMLInputElement;
-    const to = view.contentEl.querySelector("[data-session-filter-to]") as HTMLInputElement;
+    const from = view.contentEl.querySelector("[data-record-filter-from]") as HTMLInputElement;
+    const to = view.contentEl.querySelector("[data-record-filter-to]") as HTMLInputElement;
 
-    expect(view.contentEl.querySelector("[data-session-id='session-1']")).not.toBeNull();
-    expect(view.contentEl.querySelector("[data-session-id='session-2']")).not.toBeNull();
+    expect(view.contentEl.querySelector("[data-record-id='record-1']")).not.toBeNull();
+    expect(view.contentEl.querySelector("[data-record-id='record-3']")).not.toBeNull();
 
     subject.value = "subject-2";
     subject.dispatchEvent(new Event("change", { bubbles: true }));
     await vi.waitFor(() => {
-      const session = view.contentEl.querySelector("[data-session-id='session-1']");
-      expect(session?.textContent).toContain("Direito Constitucional");
-      expect(session?.textContent).not.toContain("Português");
-      expect(view.contentEl.querySelector("[data-session-id='session-2']")).toBeNull();
+      expect(view.contentEl.querySelector("[data-record-id='record-2']")).not.toBeNull();
+      expect(view.contentEl.querySelector("[data-record-id='record-1']")).toBeNull();
+      expect(view.contentEl.querySelector("[data-record-id='record-3']")).toBeNull();
     });
 
     from.value = "2026-07-28";
     from.dispatchEvent(new Event("change", { bubbles: true }));
     await vi.waitFor(() => {
-      expect(view.contentEl.querySelector("[data-session-id='session-1']")).toBeNull();
+      expect(view.contentEl.querySelector("[data-record-id='record-2']")).toBeNull();
       expect(view.contentEl.textContent).toContain("Nenhum registro encontrado");
     });
 
@@ -622,11 +595,11 @@ describe("LeifView", () => {
     to.value = "2026-07-27";
     to.dispatchEvent(new Event("change", { bubbles: true }));
     await vi.waitFor(() => {
-      expect(view.contentEl.querySelector("[data-session-id='session-1']")).not.toBeNull();
+      expect(view.contentEl.querySelector("[data-record-id='record-2']")).not.toBeNull();
     });
   });
 
-  it("undoes the cycle advancement produced by a multi-record session", async () => {
+  it("saves multiple draft rows as independent records without advancing the recommendation", async () => {
     const dataStore = new InMemoryPluginDataStore();
     await seedUiCycleData(dataStore);
 
@@ -634,13 +607,13 @@ describe("LeifView", () => {
     await (view as unknown as { openTab: (tabId: "sessions") => Promise<void> }).openTab(
       "sessions"
     );
-    const firstRecord = view.contentEl.querySelector("[data-record-editor-index='0']");
+    const firstRecord = view.contentEl.querySelector("[data-record-draft-index='0']");
     const firstResource = firstRecord?.querySelector(
       "[data-record-editor-resource]"
     ) as HTMLSelectElement;
     firstResource.value = "resource-1";
-    (view.contentEl.querySelector("[data-session-create-add-record]") as HTMLButtonElement).click();
-    const secondRecord = view.contentEl.querySelector("[data-record-editor-index='1']");
+    (view.contentEl.querySelector("[data-record-create-add]") as HTMLButtonElement).click();
+    const secondRecord = view.contentEl.querySelector("[data-record-draft-index='1']");
     const subject = secondRecord?.querySelector(
       "[data-record-editor-subject]"
     ) as HTMLSelectElement;
@@ -651,24 +624,43 @@ describe("LeifView", () => {
     subject.dispatchEvent(new Event("change", { bubbles: true }));
     resource.value = "resource-2";
 
-    (view.contentEl.querySelector("[data-session-create-save]") as HTMLButtonElement).click();
+    (view.contentEl.querySelector("[data-record-create-save]") as HTMLButtonElement).click();
 
     await vi.waitFor(async () => {
       const data = await dataStore.load();
-      expect(data.cycleStates[0].currentSubjectId).toBe("subject-3");
-      expect(data.studySessions).toHaveLength(1);
-      expect(data.studySessions[0].records).toHaveLength(2);
+      expect(data.cycleStates[0].currentSubjectId).toBe("subject-1");
+      expect(data.studyRecords).toHaveLength(2);
+      expect(data.studyRecords.map((record) => record.subjectId)).toEqual([
+        "subject-1",
+        "subject-2"
+      ]);
     });
-    expect(view.contentEl.textContent).toContain("Ciclo avançado");
+    expect(view.contentEl.querySelector(".leif-record-feedback")).toBeNull();
+  });
 
-    (view.contentEl.querySelector("[data-session-cycle-undo]") as HTMLButtonElement).click();
+  it("undoes an explicit recommendation advance", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiCycleData(dataStore);
+
+    const { view } = await openLeifView(dataStore);
+    await (view as unknown as { openTab: (tabId: "sessions") => Promise<void> }).openTab(
+      "sessions"
+    );
+    (
+      view.contentEl.querySelector(".leif-cycle-recommendation-action") as HTMLButtonElement
+    ).click();
+
+    await vi.waitFor(async () => {
+      expect((await dataStore.load()).cycleStates[0].currentSubjectId).toBe("subject-2");
+    });
+    (view.contentEl.querySelector("[data-record-cycle-undo]") as HTMLButtonElement).click();
 
     await vi.waitFor(async () => {
       const data = await dataStore.load();
       expect(data.cycleStates[0].currentSubjectId).toBe("subject-1");
       expect(data.cycleStates[0].currentResourceId).toBe("resource-1");
     });
-    expect(view.contentEl.querySelector("[data-session-cycle-undo]")).toBeNull();
+    expect(view.contentEl.querySelector("[data-record-cycle-undo]")).toBeNull();
   });
 
   it("renders the Recursos view as a readable table with a sticky Actions column", async () => {

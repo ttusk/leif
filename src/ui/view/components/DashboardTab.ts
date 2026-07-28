@@ -52,7 +52,7 @@ export class DashboardTab {
     const card = DomHelpers.createCard("Resumo por matéria");
     const { container: tableContainer, tbody } = DomHelpers.createCrudTable([
       "Matéria",
-      "Sessões",
+      "Registros",
       "Páginas",
       "Questões"
     ]);
@@ -62,7 +62,7 @@ export class DashboardTab {
       row.dataset.subjectId = subject.subjectId;
       row.append(
         DomHelpers.createNameCell(subject.subjectName),
-        DomHelpers.createNumericCell(String(subject.totalSessions)),
+        DomHelpers.createNumericCell(String(subject.totalRecords)),
         DomHelpers.createNumericCell(String(subject.pagesRead)),
         DomHelpers.createNumericCell(String(subject.questionsSolved))
       );
