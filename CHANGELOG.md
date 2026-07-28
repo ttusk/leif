@@ -4,6 +4,15 @@ Todas as mudanças notáveis do Leif são documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [3.1.1] - 2026-07-28
+
+### Corrigido
+
+- Salvamento de registros não entra mais em um ciclo de sincronização que reescrevia e expandia o Markdown indefinidamente.
+- O campo legado Atividade foi removido dos registros, formulários, histórico e documentos Markdown.
+- A suíte de validação agora simula eventos reais do Obsidian, rajadas de alterações, expiração da supressão, falhas de sincronização e mutações que reintroduziriam o ciclo.
+- A interface usa os helpers nativos de criação de elementos do Obsidian e a validação de release impede a volta da criação direta pelo DOM.
+
 ## [3.1.0] - 2026-07-28
 
 ### Melhorado

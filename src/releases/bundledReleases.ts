@@ -2,6 +2,17 @@ import type { BundledReleaseNote } from "@/application/services/ChangelogService
 
 export const BUNDLED_RELEASES: readonly BundledReleaseNote[] = [
   {
+    version: "3.1.1",
+    title: "Leif 3.1.1",
+    body: `## Corrigido
+
+- Salvamento de registros não entra mais em um ciclo de sincronização que reescrevia e expandia o Markdown indefinidamente.
+- O campo legado Atividade foi removido dos registros, formulários, histórico e documentos Markdown.
+- A suíte de validação agora simula eventos reais do Obsidian, rajadas de alterações, expiração da supressão, falhas de sincronização e mutações que reintroduziriam o ciclo.
+- A interface usa os helpers nativos de criação de elementos do Obsidian e a validação de release impede a volta da criação direta pelo DOM.`,
+    githubUrl: "https://github.com/ttusk/leif/releases/tag/3.1.1"
+  },
+  {
     version: "3.1.0",
     title: "Leif 3.1.0",
     body: `## Melhorado
