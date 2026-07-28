@@ -2,6 +2,16 @@ import type { BundledReleaseNote } from "@/application/services/ChangelogService
 
 export const BUNDLED_RELEASES: readonly BundledReleaseNote[] = [
   {
+    version: "3.1.0",
+    title: "Leif 3.1.0",
+    body: `## Melhorado
+
+- Releases agora incluem atestações criptográficas de proveniência para main.js, styles.css e manifest.json.
+- Exclusões de concursos, sessões, recursos e assuntos agora usam uma janela nativa do Obsidian.
+- A leitura e a migração dos dados foram ajustadas para eliminar avisos de tipagem da revisão automática do marketplace.`,
+    githubUrl: "https://github.com/ttusk/leif/releases/tag/3.1.0"
+  },
+  {
     version: "3.0.5",
     title: "Leif 3.0.5",
     body: `## Melhorado

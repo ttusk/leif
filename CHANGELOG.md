@@ -4,6 +4,14 @@ Todas as mudanças notáveis do Leif são documentadas neste arquivo.
 
 O formato segue [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/) e o projeto adere ao [Versionamento Semântico](https://semver.org/lang/pt-BR/).
 
+## [3.1.0] - 2026-07-28
+
+### Melhorado
+
+- Releases agora incluem atestações criptográficas de proveniência para main.js, styles.css e manifest.json.
+- Exclusões de concursos, sessões, recursos e assuntos agora usam uma janela nativa do Obsidian.
+- A leitura e a migração dos dados foram ajustadas para eliminar avisos de tipagem da revisão automática do marketplace.
+
 ## [3.0.5] - 2026-07-28
 
 ### Melhorado
