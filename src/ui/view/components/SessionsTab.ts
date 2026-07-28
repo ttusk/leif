@@ -6,6 +6,7 @@ import {
   RegisterStudyRecordsUseCase
 } from "@/application/use-cases/RegisterStudyRecordsUseCase";
 import { RestoreCyclePositionUseCase } from "@/application/use-cases/RestoreCyclePositionUseCase";
+import { SelectCycleSubjectUseCase } from "@/application/use-cases/SelectCycleSubjectUseCase";
 import { UpdateStudyRecordUseCase } from "@/application/use-cases/UpdateStudyRecordUseCase";
 import type { CyclePosition } from "@/domain/entities/CycleState";
 import type { StudyRecord } from "@/domain/entities/StudyRecord";
@@ -39,6 +40,7 @@ export class SessionsTab {
   private readonly advanceCycle: AdvanceCycleUseCase;
   private readonly updateRecord: UpdateStudyRecordUseCase;
   private readonly restoreCyclePosition: RestoreCyclePositionUseCase;
+  private readonly selectCycleSubject: SelectCycleSubjectUseCase;
   private readonly deleteRecord: DeleteStudyRecordUseCase;
   private readonly recommendation: CycleRecommendationPanel;
   private readonly filters: RecordFilters = {
@@ -60,6 +62,7 @@ export class SessionsTab {
     this.advanceCycle = new AdvanceCycleUseCase(dataStore);
     this.updateRecord = new UpdateStudyRecordUseCase(dataStore);
     this.restoreCyclePosition = new RestoreCyclePositionUseCase(dataStore);
+    this.selectCycleSubject = new SelectCycleSubjectUseCase(dataStore);
     this.deleteRecord = new DeleteStudyRecordUseCase(dataStore);
     this.recommendation = new CycleRecommendationPanel(dataStore);
   }
@@ -92,11 +95,39 @@ export class SessionsTab {
         }
       })
     );
+    container.appendChild(this.renderRecommendationSubjectChoice(data, contestId));
     if (this.cycleUndo) {
       container.appendChild(this.renderCycleUndoFeedback());
     }
     container.appendChild(this.renderCreateForm(data, contestId));
     container.appendChild(this.renderRecordHistory(data, contestId));
+  }
+
+  private renderRecommendationSubjectChoice(
+    data: LeifPluginData,
+    contestId: string
+  ): HTMLElement {
+    const subjects = data.subjects
+      .filter((subject) => subject.contestId === contestId && subject.isActive)
+      .sort((left, right) => left.order - right.order);
+    const currentSubjectId =
+      data.cycleStates.find((state) => state.contestId === contestId)?.currentSubjectId ??
+      subjects[0]?.id ??
+      "";
+    const select = DomHelpers.createSelect(
+      subjects.map((subject): [string, string] => [subject.id, subject.name]),
+      currentSubjectId
+    );
+    select.dataset.recordCycleSubject = "true";
+    select.addEventListener("change", () => {
+      if (!select.value) return;
+      void (async () => {
+        await this.selectCycleSubject.execute({ subjectId: select.value });
+        this.cycleUndo = null;
+        await this.onUpdate();
+      })();
+    });
+    return DomHelpers.createStackedLabel("Escolher matéria recomendada", select);
   }
 
   private renderCycleUndoFeedback(): HTMLElement {
