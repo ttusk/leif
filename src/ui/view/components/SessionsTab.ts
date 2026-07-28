@@ -1,4 +1,5 @@
 import type { PluginDataStore } from "@/application/ports/PluginDataStore";
+import { AdvanceCycleUseCase } from "@/application/use-cases/AdvanceCycleUseCase";
 import { DeleteStudySessionUseCase } from "@/application/use-cases/DeleteStudySessionUseCase";
 import {
   type RegisterStudyRecordInput,
@@ -33,6 +34,7 @@ interface CycleUndoState {
 
 export class SessionsTab {
   private readonly registerSession: RegisterStudySessionUseCase;
+  private readonly advanceCycle: AdvanceCycleUseCase;
   private readonly updateSession: UpdateStudySessionUseCase;
   private readonly restoreCyclePosition: RestoreCyclePositionUseCase;
   private readonly deleteSession: DeleteStudySessionUseCase;
@@ -54,6 +56,7 @@ export class SessionsTab {
     private readonly onUpdate: () => Promise<void>
   ) {
     this.registerSession = new RegisterStudySessionUseCase(dataStore);
+    this.advanceCycle = new AdvanceCycleUseCase(dataStore);
     this.updateSession = new UpdateStudySessionUseCase(dataStore);
     this.restoreCyclePosition = new RestoreCyclePositionUseCase(dataStore);
     this.deleteSession = new DeleteStudySessionUseCase(dataStore);
@@ -73,7 +76,20 @@ export class SessionsTab {
       );
       return;
     }
-    container.appendChild(await this.recommendation.render());
+    container.appendChild(
+      await this.recommendation.render({
+        label: "Avançar para próxima matéria",
+        onClick: async (snapshot) => {
+          const result = await this.advanceCycle.execute();
+          this.cycleUndo = {
+            contestId: snapshot.contestId,
+            expectedCurrent: result.current,
+            restoreTo: result.previous
+          };
+          await this.onUpdate();
+        }
+      })
+    );
     if (this.cycleUndo) {
       container.appendChild(this.renderCycleUndoFeedback());
     }

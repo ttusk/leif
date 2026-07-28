@@ -329,6 +329,36 @@ describe("LeifView", () => {
     expect(view.contentEl.querySelector(".leif-cycle-thread")).toBeNull();
   });
 
+  it("advances to the next cycle subject from Registros without creating a session", async () => {
+    const dataStore = new InMemoryPluginDataStore();
+    await seedUiCycleData(dataStore);
+
+    const { view } = await openLeifView(dataStore);
+    await (view as unknown as { openTab: (tabId: "sessions") => Promise<void> }).openTab(
+      "sessions"
+    );
+
+    const advance = view.contentEl.querySelector(
+      ".leif-cycle-recommendation-action"
+    ) as HTMLButtonElement;
+    expect(advance.textContent).toBe("Avançar para próxima matéria");
+
+    advance.dispatchEvent(new MouseEvent("click", { bubbles: true }));
+
+    await vi.waitFor(async () => {
+      const data = await dataStore.load();
+      expect(data.cycleStates[0]?.currentSubjectId).toBe("subject-2");
+      expect(data.cycleStates[0]?.currentResourceId).toBe("resource-2");
+      expect(data.studySessions).toHaveLength(0);
+      expect(
+        view.contentEl.querySelector(".leif-cycle-recommendation-summary")?.textContent
+      ).toContain("Direito Constitucional");
+      expect(view.contentEl.querySelector(".leif-session-feedback")?.textContent).toContain(
+        "Ciclo avançado."
+      );
+    });
+  });
+
   it("renders the subject summary as a compact table", async () => {
     const dataStore = new InMemoryPluginDataStore();
     await seedUiSessionHistory(dataStore);

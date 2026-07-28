@@ -65,6 +65,20 @@ describe("Leif Native visual system", () => {
     expect(styles).toMatch(/\.leif-table-wrapper\s*{[^}]*overflow-x:\s*auto;/s);
   });
 
+  it("keeps quantity, unit, and correct answers side by side on wide panes", () => {
+    const styles = readStyles();
+
+    expect(styles).toMatch(
+      /\.leif-session-record-editor\s*{[^}]*grid-template-columns:\s*repeat\(3,\s*minmax\(0,\s*1fr\)\);/s
+    );
+    expect(styles).toMatch(
+      /\.leif-view\.is-narrow[\s\S]*?\.leif-session-record-editor\s*{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/s
+    );
+    expect(styles).toMatch(
+      /\.leif-view\.is-compact[\s\S]*?\.leif-session-record-editor[\s\S]*?grid-template-columns:\s*1fr;/s
+    );
+  });
+
   it("uses proximity and sparse dividers instead of cards and shadows", () => {
     const styles = readStyles();
 
