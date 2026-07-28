@@ -5,6 +5,7 @@ import {
   LEIF_DATA_SCHEMA_VERSION,
   createDefaultLeifPluginData
 } from "@/domain/types/LeifPluginData";
+import { STORAGE_SCHEMA_VERSION } from "@/domain/types/LeifRuntimeState";
 import { DataMigrationService } from "@/infrastructure/persistence/DataMigrations";
 
 describe("DataMigrationService", () => {
@@ -14,6 +15,15 @@ describe("DataMigrationService", () => {
     expect(service.getCurrentVersion()).toBe(LEIF_DATA_SCHEMA_VERSION);
     expect(service.migrate(createDefaultLeifPluginData()).schemaVersion).toBe(
       LEIF_DATA_SCHEMA_VERSION
+    );
+  });
+
+  it("stamps the current operational storage version when normalizing persisted data", () => {
+    const persisted = createDefaultLeifPluginData();
+    persisted.runtimeState!.storageSchemaVersion = 2 as typeof STORAGE_SCHEMA_VERSION;
+
+    expect(service.migrate(persisted).runtimeState?.storageSchemaVersion).toBe(
+      STORAGE_SCHEMA_VERSION
     );
   });
 

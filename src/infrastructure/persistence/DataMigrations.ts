@@ -14,6 +14,7 @@ import {
   LEIF_DATA_SCHEMA_VERSION,
   type LeifPluginData
 } from "@/domain/types/LeifPluginData";
+import { STORAGE_SCHEMA_VERSION } from "@/domain/types/LeifRuntimeState";
 
 interface LegacyContest {
   id: string;
@@ -324,7 +325,8 @@ function projectLegacyData(data: LegacyData): LeifPluginData {
     studyRecords,
     runtimeState: {
       ...defaults.runtimeState!,
-      ...data.runtimeState
+      ...data.runtimeState,
+      storageSchemaVersion: STORAGE_SCHEMA_VERSION
     }
   };
 }
@@ -344,7 +346,8 @@ function normalizeCurrentData(data: LegacyData): LeifPluginData {
     studyRecords: collection(data.studyRecords),
     runtimeState: {
       ...defaults.runtimeState!,
-      ...data.runtimeState
+      ...data.runtimeState,
+      storageSchemaVersion: STORAGE_SCHEMA_VERSION
     }
   };
 }
