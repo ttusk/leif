@@ -26,8 +26,8 @@ export class AdvanceCycleUseCase {
       const subjects = draft.subjects.filter((subject) => subject.contestId === activeContestId);
       const subjectIds = new Set(subjects.map((subject) => subject.id));
       const resources = draft.resources.filter((resource) => subjectIds.has(resource.subjectId));
-      const sessions = draft.studySessions.filter(
-        (session) => session.contestId === activeContestId
+      const records = draft.studyRecords.filter(
+        (record) => record.contestId === activeContestId
       );
       let stateIndex = draft.cycleStates.findIndex((state) => state.contestId === activeContestId);
       if (stateIndex === -1) {
@@ -36,8 +36,8 @@ export class AdvanceCycleUseCase {
       }
 
       const state = draft.cycleStates[stateIndex];
-      const previous = this.cycleService.getRecommendation(subjects, resources, sessions, state);
-      const current = this.cycleService.advance(subjects, resources, sessions, {
+      const previous = this.cycleService.getRecommendation(subjects, resources, records, state);
+      const current = this.cycleService.advance(subjects, resources, records, {
         ...state,
         currentSubjectId: previous.subjectId,
         currentResourceId: previous.resourceId

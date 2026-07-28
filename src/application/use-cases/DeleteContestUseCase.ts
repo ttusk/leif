@@ -27,8 +27,8 @@ export class DeleteContestUseCase {
       draft.subjects = draft.subjects.filter((subject) => !subjectIds.has(subject.id));
       draft.resources = draft.resources.filter((resource) => !subjectIds.has(resource.subjectId));
       draft.topics = draft.topics.filter((topic) => !subjectIds.has(topic.subjectId));
-      draft.studySessions = draft.studySessions.filter(
-        (session) => session.contestId !== input.contestId
+      draft.studyRecords = draft.studyRecords.filter(
+        (record) => record.contestId !== input.contestId
       );
 
       if (draft.activeContestId === input.contestId) {

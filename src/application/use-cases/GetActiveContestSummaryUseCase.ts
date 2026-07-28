@@ -5,7 +5,7 @@ import { GoalUnit } from "@/domain/types/GoalUnit";
 export interface SubjectSummary {
   subjectId: string;
   subjectName: string;
-  totalSessions: number;
+  totalRecords: number;
   pagesRead: number;
   questionsSolved: number;
   minutesStudied: number;
@@ -32,13 +32,9 @@ export class GetActiveContestSummaryUseCase {
     const contestSubjects = await this.guard.getActiveContestSubjects();
 
     const subjectSummaries = contestSubjects.map((subject) => {
-      const subjectSessions = data.studySessions.filter(
-        (session) =>
-          session.contestId === activeContestId &&
-          session.records.some((record) => record.subjectId === subject.id)
-      );
-      const records = subjectSessions.flatMap((session) =>
-        session.records.filter((record) => record.subjectId === subject.id)
+      const records = data.studyRecords.filter(
+        (record) =>
+          record.contestId === activeContestId && record.subjectId === subject.id
       );
       const pagesRead = records
         .filter((record) => record.unit === GoalUnit.PAGINAS)
@@ -57,7 +53,7 @@ export class GetActiveContestSummaryUseCase {
       return {
         subjectId: subject.id,
         subjectName: subject.name,
-        totalSessions: subjectSessions.length,
+        totalRecords: records.length,
         pagesRead,
         questionsSolved,
         minutesStudied,

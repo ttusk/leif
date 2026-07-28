@@ -56,8 +56,8 @@ export class GetActiveContestProgressDashboardUseCase {
     const activeContestId = await this.guard.requireActiveContest();
     const data = await this.dataStore.load();
     const contestSubjects = await this.guard.getActiveContestSubjects();
-    const contestSessions = data.studySessions.filter(
-      (session) => session.contestId === activeContestId
+    const contestRecords = data.studyRecords.filter(
+      (record) => record.contestId === activeContestId
     );
 
     const resourceProgressBySubject = contestSubjects.map((subject) => {
@@ -68,10 +68,10 @@ export class GetActiveContestProgressDashboardUseCase {
           resourceId: resource.id,
           title: resource.title,
           order: resource.order,
-          progress: this.progress.progressFor(resource, contestSessions),
+          progress: this.progress.progressFor(resource, contestRecords),
           goal: resource.goal?.amount,
           unit: resource.goal?.unit,
-          completed: this.progress.isComplete(resource, contestSessions)
+          completed: this.progress.isComplete(resource, contestRecords)
         }));
 
       return {
@@ -86,20 +86,18 @@ export class GetActiveContestProgressDashboardUseCase {
     const questionProgressBySubject = contestSubjects.map((subject) => {
       const groupedByDate = new Map<string, { questionCount: number; correctAnswers: number }>();
 
-      contestSessions.forEach((session) => {
-        session.records
-          .filter((record) => record.subjectId === subject.id && record.unit === GoalUnit.QUESTOES)
-          .forEach((record) => {
-            const current = groupedByDate.get(session.date) ?? {
-              questionCount: 0,
-              correctAnswers: 0
-            };
-            groupedByDate.set(session.date, {
-              questionCount: current.questionCount + (record.quantity ?? 0),
-              correctAnswers: current.correctAnswers + (record.correctAnswers ?? 0)
-            });
+      contestRecords
+        .filter((record) => record.subjectId === subject.id && record.unit === GoalUnit.QUESTOES)
+        .forEach((record) => {
+          const current = groupedByDate.get(record.date) ?? {
+            questionCount: 0,
+            correctAnswers: 0
+          };
+          groupedByDate.set(record.date, {
+            questionCount: current.questionCount + (record.quantity ?? 0),
+            correctAnswers: current.correctAnswers + (record.correctAnswers ?? 0)
           });
-      });
+        });
 
       const points = Array.from(groupedByDate.entries())
         .sort(([left], [right]) => left.localeCompare(right))

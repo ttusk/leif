@@ -116,7 +116,7 @@ export class CreateTopicValidator {
   }
 }
 
-export class RegisterStudySessionValidator {
+export class RegisterStudyRecordsValidator {
   validate(input: {
     contestId: string;
     date: string;
@@ -124,9 +124,9 @@ export class RegisterStudySessionValidator {
   }): ValidationResult {
     return collectErrors(
       requireNonEmpty(input.contestId, "Contest ID"),
-      requireNonEmpty(input.date, "Session date"),
+      requireNonEmpty(input.date, "Record date"),
       !Array.isArray(input.records) || input.records.length === 0
-        ? "Session requires at least one record"
+        ? "At least one record is required"
         : undefined,
       ...(input.records ?? [])
         .map((record, index) =>
@@ -170,9 +170,9 @@ export class UpdateSubjectConfigurationValidator {
   }
 }
 
-export class DeleteStudySessionValidator {
-  validate(input: { sessionId: string }): ValidationResult {
-    return collectErrors(requireNonEmpty(input.sessionId, "Session ID"));
+export class DeleteStudyRecordValidator {
+  validate(input: { recordId: string }): ValidationResult {
+    return collectErrors(requireNonEmpty(input.recordId, "Record ID"));
   }
 }
 

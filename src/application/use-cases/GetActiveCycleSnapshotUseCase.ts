@@ -31,10 +31,10 @@ export class GetActiveCycleSnapshotUseCase {
     const subjects = data.subjects.filter((subject) => subject.contestId === activeContestId);
     const subjectIds = new Set(subjects.map((subject) => subject.id));
     const resources = data.resources.filter((resource) => subjectIds.has(resource.subjectId));
-    const sessions = data.studySessions.filter((session) => session.contestId === activeContestId);
+    const records = data.studyRecords.filter((record) => record.contestId === activeContestId);
     const state = data.cycleStates.find((entry) => entry.contestId === activeContestId);
-    const current = this.cycleService.getRecommendation(subjects, resources, sessions, state);
-    const next = this.cycleService.advance(subjects, resources, sessions, {
+    const current = this.cycleService.getRecommendation(subjects, resources, records, state);
+    const next = this.cycleService.advance(subjects, resources, records, {
       contestId: activeContestId,
       currentSubjectId: current.subjectId,
       currentResourceId: current.resourceId
