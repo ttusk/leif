@@ -15,13 +15,12 @@ import type { LeifPluginData } from "@/domain/types/LeifPluginData";
 import { ConfirmationModal } from "@/ui/confirmation/ConfirmationModal";
 import { CycleRecommendationPanel } from "@/ui/view/shared/CycleRecommendationPanel";
 import { DomHelpers } from "@/ui/view/shared/DomHelpers";
-import { formatActivity, formatGoalQuantity, goalUnitOptions } from "@/ui/view/shared/StudyLabels";
+import { formatGoalQuantity, goalUnitOptions } from "@/ui/view/shared/StudyLabels";
 import type { RecommendedStudyRegistration } from "@/ui/view/components/DashboardTab";
 import type { App } from "obsidian";
 
 interface SessionFilters {
   subjectId: string;
-  activity: string;
   fromDate: string;
   toDate: string;
 }
@@ -40,7 +39,6 @@ export class SessionsTab {
   private readonly recommendation: CycleRecommendationPanel;
   private readonly filters: SessionFilters = {
     subjectId: "",
-    activity: "",
     fromDate: "",
     toDate: ""
   };
@@ -140,7 +138,6 @@ export class SessionsTab {
       "Matéria",
       "Recurso",
       "Assunto",
-      "Atividade",
       "Resultado",
       "Ações"
     ]);
@@ -172,11 +169,6 @@ export class SessionsTab {
       this.filters.subjectId
     );
     subject.dataset.sessionFilterSubject = "true";
-    const activity = DomHelpers.createSelect(
-      this.activityOptions(data, contestId),
-      this.filters.activity
-    );
-    activity.dataset.sessionFilterActivity = "true";
     const from = DomHelpers.createInput("date", "De", this.filters.fromDate);
     from.dataset.sessionFilterFrom = "true";
     const to = DomHelpers.createInput("date", "Até", this.filters.toDate);
@@ -184,10 +176,6 @@ export class SessionsTab {
 
     subject.addEventListener("change", () => {
       this.filters.subjectId = subject.value;
-      void this.onUpdate();
-    });
-    activity.addEventListener("change", () => {
-      this.filters.activity = activity.value;
       void this.onUpdate();
     });
     from.addEventListener("change", () => {
@@ -201,32 +189,15 @@ export class SessionsTab {
 
     filters.append(
       DomHelpers.createStackedLabel("Matéria", subject),
-      DomHelpers.createStackedLabel("Atividade", activity),
       DomHelpers.createStackedLabel("De", from),
       DomHelpers.createStackedLabel("Até", to)
     );
     return filters;
   }
 
-  private activityOptions(data: LeifPluginData, contestId: string): Array<[string, string]> {
-    const activities = new Set<string>();
-    data.studySessions
-      .filter((session) => session.contestId === contestId)
-      .forEach((session) => {
-        session.records.forEach((record) => activities.add(record.activity));
-      });
-    return [
-      ["", "Todas as atividades"],
-      ...[...activities]
-        .sort((left, right) => left.localeCompare(right))
-        .map((activity): [string, string] => [activity, formatActivity(activity)])
-    ];
-  }
-
   private filteredRecordsForSession(session: StudySession): StudyRecord[] {
     return session.records.filter((record) => {
       if (this.filters.subjectId && record.subjectId !== this.filters.subjectId) return false;
-      if (this.filters.activity && record.activity !== this.filters.activity) return false;
       return true;
     });
   }
@@ -271,7 +242,6 @@ export class SessionsTab {
         DomHelpers.createNameCell(subject?.name ?? "Matéria removida"),
         DomHelpers.createNameCell(resource?.title ?? "Sem recurso"),
         DomHelpers.createNameCell(topic?.name ?? "Sem assunto"),
-        DomHelpers.createCell(formatActivity(record.activity)),
         DomHelpers.createNumericCell(this.formatRecordResult(record))
       );
 
@@ -429,8 +399,6 @@ export class SessionsTab {
       record?.topicId ?? ""
     );
     topic.dataset.recordEditorTopic = "true";
-    const activity = DomHelpers.createInput("text", "Atividade", record?.activity ?? "leitura");
-    activity.dataset.recordEditorActivity = "true";
     const quantity = DomHelpers.createInput(
       "number",
       "Quantidade",
@@ -495,7 +463,6 @@ export class SessionsTab {
       DomHelpers.createStackedLabel("Matéria", subject),
       DomHelpers.createStackedLabel("Recurso", resource),
       DomHelpers.createStackedLabel("Assunto", topic),
-      DomHelpers.createStackedLabel("Atividade", activity),
       DomHelpers.createStackedLabel("Quantidade", quantity),
       DomHelpers.createStackedLabel("Unidade", unit),
       DomHelpers.createStackedLabel("Acertos", correct),
@@ -521,8 +488,6 @@ export class SessionsTab {
             undefined,
           topicId:
             row.querySelector<HTMLSelectElement>("[data-record-editor-topic]")?.value || undefined,
-          activity:
-            row.querySelector<HTMLInputElement>("[data-record-editor-activity]")?.value ?? "",
           quantity,
           unit: quantity !== undefined && unit !== undefined && isGoalUnit(unit) ? unit : undefined,
           correctAnswers: this.optionalNumber(

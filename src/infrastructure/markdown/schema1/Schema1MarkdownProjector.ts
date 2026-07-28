@@ -299,7 +299,6 @@ function decodeStudySession(
   const record = new StudyRecord(
     document.id,
     subjectId,
-    legacyActivity(type),
     optional(document, "item-id"),
     optional(document, "topic-id"),
     quantity,
@@ -367,13 +366,6 @@ function legacyNotes(document: Schema1Document): string | undefined {
     .filter((value): value is string => Boolean(value))
     .join("\n");
   return notes || undefined;
-}
-
-function legacyActivity(type: string | undefined): string {
-  if (type === "pdf") return "leitura";
-  if (type === "questions") return "questoes";
-  if (type === "video") return "video";
-  return type ?? "outro";
 }
 
 function legacySessionUnit(type: string | undefined): GoalUnit {

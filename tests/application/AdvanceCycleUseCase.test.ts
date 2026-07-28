@@ -60,7 +60,6 @@ describe("AdvanceCycleUseCase", () => {
       records: [
         {
           subjectId: "subject-1",
-          activity: "leitura",
           resourceId: "resource-1",
           quantity: 10,
           unit: GoalUnit.PAGINAS,

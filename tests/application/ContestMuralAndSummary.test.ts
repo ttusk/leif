@@ -44,15 +44,14 @@ describe("contest mural and summary", () => {
       contestId: "contest-1",
       date: "2026-07-27",
       records: [
-        { subjectId: "subject-1", activity: "leitura", quantity: 20, unit: GoalUnit.PAGINAS },
+        { subjectId: "subject-1", quantity: 20, unit: GoalUnit.PAGINAS },
         {
           subjectId: "subject-1",
-          activity: "questoes",
           quantity: 10,
           unit: GoalUnit.QUESTOES,
           correctAnswers: 8
         },
-        { subjectId: "subject-1", activity: "video", quantity: 30, unit: GoalUnit.MINUTOS }
+        { subjectId: "subject-1", quantity: 30, unit: GoalUnit.MINUTOS }
       ]
     });
 

@@ -120,7 +120,7 @@ export class RegisterStudySessionValidator {
   validate(input: {
     contestId: string;
     date: string;
-    records: Array<{ subjectId: string; activity: string; unit?: GoalUnit }>;
+    records: Array<{ subjectId: string; unit?: GoalUnit }>;
   }): ValidationResult {
     return collectErrors(
       requireNonEmpty(input.contestId, "Contest ID"),
@@ -132,7 +132,6 @@ export class RegisterStudySessionValidator {
         .map((record, index) =>
           collectErrors(
             requireNonEmpty(record.subjectId, `Record ${index + 1} subject`),
-            requireNonEmpty(record.activity, `Record ${index + 1} activity`),
             requireValidUnit(record.unit, `Record ${index + 1} unit`)
           ).errors.join(", ")
         )

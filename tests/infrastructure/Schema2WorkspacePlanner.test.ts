@@ -20,7 +20,6 @@ function data(): LeifPluginData {
   const record = new StudyRecord(
     "record-1",
     "subject-1",
-    "leitura",
     "resource-1",
     "topic-1",
     20,
@@ -77,7 +76,7 @@ describe("Schema2WorkspacePlanner", () => {
       "create:Leif/concursos/trt-brasil/materias/portugues/assuntos/concordancia-verbal/assunto.md",
       "create:Leif/concursos/trt-brasil/materias/portugues/recursos/pdf-01/recurso.md",
       "create:Leif/concursos/trt-brasil/sessoes/2026-07/2026-07-27-19-00/sessao.md",
-      "create:Leif/concursos/trt-brasil/sessoes/2026-07/2026-07-27-19-00/registros/leitura.md"
+      "create:Leif/concursos/trt-brasil/sessoes/2026-07/2026-07-27-19-00/registros/registro-1.md"
     ]);
     expect(contentFor(plan.changes, "concurso.md")).toContain(
       "[[materias/portugues/materia|Português]]"
@@ -91,9 +90,10 @@ describe("Schema2WorkspacePlanner", () => {
     expect(contentFor(plan.changes, "recurso.md")).toContain(
       "[[../../assuntos/concordancia-verbal/assunto|Concordância Verbal]]"
     );
-    expect(contentFor(plan.changes, "leitura.md")).toContain(
+    expect(contentFor(plan.changes, "registro-1.md")).toContain(
       'recurso: "[[../../../../materias/portugues/recursos/pdf-01/recurso]]"'
     );
+    expect(contentFor(plan.changes, "registro-1.md")).not.toContain("atividade:");
   });
 
   it("keeps record wikilink aliases on one line when notes contain line breaks", () => {
@@ -102,7 +102,6 @@ describe("Schema2WorkspacePlanner", () => {
       new StudyRecord(
         "record-1",
         "subject-1",
-        "leitura",
         "resource-1",
         "topic-1",
         20,
@@ -116,7 +115,7 @@ describe("Schema2WorkspacePlanner", () => {
     const plan = Schema2WorkspacePlanner.plan(source, []);
     const session = contentFor(plan.changes, "sessao.md");
 
-    expect(session).toContain("[[registros/fase-teoria-referencia-aula-1|leitura]]");
+    expect(session).toContain("[[registros/fase-teoria-referencia-aula-1|Registro 1]]");
     expect(session).not.toContain("|Fase: Teoria\n");
   });
 

@@ -12,7 +12,6 @@ import { AlreadyExistsError, NotFoundError, ValidationError } from "@/domain/err
 export interface RegisterStudyRecordInput {
   id?: string;
   subjectId: string;
-  activity: string;
   resourceId?: string;
   topicId?: string;
   quantity?: number;
@@ -96,7 +95,6 @@ export class RegisterStudySessionUseCase {
         return new StudyRecord(
           recordInput.id ?? createLeifId(),
           recordInput.subjectId,
-          recordInput.activity,
           recordInput.resourceId,
           recordInput.topicId,
           recordInput.quantity,

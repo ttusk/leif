@@ -138,7 +138,6 @@ A Sessão persists all its Registros and any cycle change in one atomic write. C
 materia: "[[../../../materias/portugues/materia]]"
 recurso: "[[../../../materias/portugues/recursos/aula-03/recurso]]"
 assunto: "[[../../../materias/portugues/assuntos/concordancia/assunto]]"
-atividade: leitura
 quantidade: 30
 unidade: paginas
 acertos: 0
@@ -148,6 +147,7 @@ concluido: true
 - `materia` is required and must belong to the session's concurso.
 - `recurso` and `assunto` are optional and must belong to the selected Matéria.
 - `quantidade`, `unidade`, and `acertos` are optional but validated as a coherent group (`quantidade⇔unidade`, and `acertos ≤ quantidade`).
+- The former `atividade` property is no longer used. Leif accepts it in older files and removes it on the next canonical write.
 
 ### mural.md
 

@@ -350,7 +350,6 @@ function projectStudySession(
   const record = new StudyRecord(
     session.id,
     session.subjectId,
-    legacyActivity(session.type),
     resourceId,
     session.topicId,
     quantity,
@@ -394,13 +393,6 @@ function legacyItemGoal(item: LegacyStudyItem): ResourceGoal | undefined {
     return new ResourceGoal(item.questionCount, GoalUnit.QUESTOES);
   }
   return undefined;
-}
-
-function legacyActivity(type: string | undefined): string {
-  if (type === "pdf") return "leitura";
-  if (type === "questions") return "questoes";
-  if (type === "video") return "video";
-  return type ?? "outro";
 }
 
 function legacySessionUnit(type: string | undefined): GoalUnit {

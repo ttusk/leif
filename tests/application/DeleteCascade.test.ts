@@ -50,7 +50,7 @@ describe("delete cascades", () => {
       id: "session-1",
       contestId: "contest-1",
       date: "2026-07-27",
-      records: [{ subjectId: "subject-1", activity: "revisao" }]
+      records: [{ subjectId: "subject-1" }]
     });
 
     await new DeleteStudySessionUseCase(store).execute({ sessionId: "session-1" });

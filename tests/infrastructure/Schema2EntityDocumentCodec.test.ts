@@ -40,7 +40,6 @@ describe("Schema2EntityDocumentCodec", () => {
     const record = new StudyRecord(
       "record-1",
       "subject-1",
-      "leitura",
       "resource-1",
       "topic-1",
       20,
@@ -102,6 +101,13 @@ leif-id: topic-1
         topicLink: "../../../materias/portugues/assuntos/concordancia/assunto"
       })
     ).toContain('materia: "[[../../../materias/portugues/materia]]"');
+    expect(
+      Schema2EntityDocumentCodec.renderRecord(record, {
+        subjectLink: "../../../materias/portugues/materia",
+        resourceLink: "../../../materias/portugues/recursos/pdf-01/recurso",
+        topicLink: "../../../materias/portugues/assuntos/concordancia/assunto"
+      })
+    ).not.toContain("atividade:");
     expect(Schema2EntityDocumentCodec.renderMural("mural-1", new Mural("Notas livres."))).toContain(
       "# Mural\n\nNotas livres.\n"
     );
@@ -162,5 +168,28 @@ Notas livres do usuário.
     expect(updated).toContain("acertos-importados: 40");
     expect(updated).toContain("- [[../../assuntos/novo/assunto|Novo]]");
     expect(updated).toContain("- [Novo](vault://novo.pdf)");
+  });
+
+  it("removes the legacy activity property when updating a record", () => {
+    const existing = Schema2Document.parse(`---
+leif-type: registro
+leif-schema: 2
+leif-id: record-1
+materia: "[[../../../materias/portugues/materia]]"
+atividade: leitura
+concluido: false
+custom-key: preserve-me
+---
+
+# Leitura
+`);
+    const updated = Schema2EntityDocumentCodec.updateRecord(
+      existing,
+      new StudyRecord("record-1", "subject-1"),
+      { subjectLink: "../../../materias/portugues/materia" }
+    ).toString();
+
+    expect(updated).not.toContain("atividade:");
+    expect(updated).toContain("custom-key: preserve-me");
   });
 });

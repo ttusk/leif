@@ -216,7 +216,6 @@ describe("DataMigrationService", () => {
         {
           id: "old-session-1",
           subjectId: "subject-1",
-          activity: "leitura",
           resourceId: "item-1",
           quantity: 30,
           unit: GoalUnit.PAGINAS,

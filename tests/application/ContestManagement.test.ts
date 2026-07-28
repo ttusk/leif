@@ -59,7 +59,7 @@ describe("contest management", () => {
       data.topics.push({ id: "topic-1", subjectId: "subject-1", name: "Concordância" });
       data.studySessions.push(
         new StudySession("session-1", "contest-1", "2026-07-27", [
-          new StudyRecord("record-1", "subject-1", "leitura")
+          new StudyRecord("record-1", "subject-1")
         ])
       );
     });

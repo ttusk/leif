@@ -145,7 +145,6 @@ describe("Schema2PluginDataStore", () => {
           new StudyRecord(
             "record-1",
             "subject-1",
-            "leitura",
             "resource-1",
             undefined,
             20,
@@ -170,7 +169,7 @@ describe("Schema2PluginDataStore", () => {
     expect(loaded.studySessions).toMatchObject([
       {
         id: "session-1",
-        records: [{ id: "record-1", activity: "leitura", notes: undefined }]
+        records: [{ id: "record-1", notes: undefined }]
       }
     ]);
     expect(markdown.files.get("Leif/concursos/trt/concurso.md")).toContain("# TRT");
@@ -446,7 +445,6 @@ Edital publicado.
           {
             id: "record-1",
             subjectId: "subject-1",
-            activity: "questoes",
             resourceId: "resource-1",
             quantity: 30,
             unit: "questoes",
@@ -481,7 +479,7 @@ Edital publicado.
       ([path]) => path.includes("/sessoes/") && path.includes("/registros/")
     )?.[1];
     expect(migratedRecord).toContain("leif-type: registro");
-    expect(migratedRecord).toContain("atividade: questoes");
+    expect(migratedRecord).not.toContain("atividade:");
     expect(migratedRecord).toContain("acertos: 24");
     expect(markdown.files.get("Leif/.backups/migration-tx-schema1/manifest.json")).toContain(
       "portugues-abc123.md"

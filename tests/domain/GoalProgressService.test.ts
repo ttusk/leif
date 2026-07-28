@@ -37,7 +37,6 @@ const buildRecord = (overrides: {
 }): StudyRecord =>
   new StudyRecord(
     overrides.id ?? `record-${Math.random().toString(36).slice(2, 9)}`,
-    "subject-1",
     "leitura",
     overrides.resourceId,
     undefined,

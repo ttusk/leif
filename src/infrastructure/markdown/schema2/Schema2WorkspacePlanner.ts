@@ -294,9 +294,9 @@ function desiredSession(session: StudySession, paths: PlannedPaths): DesiredDocu
     id: session.id,
     path,
     render(existing) {
-      const recordLinks = session.records.map((record) => ({
+      const recordLinks = session.records.map((record, index) => ({
         target: relativeLink(path, requiredPath(paths.records, record.id)),
-        alias: record.activity
+        alias: `Registro ${index + 1}`
       }));
       if (existing) {
         return Schema2EntityDocumentCodec.updateSession(existing.document, session, {
@@ -334,14 +334,13 @@ function desiredRecord(record: StudyRecord, index: number, paths: PlannedPaths):
         new StudyRecord(
           record.id,
           record.subjectId,
-          record.activity,
           record.resourceId,
           record.topicId,
           record.quantity,
           record.unit,
           record.correctAnswers,
           record.completed,
-          record.notes ?? `${record.activity}${index > 0 ? ` ${index + 1}` : ""}`
+          record.notes ?? `Registro ${index + 1}`
         ),
         options
       );
@@ -436,7 +435,7 @@ function planPaths(
       )
     );
     session.records.forEach((record, index) => {
-      const title = record.notes ?? record.activity;
+      const title = record.notes ?? `registro-${index + 1}`;
       records.set(
         record.id,
         reuseOrAllocate(

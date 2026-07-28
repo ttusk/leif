@@ -92,10 +92,9 @@ describe("RegisterStudySessionUseCase", () => {
       startTime: "19:00",
       endTime: "21:00",
       records: [
-        { subjectId: "subject-a", activity: "leitura", quantity: 30, unit: GoalUnit.PAGINAS },
+        { subjectId: "subject-a", quantity: 30, unit: GoalUnit.PAGINAS },
         {
           subjectId: "subject-b",
-          activity: "questoes",
           quantity: 20,
           unit: GoalUnit.QUESTOES,
           correctAnswers: 15
@@ -127,7 +126,7 @@ describe("RegisterStudySessionUseCase", () => {
       useCase.execute({
         contestId: "contest-1",
         date: "2026-07-27",
-        records: [{ subjectId: "subject-b", activity: "leitura", resourceId: "resource-a1" }]
+        records: [{ subjectId: "subject-b", resourceId: "resource-a1" }]
       })
     ).rejects.toThrow(ValidationError);
 
@@ -135,7 +134,7 @@ describe("RegisterStudySessionUseCase", () => {
       useCase.execute({
         contestId: "contest-1",
         date: "2026-07-27",
-        records: [{ subjectId: "subject-a", activity: "leitura", topicId: "missing" }]
+        records: [{ subjectId: "subject-a", topicId: "missing" }]
       })
     ).rejects.toThrow(ValidationError);
 
@@ -143,7 +142,7 @@ describe("RegisterStudySessionUseCase", () => {
       useCase.execute({
         contestId: "contest-1",
         date: "2026-07-27",
-        records: [{ subjectId: "subject-x", activity: "leitura" }]
+        records: [{ subjectId: "subject-x" }]
       })
     ).rejects.toThrow(NotFoundError);
 
@@ -155,8 +154,8 @@ describe("RegisterStudySessionUseCase", () => {
       contestId: "contest-1",
       date: "2026-07-27",
       records: [
-        { subjectId: "subject-a", activity: "leitura", resourceId: "resource-a1", completed: true },
-        { subjectId: "subject-b", activity: "leitura", resourceId: "resource-b1", completed: true }
+        { subjectId: "subject-a", resourceId: "resource-a1", completed: true },
+        { subjectId: "subject-b", resourceId: "resource-b1", completed: true }
       ]
     });
 
@@ -175,9 +174,9 @@ describe("RegisterStudySessionUseCase", () => {
       contestId: "contest-1",
       date: "2026-07-27",
       records: [
-        { subjectId: "subject-a", activity: "leitura", resourceId: "resource-a1", completed: true },
-        { subjectId: "subject-a", activity: "revisao", completed: true },
-        { subjectId: "subject-b", activity: "leitura", resourceId: "resource-b1", completed: true }
+        { subjectId: "subject-a", resourceId: "resource-a1", completed: true },
+        { subjectId: "subject-a", completed: true },
+        { subjectId: "subject-b", resourceId: "resource-b1", completed: true }
       ]
     });
 
@@ -193,9 +192,7 @@ describe("RegisterStudySessionUseCase", () => {
     const result = await useCase.execute({
       contestId: "contest-1",
       date: "2026-07-27",
-      records: [
-        { subjectId: "subject-b", activity: "leitura", resourceId: "resource-b1", completed: true }
-      ]
+      records: [{ subjectId: "subject-b", resourceId: "resource-b1", completed: true }]
     });
 
     expect(result.cycleAdvanced).toBe(false);
@@ -217,7 +214,7 @@ describe("RegisterStudySessionUseCase", () => {
     const result = await useCase.execute({
       contestId: "contest-2",
       date: "2026-07-27",
-      records: [{ subjectId: "subject-c", activity: "leitura", completed: true }]
+      records: [{ subjectId: "subject-c", completed: true }]
     });
 
     expect(result.cycleAdvanced).toBe(false);
@@ -230,7 +227,7 @@ describe("RegisterStudySessionUseCase", () => {
       id: "session-1",
       contestId: "contest-1",
       date: "2026-07-27",
-      records: [{ subjectId: "subject-a", activity: "leitura" }]
+      records: [{ subjectId: "subject-a" }]
     });
 
     await expect(
@@ -238,7 +235,7 @@ describe("RegisterStudySessionUseCase", () => {
         id: "session-1",
         contestId: "contest-1",
         date: "2026-07-28",
-        records: [{ subjectId: "subject-a", activity: "leitura" }]
+        records: [{ subjectId: "subject-a" }]
       })
     ).rejects.toThrow();
 
@@ -246,7 +243,7 @@ describe("RegisterStudySessionUseCase", () => {
       useCase.execute({
         contestId: "missing",
         date: "2026-07-28",
-        records: [{ subjectId: "subject-a", activity: "leitura" }]
+        records: [{ subjectId: "subject-a" }]
       })
     ).rejects.toThrow(NotFoundError);
   });
@@ -272,7 +269,6 @@ describe("RegisterStudySessionUseCase", () => {
       records: [
         {
           subjectId: "subject-a",
-          activity: "leitura",
           resourceId: "resource-a2",
           quantity: 30,
           unit: GoalUnit.PAGINAS,

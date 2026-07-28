@@ -5,46 +5,34 @@ import { GoalUnit } from "@/domain/types/GoalUnit";
 import { ValidationError } from "@/domain/errors/DomainErrors";
 
 describe("StudyRecord", () => {
-  it("requires an id, exactly one subject and an activity", () => {
-    expect(() => new StudyRecord("", "subject-1", "leitura")).toThrow(ValidationError);
-    expect(() => new StudyRecord("record-1", "", "leitura")).toThrow(ValidationError);
-    expect(() => new StudyRecord("record-1", "subject-1", " ")).toThrow(ValidationError);
+  it("requires an id and exactly one subject", () => {
+    expect(() => new StudyRecord("", "subject-1")).toThrow(ValidationError);
+    expect(() => new StudyRecord("record-1", "")).toThrow(ValidationError);
   });
 
   it("points to at most one resource and one topic", () => {
-    const record = new StudyRecord("record-1", "subject-1", "leitura", "resource-1", "topic-1");
+    const record = new StudyRecord("record-1", "subject-1", "resource-1", "topic-1");
 
     expect(record.resourceId).toBe("resource-1");
     expect(record.topicId).toBe("topic-1");
   });
 
   it("validates quantity, unit and correct answers as a coherent group", () => {
-    expect(() => new StudyRecord("r", "s", "leitura", undefined, undefined, 30)).toThrow(
+    expect(() => new StudyRecord("r", "s", undefined, undefined, 30)).toThrow(ValidationError);
+    expect(
+      () => new StudyRecord("r", "s", undefined, undefined, undefined, GoalUnit.PAGINAS)
+    ).toThrow(ValidationError);
+    expect(() => new StudyRecord("r", "s", undefined, undefined, -1, GoalUnit.QUESTOES)).toThrow(
       ValidationError
     );
     expect(
-      () => new StudyRecord("r", "s", "leitura", undefined, undefined, undefined, GoalUnit.PAGINAS)
+      () => new StudyRecord("r", "s", undefined, undefined, 20, GoalUnit.QUESTOES, 21)
     ).toThrow(ValidationError);
-    expect(
-      () => new StudyRecord("r", "s", "questoes", undefined, undefined, -1, GoalUnit.QUESTOES)
-    ).toThrow(ValidationError);
-    expect(
-      () => new StudyRecord("r", "s", "questoes", undefined, undefined, 20, GoalUnit.QUESTOES, 21)
-    ).toThrow(ValidationError);
-    expect(
-      () => new StudyRecord("r", "s", "questoes", undefined, undefined, undefined, undefined, 5)
-    ).toThrow(ValidationError);
-
-    const record = new StudyRecord(
-      "r",
-      "s",
-      "questoes",
-      undefined,
-      undefined,
-      20,
-      GoalUnit.QUESTOES,
-      15
+    expect(() => new StudyRecord("r", "s", undefined, undefined, undefined, undefined, 5)).toThrow(
+      ValidationError
     );
+
+    const record = new StudyRecord("r", "s", undefined, undefined, 20, GoalUnit.QUESTOES, 15);
     expect(record.quantity).toBe(20);
     expect(record.unit).toBe(GoalUnit.QUESTOES);
     expect(record.correctAnswers).toBe(15);
@@ -54,7 +42,6 @@ describe("StudyRecord", () => {
     const record = new StudyRecord(
       "r",
       "s",
-      "leitura",
       "resource-1",
       undefined,
       30,
@@ -69,17 +56,17 @@ describe("StudyRecord", () => {
   });
 
   it("defaults to not completed", () => {
-    expect(new StudyRecord("r", "s", "leitura").completed).toBe(false);
+    expect(new StudyRecord("r", "s").completed).toBe(false);
   });
 });
 
 describe("StudySession", () => {
-  const record = () => new StudyRecord("record-1", "subject-1", "leitura");
+  const record = () => new StudyRecord("record-1", "subject-1");
 
   it("owns one or more ordered records", () => {
     const session = new StudySession("session-1", "contest-1", "2026-07-27", [
       record(),
-      new StudyRecord("record-2", "subject-2", "questoes")
+      new StudyRecord("record-2", "subject-2")
     ]);
 
     expect(session.records.map((entry) => entry.id)).toEqual(["record-1", "record-2"]);

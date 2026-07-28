@@ -96,7 +96,7 @@ const workspace = [
       "registro",
       "record-1",
       "Leitura PDF 01",
-      'materia: "[[../../../materias/portugues/materia]]"\nrecurso: "[[../../../materias/portugues/recursos/pdf-01/recurso]]"\natividade: questoes\nquantidade: 30\nunidade: questoes\nacertos: 24\nconcluido: true\n'
+      'materia: "[[../../../materias/portugues/materia]]"\nrecurso: "[[../../../materias/portugues/recursos/pdf-01/recurso]]"\nquantidade: 30\nunidade: questoes\nacertos: 24\nconcluido: true\n'
     )
   },
   {
@@ -162,7 +162,6 @@ describe("Schema2DomainCodec", () => {
         {
           id: "record-1",
           subjectId: "subject-1",
-          activity: "questoes",
           resourceId: "resource-1",
           quantity: 30,
           unit: "questoes",

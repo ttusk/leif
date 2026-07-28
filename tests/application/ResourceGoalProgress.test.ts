@@ -31,7 +31,6 @@ describe("resource goal progress", () => {
       records: [
         {
           subjectId: "subject-1",
-          activity: "leitura",
           resourceId: "resource-1",
           quantity: 30,
           unit: GoalUnit.PAGINAS,
@@ -74,7 +73,6 @@ describe("resource goal progress", () => {
       records: [
         {
           subjectId: "subject-1",
-          activity: "questoes",
           quantity: 20,
           unit: GoalUnit.QUESTOES,
           correctAnswers: 15

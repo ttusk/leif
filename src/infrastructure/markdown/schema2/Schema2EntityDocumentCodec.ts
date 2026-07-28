@@ -240,7 +240,7 @@ export class Schema2EntityDocumentCodec {
   static renderRecord(record: StudyRecord, options: RecordRenderOptions): string {
     return [
       renderFrontmatter("registro", record.id, recordProperties(record, options)),
-      renderTitle(record.notes?.trim() ? record.notes.trim() : record.activity)
+      renderTitle(record.notes?.trim() ? record.notes.trim() : "Registro")
     ].join("\n");
   }
 
@@ -300,7 +300,6 @@ function recordProperties(
     ["materia", `[[${options.subjectLink}]]`],
     ["recurso", options.resourceLink ? `[[${options.resourceLink}]]` : undefined],
     ["assunto", options.topicLink ? `[[${options.topicLink}]]` : undefined],
-    ["atividade", record.activity],
     ["quantidade", record.quantity],
     ["unidade", record.unit],
     ["acertos", record.correctAnswers],

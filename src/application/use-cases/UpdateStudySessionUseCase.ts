@@ -37,7 +37,6 @@ export class UpdateStudySessionUseCase {
             new StudyRecord(
               record.id ?? createLeifId(),
               record.subjectId,
-              record.activity,
               record.resourceId,
               record.topicId,
               record.quantity,

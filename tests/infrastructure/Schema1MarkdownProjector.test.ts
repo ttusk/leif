@@ -214,7 +214,6 @@ describe("Schema1MarkdownProjector", () => {
           {
             id: "record-1",
             subjectId: "subject-1",
-            activity: "questoes",
             resourceId: "resource-1",
             topicId: "topic-1",
             quantity: 30,

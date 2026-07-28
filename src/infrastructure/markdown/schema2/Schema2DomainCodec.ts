@@ -234,7 +234,6 @@ function decodeRecord(record: IndexedSchema2Document, context: DecodeContext): S
   return new StudyRecord(
     record.id,
     subject.id,
-    requiredProperty(record, "atividade"),
     resource?.id,
     topic?.id,
     parseOptionalNumber(record, "quantidade"),

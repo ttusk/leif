@@ -135,7 +135,6 @@ async function seedUiSessionHistory(dataStore: PluginDataStore): Promise<void> {
           new StudyRecord(
             "record-1",
             "subject-1",
-            "leitura",
             "resource-1",
             undefined,
             12,
@@ -146,7 +145,6 @@ async function seedUiSessionHistory(dataStore: PluginDataStore): Promise<void> {
           new StudyRecord(
             "record-2",
             "subject-2",
-            "questoes",
             "resource-2",
             "topic-2",
             20,
@@ -167,7 +165,6 @@ async function seedUiSessionHistory(dataStore: PluginDataStore): Promise<void> {
           new StudyRecord(
             "record-3",
             "subject-1",
-            "revisao",
             "resource-1",
             undefined,
             30,
@@ -366,10 +363,11 @@ describe("LeifView", () => {
       "Matéria",
       "Recurso",
       "Assunto",
-      "Atividade",
       "Resultado",
       "Ações"
     ]);
+    expect(view.contentEl.querySelector("[data-record-editor-activity]")).toBeNull();
+    expect(view.contentEl.querySelector("[data-session-filter-activity]")).toBeNull();
     const session = table?.querySelector("[data-session-id='session-1']");
     const records = Array.from(
       table?.querySelectorAll("[data-session-id='session-1'].leif-session-record") ?? []
@@ -381,12 +379,10 @@ describe("LeifView", () => {
     expect(records[1]?.textContent).toContain("27/07/2026");
     expect(records[0]?.textContent).toContain("Português");
     expect(records[0]?.textContent).toContain("PDF 01");
-    expect(records[0]?.textContent).toContain("Leitura");
     expect(records[0]?.textContent).toContain("12 páginas");
     expect(records[1]?.textContent).toContain("Direito Constitucional");
     expect(records[1]?.textContent).toContain("Controle de constitucionalidade");
     expect(records[1]?.textContent).toContain("Controle concentrado");
-    expect(records[1]?.textContent).toContain("Questões");
     expect(records[1]?.textContent).toContain("80% (16/20)");
     expect(session?.querySelectorAll(".leif-menu-trigger")).toHaveLength(1);
 
@@ -471,13 +467,9 @@ describe("LeifView", () => {
     notes.value = "Bloco ajustado";
 
     const firstRecord = editor?.querySelector("[data-record-editor-index='0']");
-    const firstActivity = firstRecord?.querySelector(
-      "[data-record-editor-activity]"
-    ) as HTMLInputElement;
     const firstQuantity = firstRecord?.querySelector(
       "[data-record-editor-quantity]"
     ) as HTMLInputElement;
-    firstActivity.value = "revisao";
     firstQuantity.value = "18";
 
     (
@@ -492,9 +484,6 @@ describe("LeifView", () => {
     const addedResource = addedRecord?.querySelector(
       "[data-record-editor-resource]"
     ) as HTMLSelectElement;
-    const addedActivity = addedRecord?.querySelector(
-      "[data-record-editor-activity]"
-    ) as HTMLInputElement;
     const addedQuantity = addedRecord?.querySelector(
       "[data-record-editor-quantity]"
     ) as HTMLInputElement;
@@ -504,7 +493,6 @@ describe("LeifView", () => {
     addedSubject.value = "subject-2";
     addedSubject.dispatchEvent(new Event("change", { bubbles: true }));
     addedResource.value = "resource-2";
-    addedActivity.value = "questoes";
     addedQuantity.value = "30";
     addedCorrect.value = "24";
 
@@ -518,7 +506,6 @@ describe("LeifView", () => {
       expect(data.studySessions[0].notes).toBe("Bloco ajustado");
       expect(data.studySessions[0].records).toHaveLength(2);
       expect(data.studySessions[0].records[0].id).toBe("record-1");
-      expect(data.studySessions[0].records[0].activity).toBe("revisao");
       expect(data.studySessions[0].records[0].quantity).toBe(18);
       expect(data.studySessions[0].records[1].subjectId).toBe("subject-2");
       expect(data.studySessions[0].records[1].resourceId).toBe("resource-2");
@@ -566,7 +553,7 @@ describe("LeifView", () => {
     expect(data.studySessions[0].date).toBe("2026-07-27");
   });
 
-  it("filters grouped Registros by matéria, activity, and date range", async () => {
+  it("filters grouped Registros by matéria and date range", async () => {
     const dataStore = new InMemoryPluginDataStore();
     await seedUiSessionHistory(dataStore);
 
@@ -577,9 +564,6 @@ describe("LeifView", () => {
 
     const subject = view.contentEl.querySelector(
       "[data-session-filter-subject]"
-    ) as HTMLSelectElement;
-    const activity = view.contentEl.querySelector(
-      "[data-session-filter-activity]"
     ) as HTMLSelectElement;
     const from = view.contentEl.querySelector("[data-session-filter-from]") as HTMLInputElement;
     const to = view.contentEl.querySelector("[data-session-filter-to]") as HTMLInputElement;
@@ -594,17 +578,6 @@ describe("LeifView", () => {
       expect(session?.textContent).toContain("Direito Constitucional");
       expect(session?.textContent).not.toContain("Português");
       expect(view.contentEl.querySelector("[data-session-id='session-2']")).toBeNull();
-    });
-
-    activity.value = "questoes";
-    activity.dispatchEvent(new Event("change", { bubbles: true }));
-    await vi.waitFor(() => {
-      expect(view.contentEl.querySelector("[data-session-id='session-1']")?.textContent).toContain(
-        "Questões"
-      );
-      expect(
-        view.contentEl.querySelector("[data-session-id='session-1']")?.textContent
-      ).not.toContain("leitura");
     });
 
     from.value = "2026-07-28";

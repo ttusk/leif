@@ -57,7 +57,7 @@ describe("input validators", () => {
       new RegisterStudySessionValidator().validate({
         contestId: "contest-1",
         date: "2026-07-27",
-        records: [{ subjectId: "subject-1", activity: "leitura", unit: "foo" as GoalUnit }]
+        records: [{ subjectId: "subject-1", unit: "foo" as GoalUnit }]
       }).valid
     ).toBe(false);
   });

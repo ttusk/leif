@@ -32,7 +32,7 @@ A study sitting that groups one or more Registros de estudo performed together.
 _Avoid_: Record, event
 
 **Registro de estudo**:
-One measured study activity within a Sessão de estudo for exactly one Matéria, optionally narrowed to one Recurso and one Assunto.
+One measured study entry within a Sessão de estudo for exactly one Matéria, optionally narrowed to one Recurso and one Assunto.
 _Avoid_: Session, event
 
 **Estado do ciclo**:
